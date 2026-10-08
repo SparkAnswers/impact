@@ -113,3 +113,4 @@ All animation loops stop on unmount, pause while `document.hidden`, and fall bac
 - Flow Designer: more auto-layout controls.
 - Flow River: per-channel trail layers, map tile backgrounds.
 - Status Bars: row click actions through data links on every column.
+- Drill-down and pruning for data-driven graphs: see `docs/DRILLDOWN.md` (proposal with mock-up).
