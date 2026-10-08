@@ -220,8 +220,8 @@ describe('FlowPanel data-driven mode', () => {
     expect(screen.getByTestId('impact-demo-badge')).toBeInTheDocument();
     expect(screen.queryByTestId('flow-demo-hint')).not.toBeInTheDocument();
     expect(screen.getAllByTestId(/^flow-node-/).length).toBe(12);
-    // Values go through the field pipeline: the generator's unit is kept.
-    expect(screen.getAllByText(/req\/s/).length).toBeGreaterThan(0);
+    // Values go through the field pipeline; the generator carries no unit, so edge labels are plain numbers.
+    expect(screen.getAllByTestId(/^flow-edge-/).length).toBeGreaterThan(0);
   });
 
   it('prefers real edges over demo data in "when no data" mode and ignores them in "always"', () => {

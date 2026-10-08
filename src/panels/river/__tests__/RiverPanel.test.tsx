@@ -79,8 +79,8 @@ describe('RiverPanel', () => {
     expect(screen.queryByTestId('error-view')).not.toBeInTheDocument();
     expect(screen.getByTestId('river-panel')).toBeInTheDocument();
     expect(screen.getByTestId('impact-demo-badge')).toBeInTheDocument();
-    // The demo series carry a percent unit which the field pipeline turns into the caption value.
-    expect(screen.getAllByText(/%$/).length).toBeGreaterThan(0);
+    // Demo series carry no unit of their own; the caption shows a plain number from the field pipeline.
+    expect(screen.getAllByText(/\d/).length).toBeGreaterThan(0);
   });
 
   it('shows real data without the badge in when-no-data mode and demo data in always', () => {
