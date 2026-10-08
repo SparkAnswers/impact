@@ -1,0 +1,1366 @@
+{
+  "uid": "impact-showcase",
+  "title": "Impact showcase",
+  "tags": [
+    "impact",
+    "demo"
+  ],
+  "editable": true,
+  "schemaVersion": 41,
+  "version": 1,
+  "timezone": "browser",
+  "refresh": "",
+  "time": {
+    "from": "now-15m",
+    "to": "now"
+  },
+  "links": [
+    {
+      "title": "Flow Designer demo",
+      "type": "link",
+      "url": "/d/impact-flow",
+      "icon": "external link"
+    },
+    {
+      "title": "Power Gauge demo",
+      "type": "link",
+      "url": "/d/impact-gauge",
+      "icon": "external link"
+    },
+    {
+      "title": "Flow River demo",
+      "type": "link",
+      "url": "/d/impact-river",
+      "icon": "external link"
+    },
+    {
+      "title": "Status Bars demo",
+      "type": "link",
+      "url": "/d/impact-bars",
+      "icon": "external link"
+    }
+  ],
+  "panels": [
+    {
+      "id": 1,
+      "type": "sparkanswers-impact-flow-panel",
+      "title": "Flow Designer \u00b7 site power flow",
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 16,
+        "h": 14
+      },
+      "datasource": {
+        "type": "grafana-testdata-datasource",
+        "uid": "impact-testdata"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-testdata-datasource",
+            "uid": "impact-testdata"
+          },
+          "scenarioId": "random_walk",
+          "alias": "solar_kw",
+          "min": 0,
+          "max": 20,
+          "startValue": 12,
+          "spread": 1.5,
+          "noise": 0.3
+        },
+        {
+          "refId": "B",
+          "datasource": {
+            "type": "grafana-testdata-datasource",
+            "uid": "impact-testdata"
+          },
+          "scenarioId": "random_walk",
+          "alias": "grid_kw",
+          "min": -4,
+          "max": 8,
+          "startValue": 3,
+          "spread": 1.5,
+          "noise": 0.3
+        },
+        {
+          "refId": "C",
+          "datasource": {
+            "type": "grafana-testdata-datasource",
+            "uid": "impact-testdata"
+          },
+          "scenarioId": "random_walk",
+          "alias": "battery_kw",
+          "min": -5,
+          "max": 5,
+          "startValue": 1,
+          "spread": 1.5,
+          "noise": 0.3
+        },
+        {
+          "refId": "D",
+          "datasource": {
+            "type": "grafana-testdata-datasource",
+            "uid": "impact-testdata"
+          },
+          "scenarioId": "random_walk",
+          "alias": "bus_kw",
+          "min": 10,
+          "max": 25,
+          "startValue": 17,
+          "spread": 1.5,
+          "noise": 0.3
+        },
+        {
+          "refId": "E",
+          "datasource": {
+            "type": "grafana-testdata-datasource",
+            "uid": "impact-testdata"
+          },
+          "scenarioId": "random_walk",
+          "alias": "house_kw",
+          "min": 2,
+          "max": 16,
+          "startValue": 6,
+          "spread": 1.5,
+          "noise": 0.3
+        },
+        {
+          "refId": "F",
+          "datasource": {
+            "type": "grafana-testdata-datasource",
+            "uid": "impact-testdata"
+          },
+          "scenarioId": "random_walk",
+          "alias": "export_kw",
+          "min": 0,
+          "max": 10,
+          "startValue": 4,
+          "spread": 1.5,
+          "noise": 0.3
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "kwatt",
+          "decimals": 1,
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 10
+              },
+              {
+                "color": "red",
+                "value": 14
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "battery_kw"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "kwatt"
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "appearance": {
+          "background": "dots",
+          "nodeStyle": "cards",
+          "fontSize": 12,
+          "edgeColor": "blue",
+          "particleSpeed": 1
+        },
+        "animation": {
+          "enabled": true,
+          "speed": 1
+        },
+        "layout": {
+          "editMode": false,
+          "gridSize": 20,
+          "snap": true,
+          "autoFit": true
+        },
+        "diagram": {
+          "nodes": [
+            {
+              "w": 140,
+              "h": 52,
+              "shape": "card",
+              "status": "ok",
+              "id": "solar",
+              "label": "Solar array",
+              "x": 40,
+              "y": 120,
+              "icon": "power",
+              "valueField": "solar_kw"
+            },
+            {
+              "w": 140,
+              "h": 52,
+              "shape": "card",
+              "status": "warn",
+              "id": "grid",
+              "label": "Grid import",
+              "x": 40,
+              "y": 200,
+              "icon": "plug",
+              "valueField": "grid_kw"
+            },
+            {
+              "w": 140,
+              "h": 52,
+              "shape": "card",
+              "status": "ok",
+              "id": "battery",
+              "label": "Battery",
+              "x": 40,
+              "y": 280,
+              "icon": "bolt",
+              "valueField": "battery_kw"
+            },
+            {
+              "w": 140,
+              "h": 52,
+              "shape": "card",
+              "status": "error",
+              "id": "generator",
+              "label": "Generator",
+              "x": 40,
+              "y": 360,
+              "icon": "cog",
+              "sublabel": "offline"
+            },
+            {
+              "w": 160,
+              "h": 110,
+              "shape": "hub",
+              "status": "ok",
+              "id": "bus",
+              "label": "Site bus",
+              "x": 330,
+              "y": 205,
+              "icon": "crosshair",
+              "valueField": "bus_kw"
+            },
+            {
+              "w": 150,
+              "h": 52,
+              "shape": "card",
+              "status": "ok",
+              "id": "house",
+              "label": "House loads",
+              "x": 620,
+              "y": 100,
+              "icon": "home",
+              "valueField": "house_kw"
+            },
+            {
+              "w": 150,
+              "h": 32,
+              "shape": "pill",
+              "status": "ok",
+              "id": "ev",
+              "label": "Vehicle charger",
+              "x": 620,
+              "y": 182,
+              "icon": "rocket"
+            },
+            {
+              "w": 150,
+              "h": 32,
+              "shape": "pill",
+              "status": "warn",
+              "id": "hvac",
+              "label": "Climate",
+              "x": 620,
+              "y": 244,
+              "icon": "cloud"
+            },
+            {
+              "w": 150,
+              "h": 32,
+              "shape": "pill",
+              "status": "ok",
+              "id": "servers",
+              "label": "Server room",
+              "x": 620,
+              "y": 306,
+              "icon": "database"
+            },
+            {
+              "w": 150,
+              "h": 52,
+              "shape": "card",
+              "status": "ok",
+              "id": "export",
+              "label": "Grid export",
+              "x": 620,
+              "y": 380,
+              "icon": "arrow-to-right",
+              "valueField": "export_kw"
+            }
+          ],
+          "edges": [
+            {
+              "fromSide": "auto",
+              "toSide": "auto",
+              "style": "bezier",
+              "curvature": 0.55,
+              "stroke": 2,
+              "color": "#19D3F0",
+              "dash": "solid",
+              "arrow": true,
+              "glow": true,
+              "particles": {
+                "enabled": true,
+                "count": 3,
+                "speed": 1.4,
+                "size": 2
+              },
+              "id": "e1",
+              "from": "solar",
+              "to": "bus",
+              "bind": {
+                "field": "solar_kw",
+                "mapTo": "speed",
+                "min": 0,
+                "max": 20
+              }
+            },
+            {
+              "fromSide": "auto",
+              "toSide": "auto",
+              "style": "orthogonal",
+              "curvature": 0.55,
+              "stroke": 1.5,
+              "color": "orange",
+              "dash": "solid",
+              "arrow": true,
+              "glow": true,
+              "particles": {
+                "enabled": true,
+                "count": 2,
+                "speed": 1.2,
+                "size": 2
+              },
+              "id": "e2",
+              "from": "grid",
+              "to": "bus",
+              "bind": {
+                "field": "grid_kw",
+                "mapTo": "speed",
+                "min": 0,
+                "max": 10,
+                "reverseBelowZero": true
+              }
+            },
+            {
+              "fromSide": "auto",
+              "toSide": "auto",
+              "style": "bezier",
+              "curvature": 0.55,
+              "stroke": 1.5,
+              "color": "blue",
+              "dash": "solid",
+              "arrow": false,
+              "glow": true,
+              "particles": {
+                "enabled": true,
+                "count": 2,
+                "speed": 1,
+                "size": 2
+              },
+              "id": "e3",
+              "from": "battery",
+              "to": "bus",
+              "bind": {
+                "field": "battery_kw",
+                "mapTo": "speed",
+                "min": -5,
+                "max": 5,
+                "reverseBelowZero": true
+              }
+            },
+            {
+              "fromSide": "auto",
+              "toSide": "auto",
+              "style": "straight",
+              "curvature": 0.55,
+              "stroke": 1.2,
+              "color": "red",
+              "dash": "dash",
+              "arrow": false,
+              "glow": false,
+              "particles": {
+                "enabled": false,
+                "count": 0,
+                "speed": 1,
+                "size": 2
+              },
+              "id": "e4",
+              "from": "generator",
+              "to": "bus"
+            },
+            {
+              "fromSide": "auto",
+              "toSide": "auto",
+              "style": "bezier",
+              "curvature": 0.6,
+              "stroke": 2,
+              "color": "green",
+              "dash": "solid",
+              "arrow": true,
+              "glow": true,
+              "particles": {
+                "enabled": true,
+                "count": 3,
+                "speed": 1.2,
+                "size": 2
+              },
+              "id": "e5",
+              "from": "bus",
+              "to": "house",
+              "bind": {
+                "field": "house_kw",
+                "mapTo": "color"
+              }
+            },
+            {
+              "fromSide": "auto",
+              "toSide": "auto",
+              "style": "orthogonal",
+              "curvature": 0.55,
+              "stroke": 1.5,
+              "color": "green",
+              "dash": "solid",
+              "arrow": true,
+              "glow": true,
+              "particles": {
+                "enabled": true,
+                "count": 2,
+                "speed": 1,
+                "size": 2
+              },
+              "id": "e6",
+              "from": "bus",
+              "to": "ev"
+            },
+            {
+              "fromSide": "auto",
+              "toSide": "auto",
+              "style": "straight",
+              "curvature": 0.55,
+              "stroke": 1.5,
+              "color": "purple",
+              "dash": "solid",
+              "arrow": true,
+              "glow": true,
+              "particles": {
+                "enabled": true,
+                "count": 2,
+                "speed": 1.6,
+                "size": 2
+              },
+              "id": "e7",
+              "from": "bus",
+              "to": "hvac"
+            },
+            {
+              "fromSide": "auto",
+              "toSide": "auto",
+              "style": "step",
+              "curvature": 0.55,
+              "stroke": 1.5,
+              "color": "blue",
+              "dash": "solid",
+              "arrow": true,
+              "glow": true,
+              "particles": {
+                "enabled": true,
+                "count": 2,
+                "speed": 1,
+                "size": 2
+              },
+              "id": "e8",
+              "from": "bus",
+              "to": "servers"
+            },
+            {
+              "fromSide": "auto",
+              "toSide": "auto",
+              "style": "bezier",
+              "curvature": 0.6,
+              "stroke": 1.5,
+              "color": "#19D3F0",
+              "dash": "solid",
+              "arrow": true,
+              "glow": true,
+              "particles": {
+                "enabled": true,
+                "count": 2,
+                "speed": 1,
+                "size": 2
+              },
+              "id": "e9",
+              "from": "bus",
+              "to": "export",
+              "bind": {
+                "field": "export_kw",
+                "mapTo": "width",
+                "min": 0,
+                "max": 10
+              }
+            }
+          ],
+          "viewport": {
+            "x": 0,
+            "y": 0,
+            "zoom": 1
+          },
+          "grid": {
+            "show": true,
+            "size": 20,
+            "snap": true
+          }
+        }
+      }
+    },
+    {
+      "id": 2,
+      "type": "sparkanswers-impact-gauge-panel",
+      "title": "Power Gauge \u00b7 signed power",
+      "description": "Default options: -50..200 kW range from the field min/max, square-root scale, positive values fill clockwise in orange from the zero mark, negative values fill the other way in green. The in-ring chart shows the panel time range.",
+      "gridPos": {
+        "x": 16,
+        "y": 0,
+        "w": 8,
+        "h": 14
+      },
+      "datasource": {
+        "type": "grafana-testdata-datasource",
+        "uid": "impact-testdata"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-testdata-datasource",
+            "uid": "impact-testdata"
+          },
+          "scenarioId": "random_walk",
+          "alias": "power",
+          "startValue": 40,
+          "spread": 25,
+          "noise": 4,
+          "min": -50,
+          "max": 200
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "kwatt",
+          "decimals": 1,
+          "min": -50,
+          "max": 200,
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "orange"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "secondaryText": "Avg. {value}",
+        "secondaryReducer": "mean",
+        "subtitleText": "Past 15 min"
+      }
+    },
+    {
+      "id": 3,
+      "type": "sparkanswers-impact-river-panel",
+      "title": "Flow River \u00b7 single stream",
+      "description": "One channel bound to query A (speed, oldest at the start of the river); width driven by query B.",
+      "gridPos": {
+        "x": 0,
+        "y": 14,
+        "w": 16,
+        "h": 12
+      },
+      "datasource": {
+        "type": "grafana-testdata-datasource",
+        "uid": "impact-testdata"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-testdata-datasource",
+            "uid": "impact-testdata"
+          },
+          "scenarioId": "random_walk",
+          "seriesCount": 1,
+          "min": 0,
+          "max": 16,
+          "spread": 1.3333333333333333,
+          "alias": "current"
+        },
+        {
+          "refId": "B",
+          "datasource": {
+            "type": "grafana-testdata-datasource",
+            "uid": "impact-testdata"
+          },
+          "scenarioId": "random_walk",
+          "seriesCount": 1,
+          "min": 30,
+          "max": 170,
+          "spread": 10,
+          "alias": "width"
+        }
+      ],
+      "options": {
+        "title": "The river, in motion",
+        "subtitle": "Current speed from Intake to Outlet over the dashboard time range",
+        "caption": "Narrows",
+        "captionBig": true,
+        "captionValue": true,
+        "showLegend": true,
+        "legendPosition": "top-left",
+        "particleCountMultiplier": 1.3,
+        "channels": [
+          {
+            "id": "main",
+            "name": "Current",
+            "path": [
+              {
+                "x": 0.03,
+                "y": 0.8
+              },
+              {
+                "x": 0.18,
+                "y": 0.79
+              },
+              {
+                "x": 0.34,
+                "y": 0.72
+              },
+              {
+                "x": 0.48,
+                "y": 0.62
+              },
+              {
+                "x": 0.58,
+                "y": 0.5
+              },
+              {
+                "x": 0.66,
+                "y": 0.37
+              },
+              {
+                "x": 0.76,
+                "y": 0.27
+              },
+              {
+                "x": 0.88,
+                "y": 0.22
+              },
+              {
+                "x": 0.99,
+                "y": 0.18
+              }
+            ],
+            "speedSource": {
+              "mode": "series",
+              "series": ""
+            },
+            "widthSource": {
+              "mode": "series",
+              "series": "B"
+            },
+            "widthPx": 150,
+            "colorScale": "turbo",
+            "customStops": [],
+            "scaleDomain": {
+              "mode": "auto"
+            },
+            "particles": {
+              "count": 3200,
+              "speed": 1,
+              "trail": 0.88,
+              "width": 1.1,
+              "color": "white"
+            },
+            "direction": "forward",
+            "labels": [
+              {
+                "text": "INTAKE",
+                "at": 0.06,
+                "side": "center"
+              },
+              {
+                "text": "Narrows",
+                "at": 0.56,
+                "side": "right"
+              },
+              {
+                "text": "Outlet",
+                "at": 0.93,
+                "side": "right"
+              }
+            ],
+            "opacity": 0.86,
+            "multiSeries": "ignore",
+            "editPath": false
+          }
+        ]
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "velocitymph",
+          "decimals": 1,
+          "min": 0,
+          "max": 16
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 4,
+      "type": "sparkanswers-impact-gauge-panel",
+      "title": "Power Gauge \u00b7 thresholds",
+      "description": "Colour mode Thresholds: the ring is painted in bands from the standard field thresholds, the fill and the history line take the colour of the current value. Unit percent, no fade.",
+      "gridPos": {
+        "x": 16,
+        "y": 14,
+        "w": 8,
+        "h": 12
+      },
+      "datasource": {
+        "type": "grafana-testdata-datasource",
+        "uid": "impact-testdata"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-testdata-datasource",
+            "uid": "impact-testdata"
+          },
+          "scenarioId": "random_walk",
+          "alias": "load",
+          "startValue": 55,
+          "spread": 12,
+          "noise": 3,
+          "min": 0,
+          "max": 100
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "decimals": 0,
+          "min": 0,
+          "max": 100,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "value": null,
+                "color": "green"
+              },
+              {
+                "value": 55,
+                "color": "orange"
+              },
+              {
+                "value": 80,
+                "color": "red"
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "startAngle": 120,
+        "sweepAngle": 300,
+        "clockwise": true,
+        "scale": "linear",
+        "ringWidth": 6,
+        "glow": 16,
+        "colorMode": "thresholds",
+        "historyColorMode": "thresholds",
+        "fadeHistory": false,
+        "secondaryText": "Peak {value}",
+        "secondaryReducer": "max",
+        "subtitleText": "Last 15 min",
+        "titleText": "Load with thresholds",
+        "titlePosition": "bottom"
+      }
+    },
+    {
+      "id": 5,
+      "type": "sparkanswers-impact-bars-panel",
+      "title": "Status Bars \u00b7 device status",
+      "description": "Twelve devices from a CSV table. The 'style' column chooses the bar per row; 'status' is mapped to text, colour and icon with value mappings; 'trend' feeds the sparkline row.",
+      "gridPos": {
+        "x": 0,
+        "y": 26,
+        "w": 24,
+        "h": 12
+      },
+      "datasource": {
+        "type": "grafana-testdata-datasource",
+        "uid": "impact-testdata"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-testdata-datasource",
+            "uid": "impact-testdata"
+          },
+          "refId": "A",
+          "scenarioId": "csv_content",
+          "csvContent": "name,progress,status,style,version,channel,updated,trend\nEdge Gateway,,warn,sweep,5.1.31,Official,2026-10-07T09:58:00Z,\nPerimeter Firewall,,warn,sweep,5.1.21,Early Access,2026-10-07T10:00:00Z,\nCore Router,42,ok,percent,5.2.0,Official,2026-10-07T09:56:00Z,\nCore Switch,78,warn,percent,7.0.50,Official,2026-10-07T09:49:00Z,\nLobby Access Point,94,crit,percent,6.6.77,Release Candidate,2026-10-07T09:00:00Z,\nRack UPS A,70,ok,segmented,1.4.2,Official,2026-10-07T09:59:30Z,\nBackup Store,61,updating,striped,3.9.1,Early Access,2026-10-07T10:00:00Z,\nGrid Import/Export,-2.4,ok,bidirectional,,Power,2026-10-07T09:59:55Z,\nBattery Charger,1.6,warn,bidirectional,,Power,2026-10-07T09:59:55Z,\nDistribution Router,56,ok,sparkline,4.1.9,Official,2026-10-07T09:59:00Z,30;38;35;52;46;60;49;64;58;70;62;56\nHypervisor Memory,16,ok,stacked,,Host,2026-10-07T09:59:50Z,\nController Appliance,,updating,pill,3.2.12,Official,2026-10-07T09:57:00Z,\n"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "convertFieldType",
+          "options": {
+            "conversions": [
+              {
+                "targetField": "updated",
+                "destinationType": "time"
+              }
+            ]
+          }
+        }
+      ],
+      "options": {
+        "barStyle": "percent",
+        "colorMode": "thresholds",
+        "showCheckbox": true,
+        "showStatusDot": true,
+        "defaultSortField": "",
+        "labelPosition": "right",
+        "trackWidth": 150,
+        "trackHeight": 6,
+        "radius": 3,
+        "animationSpeed": 1.6,
+        "sweepWidth": 38,
+        "segments": 10,
+        "density": "comfortable",
+        "showFooter": true,
+        "stackFields": [
+          "progress"
+        ]
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "min": 0,
+          "max": 100,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "#EAB839",
+                "value": 70
+              },
+              {
+                "color": "red",
+                "value": 90
+              }
+            ]
+          },
+          "color": {
+            "mode": "thresholds"
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "status"
+            },
+            "properties": [
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "ok": {
+                        "text": "Healthy",
+                        "color": "green",
+                        "icon": "check-circle",
+                        "index": 0
+                      },
+                      "warn": {
+                        "text": "Degraded",
+                        "color": "orange",
+                        "icon": "exclamation-triangle",
+                        "index": 1
+                      },
+                      "crit": {
+                        "text": "Critical",
+                        "color": "red",
+                        "icon": "times-circle",
+                        "index": 2
+                      },
+                      "updating": {
+                        "text": "Updating\u2026",
+                        "color": "blue",
+                        "icon": "info-circle",
+                        "index": 3
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "version"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Version"
+              },
+              {
+                "id": "noValue",
+                "value": "\u2014"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "channel"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Channel"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": 6,
+      "type": "sparkanswers-impact-river-panel",
+      "title": "Flow River \u00b7 three channels",
+      "description": "Three random-walk queries, three stacked horizontal channels with different colour presets.",
+      "gridPos": {
+        "x": 0,
+        "y": 38,
+        "w": 12,
+        "h": 10
+      },
+      "datasource": {
+        "type": "grafana-testdata-datasource",
+        "uid": "impact-testdata"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-testdata-datasource",
+            "uid": "impact-testdata"
+          },
+          "scenarioId": "random_walk",
+          "seriesCount": 1,
+          "min": 0,
+          "max": 20,
+          "spread": 1.6666666666666667,
+          "alias": "uplink"
+        },
+        {
+          "refId": "B",
+          "datasource": {
+            "type": "grafana-testdata-datasource",
+            "uid": "impact-testdata"
+          },
+          "scenarioId": "random_walk",
+          "seriesCount": 1,
+          "min": 0,
+          "max": 500,
+          "spread": 41.666666666666664,
+          "alias": "queue"
+        },
+        {
+          "refId": "C",
+          "datasource": {
+            "type": "grafana-testdata-datasource",
+            "uid": "impact-testdata"
+          },
+          "scenarioId": "random_walk",
+          "seriesCount": 1,
+          "min": -50,
+          "max": 50,
+          "spread": 8.333333333333334,
+          "alias": "balance"
+        }
+      ],
+      "options": {
+        "title": "Three pipes",
+        "subtitle": "Channel i binds to series i when no source is chosen",
+        "showLegend": true,
+        "legendPosition": "top-right",
+        "captionValue": false,
+        "channels": [
+          {
+            "id": "a",
+            "name": "Uplink",
+            "path": [
+              {
+                "x": 0.03,
+                "y": 0.25
+              },
+              {
+                "x": 0.35,
+                "y": 0.25
+              },
+              {
+                "x": 0.65,
+                "y": 0.25
+              },
+              {
+                "x": 0.97,
+                "y": 0.25
+              }
+            ],
+            "speedSource": {
+              "mode": "series",
+              "series": ""
+            },
+            "widthSource": {
+              "mode": "fixed"
+            },
+            "widthPx": 48,
+            "colorScale": "cool",
+            "customStops": [],
+            "scaleDomain": {
+              "mode": "auto"
+            },
+            "particles": {
+              "count": 900,
+              "speed": 1,
+              "trail": 0.84,
+              "width": 1.3,
+              "color": "white"
+            },
+            "direction": "forward",
+            "labels": [
+              {
+                "text": "Uplink",
+                "at": 0.02,
+                "side": "left"
+              }
+            ],
+            "opacity": 0.86,
+            "multiSeries": "ignore",
+            "editPath": false
+          },
+          {
+            "id": "b",
+            "name": "Queue",
+            "path": [
+              {
+                "x": 0.03,
+                "y": 0.5
+              },
+              {
+                "x": 0.35,
+                "y": 0.5
+              },
+              {
+                "x": 0.65,
+                "y": 0.5
+              },
+              {
+                "x": 0.97,
+                "y": 0.5
+              }
+            ],
+            "speedSource": {
+              "mode": "series",
+              "series": ""
+            },
+            "widthSource": {
+              "mode": "fixed"
+            },
+            "widthPx": 48,
+            "colorScale": "warm",
+            "customStops": [],
+            "scaleDomain": {
+              "mode": "auto"
+            },
+            "particles": {
+              "count": 900,
+              "speed": 1,
+              "trail": 0.84,
+              "width": 1.3,
+              "color": "byValue"
+            },
+            "direction": "forward",
+            "labels": [
+              {
+                "text": "Queue",
+                "at": 0.02,
+                "side": "left"
+              }
+            ],
+            "opacity": 0.86,
+            "multiSeries": "ignore",
+            "editPath": false
+          },
+          {
+            "id": "c",
+            "name": "Balance",
+            "path": [
+              {
+                "x": 0.03,
+                "y": 0.75
+              },
+              {
+                "x": 0.35,
+                "y": 0.75
+              },
+              {
+                "x": 0.65,
+                "y": 0.75
+              },
+              {
+                "x": 0.97,
+                "y": 0.75
+              }
+            ],
+            "speedSource": {
+              "mode": "series",
+              "series": ""
+            },
+            "widthSource": {
+              "mode": "fixed"
+            },
+            "widthPx": 48,
+            "colorScale": "viridis",
+            "customStops": [],
+            "scaleDomain": {
+              "mode": "auto"
+            },
+            "particles": {
+              "count": 900,
+              "speed": 1,
+              "trail": 0.84,
+              "width": 1.3,
+              "color": "fixed",
+              "fixedColor": "#ffe08a"
+            },
+            "direction": "bySign",
+            "labels": [
+              {
+                "text": "Balance (flows backwards when negative)",
+                "at": 0.02,
+                "side": "left"
+              }
+            ],
+            "opacity": 0.86,
+            "multiSeries": "ignore",
+            "editPath": false
+          }
+        ]
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 7,
+      "type": "sparkanswers-impact-bars-panel",
+      "title": "Status Bars \u00b7 series with sparklines",
+      "description": "Several random walks reduced to one row each (last value), the series itself drawn as the sparkline. A field override switches one row to the segmented style.",
+      "gridPos": {
+        "x": 12,
+        "y": 38,
+        "w": 12,
+        "h": 10
+      },
+      "datasource": {
+        "type": "grafana-testdata-datasource",
+        "uid": "impact-testdata"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-testdata-datasource",
+            "uid": "impact-testdata"
+          },
+          "refId": "A",
+          "scenarioId": "random_walk",
+          "alias": "Edge Gateway",
+          "startValue": 35,
+          "spread": 4,
+          "noise": 1,
+          "min": 0,
+          "max": 100
+        },
+        {
+          "datasource": {
+            "type": "grafana-testdata-datasource",
+            "uid": "impact-testdata"
+          },
+          "refId": "B",
+          "scenarioId": "random_walk",
+          "alias": "Core Switch",
+          "startValue": 62,
+          "spread": 4,
+          "noise": 1,
+          "min": 0,
+          "max": 100
+        },
+        {
+          "datasource": {
+            "type": "grafana-testdata-datasource",
+            "uid": "impact-testdata"
+          },
+          "refId": "C",
+          "scenarioId": "random_walk",
+          "alias": "Lobby Access Point",
+          "startValue": 88,
+          "spread": 4,
+          "noise": 1,
+          "min": 0,
+          "max": 100
+        },
+        {
+          "datasource": {
+            "type": "grafana-testdata-datasource",
+            "uid": "impact-testdata"
+          },
+          "refId": "D",
+          "scenarioId": "random_walk",
+          "alias": "Backup Store",
+          "startValue": 50,
+          "spread": 4,
+          "noise": 1,
+          "min": 0,
+          "max": 100
+        },
+        {
+          "datasource": {
+            "type": "grafana-testdata-datasource",
+            "uid": "impact-testdata"
+          },
+          "refId": "E",
+          "scenarioId": "random_walk",
+          "alias": "Rack UPS A",
+          "startValue": 20,
+          "spread": 4,
+          "noise": 1,
+          "min": 0,
+          "max": 100
+        },
+        {
+          "datasource": {
+            "type": "grafana-testdata-datasource",
+            "uid": "impact-testdata"
+          },
+          "refId": "F",
+          "scenarioId": "random_walk",
+          "alias": "Distribution Router",
+          "startValue": 73,
+          "spread": 4,
+          "noise": 1,
+          "min": 0,
+          "max": 100
+        }
+      ],
+      "transformations": [],
+      "options": {
+        "barStyle": "sparkline",
+        "colorMode": "thresholds",
+        "reducer": "lastNotNull",
+        "defaultSortField": "value",
+        "defaultSortDesc": true,
+        "trackWidth": 120,
+        "showCheckbox": false
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "min": 0,
+          "max": 100,
+          "decimals": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "#EAB839",
+                "value": 70
+              },
+              {
+                "color": "red",
+                "value": 90
+              }
+            ]
+          },
+          "color": {
+            "mode": "thresholds"
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Rack UPS A"
+            },
+            "properties": [
+              {
+                "id": "custom.barStyle",
+                "value": "segmented"
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

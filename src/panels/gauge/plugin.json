@@ -1,0 +1,16 @@
+{
+  "$schema": "https://raw.githubusercontent.com/grafana/grafana/main/docs/sources/developers/plugins/plugin.schema.json",
+  "type": "panel",
+  "name": "Impact Power Gauge",
+  "id": "sparkanswers-impact-gauge-panel",
+  "info": {
+    "keywords": ["panel", "impact", "gauge"],
+    "description": "Ring gauge with signed arc fill, live marker and an in-ring history chart",
+    "author": { "name": "SparkAnswers" },
+    "logos": { "small": "img/logo.svg", "large": "img/logo.svg" },
+    "screenshots": [],
+    "version": "%VERSION%",
+    "updated": "%TODAY%"
+  },
+  "dependencies": { "grafanaDependency": ">=12.0.0", "plugins": [] }
+}

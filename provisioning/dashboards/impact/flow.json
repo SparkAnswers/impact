@@ -1,0 +1,2551 @@
+{
+  "uid": "impact-flow",
+  "title": "Impact Flow Designer demo",
+  "tags": [
+    "impact",
+    "demo"
+  ],
+  "timezone": "browser",
+  "schemaVersion": 41,
+  "version": 1,
+  "editable": true,
+  "graphTooltip": 0,
+  "refresh": "5s",
+  "time": {
+    "from": "now-15m",
+    "to": "now"
+  },
+  "panels": [
+    {
+      "id": 1,
+      "type": "text",
+      "title": "",
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 24,
+        "h": 3
+      },
+      "options": {
+        "mode": "markdown",
+        "content": "**Flow Designer** draws node/edge diagrams with glowing edges and travelling particles. Nodes show the last value of a bound field (unit and decimals from standard options); edges can map a field to particle speed, colour (via thresholds) or width. Edit a panel and turn on *Layout → Edit layout* to drag nodes, draw edges and reshape curves."
+      }
+    },
+    {
+      "id": 2,
+      "type": "sparkanswers-impact-flow-panel",
+      "title": "Site power flow (live, animated)",
+      "gridPos": {
+        "x": 0,
+        "y": 3,
+        "w": 16,
+        "h": 14
+      },
+      "datasource": {
+        "type": "grafana-testdata-datasource",
+        "uid": "impact-testdata"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-testdata-datasource",
+            "uid": "impact-testdata"
+          },
+          "scenarioId": "random_walk",
+          "alias": "solar_kw",
+          "min": 0,
+          "max": 20,
+          "startValue": 12,
+          "spread": 1.5,
+          "noise": 0.3
+        },
+        {
+          "refId": "B",
+          "datasource": {
+            "type": "grafana-testdata-datasource",
+            "uid": "impact-testdata"
+          },
+          "scenarioId": "random_walk",
+          "alias": "grid_kw",
+          "min": -4,
+          "max": 8,
+          "startValue": 3,
+          "spread": 1.5,
+          "noise": 0.3
+        },
+        {
+          "refId": "C",
+          "datasource": {
+            "type": "grafana-testdata-datasource",
+            "uid": "impact-testdata"
+          },
+          "scenarioId": "random_walk",
+          "alias": "battery_kw",
+          "min": -5,
+          "max": 5,
+          "startValue": 1,
+          "spread": 1.5,
+          "noise": 0.3
+        },
+        {
+          "refId": "D",
+          "datasource": {
+            "type": "grafana-testdata-datasource",
+            "uid": "impact-testdata"
+          },
+          "scenarioId": "random_walk",
+          "alias": "bus_kw",
+          "min": 10,
+          "max": 25,
+          "startValue": 17,
+          "spread": 1.5,
+          "noise": 0.3
+        },
+        {
+          "refId": "E",
+          "datasource": {
+            "type": "grafana-testdata-datasource",
+            "uid": "impact-testdata"
+          },
+          "scenarioId": "random_walk",
+          "alias": "house_kw",
+          "min": 2,
+          "max": 16,
+          "startValue": 6,
+          "spread": 1.5,
+          "noise": 0.3
+        },
+        {
+          "refId": "F",
+          "datasource": {
+            "type": "grafana-testdata-datasource",
+            "uid": "impact-testdata"
+          },
+          "scenarioId": "random_walk",
+          "alias": "export_kw",
+          "min": 0,
+          "max": 10,
+          "startValue": 4,
+          "spread": 1.5,
+          "noise": 0.3
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "kwatt",
+          "decimals": 1,
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 10
+              },
+              {
+                "color": "red",
+                "value": 14
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "battery_kw"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "kwatt"
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "appearance": {
+          "background": "dots",
+          "nodeStyle": "cards",
+          "fontSize": 12,
+          "edgeColor": "blue",
+          "particleSpeed": 1
+        },
+        "animation": {
+          "enabled": true,
+          "speed": 1
+        },
+        "layout": {
+          "editMode": false,
+          "gridSize": 20,
+          "snap": true,
+          "autoFit": true
+        },
+        "diagram": {
+          "nodes": [
+            {
+              "w": 140,
+              "h": 52,
+              "shape": "card",
+              "status": "ok",
+              "id": "solar",
+              "label": "Solar array",
+              "x": 40,
+              "y": 120,
+              "icon": "power",
+              "valueField": "solar_kw"
+            },
+            {
+              "w": 140,
+              "h": 52,
+              "shape": "card",
+              "status": "warn",
+              "id": "grid",
+              "label": "Grid import",
+              "x": 40,
+              "y": 200,
+              "icon": "plug",
+              "valueField": "grid_kw"
+            },
+            {
+              "w": 140,
+              "h": 52,
+              "shape": "card",
+              "status": "ok",
+              "id": "battery",
+              "label": "Battery",
+              "x": 40,
+              "y": 280,
+              "icon": "bolt",
+              "valueField": "battery_kw"
+            },
+            {
+              "w": 140,
+              "h": 52,
+              "shape": "card",
+              "status": "error",
+              "id": "generator",
+              "label": "Generator",
+              "x": 40,
+              "y": 360,
+              "icon": "cog",
+              "sublabel": "offline"
+            },
+            {
+              "w": 160,
+              "h": 110,
+              "shape": "hub",
+              "status": "ok",
+              "id": "bus",
+              "label": "Site bus",
+              "x": 330,
+              "y": 205,
+              "icon": "crosshair",
+              "valueField": "bus_kw"
+            },
+            {
+              "w": 150,
+              "h": 52,
+              "shape": "card",
+              "status": "ok",
+              "id": "house",
+              "label": "House loads",
+              "x": 620,
+              "y": 100,
+              "icon": "home",
+              "valueField": "house_kw"
+            },
+            {
+              "w": 150,
+              "h": 32,
+              "shape": "pill",
+              "status": "ok",
+              "id": "ev",
+              "label": "Vehicle charger",
+              "x": 620,
+              "y": 182,
+              "icon": "rocket"
+            },
+            {
+              "w": 150,
+              "h": 32,
+              "shape": "pill",
+              "status": "warn",
+              "id": "hvac",
+              "label": "Climate",
+              "x": 620,
+              "y": 244,
+              "icon": "cloud"
+            },
+            {
+              "w": 150,
+              "h": 32,
+              "shape": "pill",
+              "status": "ok",
+              "id": "servers",
+              "label": "Server room",
+              "x": 620,
+              "y": 306,
+              "icon": "database"
+            },
+            {
+              "w": 150,
+              "h": 52,
+              "shape": "card",
+              "status": "ok",
+              "id": "export",
+              "label": "Grid export",
+              "x": 620,
+              "y": 380,
+              "icon": "arrow-to-right",
+              "valueField": "export_kw"
+            }
+          ],
+          "edges": [
+            {
+              "fromSide": "auto",
+              "toSide": "auto",
+              "style": "bezier",
+              "curvature": 0.55,
+              "stroke": 2,
+              "color": "#19D3F0",
+              "dash": "solid",
+              "arrow": true,
+              "glow": true,
+              "particles": {
+                "enabled": true,
+                "count": 3,
+                "speed": 1.4,
+                "size": 2
+              },
+              "id": "e1",
+              "from": "solar",
+              "to": "bus",
+              "bind": {
+                "field": "solar_kw",
+                "mapTo": "speed",
+                "min": 0,
+                "max": 20
+              }
+            },
+            {
+              "fromSide": "auto",
+              "toSide": "auto",
+              "style": "orthogonal",
+              "curvature": 0.55,
+              "stroke": 1.5,
+              "color": "orange",
+              "dash": "solid",
+              "arrow": true,
+              "glow": true,
+              "particles": {
+                "enabled": true,
+                "count": 2,
+                "speed": 1.2,
+                "size": 2
+              },
+              "id": "e2",
+              "from": "grid",
+              "to": "bus",
+              "bind": {
+                "field": "grid_kw",
+                "mapTo": "speed",
+                "min": 0,
+                "max": 10,
+                "reverseBelowZero": true
+              }
+            },
+            {
+              "fromSide": "auto",
+              "toSide": "auto",
+              "style": "bezier",
+              "curvature": 0.55,
+              "stroke": 1.5,
+              "color": "blue",
+              "dash": "solid",
+              "arrow": false,
+              "glow": true,
+              "particles": {
+                "enabled": true,
+                "count": 2,
+                "speed": 1,
+                "size": 2
+              },
+              "id": "e3",
+              "from": "battery",
+              "to": "bus",
+              "bind": {
+                "field": "battery_kw",
+                "mapTo": "speed",
+                "min": -5,
+                "max": 5,
+                "reverseBelowZero": true
+              }
+            },
+            {
+              "fromSide": "auto",
+              "toSide": "auto",
+              "style": "straight",
+              "curvature": 0.55,
+              "stroke": 1.2,
+              "color": "red",
+              "dash": "dash",
+              "arrow": false,
+              "glow": false,
+              "particles": {
+                "enabled": false,
+                "count": 0,
+                "speed": 1,
+                "size": 2
+              },
+              "id": "e4",
+              "from": "generator",
+              "to": "bus"
+            },
+            {
+              "fromSide": "auto",
+              "toSide": "auto",
+              "style": "bezier",
+              "curvature": 0.6,
+              "stroke": 2,
+              "color": "green",
+              "dash": "solid",
+              "arrow": true,
+              "glow": true,
+              "particles": {
+                "enabled": true,
+                "count": 3,
+                "speed": 1.2,
+                "size": 2
+              },
+              "id": "e5",
+              "from": "bus",
+              "to": "house",
+              "bind": {
+                "field": "house_kw",
+                "mapTo": "color"
+              }
+            },
+            {
+              "fromSide": "auto",
+              "toSide": "auto",
+              "style": "orthogonal",
+              "curvature": 0.55,
+              "stroke": 1.5,
+              "color": "green",
+              "dash": "solid",
+              "arrow": true,
+              "glow": true,
+              "particles": {
+                "enabled": true,
+                "count": 2,
+                "speed": 1,
+                "size": 2
+              },
+              "id": "e6",
+              "from": "bus",
+              "to": "ev"
+            },
+            {
+              "fromSide": "auto",
+              "toSide": "auto",
+              "style": "straight",
+              "curvature": 0.55,
+              "stroke": 1.5,
+              "color": "purple",
+              "dash": "solid",
+              "arrow": true,
+              "glow": true,
+              "particles": {
+                "enabled": true,
+                "count": 2,
+                "speed": 1.6,
+                "size": 2
+              },
+              "id": "e7",
+              "from": "bus",
+              "to": "hvac"
+            },
+            {
+              "fromSide": "auto",
+              "toSide": "auto",
+              "style": "step",
+              "curvature": 0.55,
+              "stroke": 1.5,
+              "color": "blue",
+              "dash": "solid",
+              "arrow": true,
+              "glow": true,
+              "particles": {
+                "enabled": true,
+                "count": 2,
+                "speed": 1,
+                "size": 2
+              },
+              "id": "e8",
+              "from": "bus",
+              "to": "servers"
+            },
+            {
+              "fromSide": "auto",
+              "toSide": "auto",
+              "style": "bezier",
+              "curvature": 0.6,
+              "stroke": 1.5,
+              "color": "#19D3F0",
+              "dash": "solid",
+              "arrow": true,
+              "glow": true,
+              "particles": {
+                "enabled": true,
+                "count": 2,
+                "speed": 1,
+                "size": 2
+              },
+              "id": "e9",
+              "from": "bus",
+              "to": "export",
+              "bind": {
+                "field": "export_kw",
+                "mapTo": "width",
+                "min": 0,
+                "max": 10
+              }
+            }
+          ],
+          "viewport": {
+            "x": 0,
+            "y": 0,
+            "zoom": 1
+          },
+          "grid": {
+            "show": true,
+            "size": 20,
+            "snap": true
+          }
+        }
+      }
+    },
+    {
+      "id": 3,
+      "type": "sparkanswers-impact-flow-panel",
+      "title": "Animation off (static render)",
+      "gridPos": {
+        "x": 16,
+        "y": 3,
+        "w": 8,
+        "h": 7
+      },
+      "datasource": {
+        "type": "grafana-testdata-datasource",
+        "uid": "impact-testdata"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-testdata-datasource",
+            "uid": "impact-testdata"
+          },
+          "scenarioId": "random_walk",
+          "alias": "solar_kw",
+          "min": 0,
+          "max": 20,
+          "startValue": 12,
+          "spread": 1.5,
+          "noise": 0.3
+        },
+        {
+          "refId": "B",
+          "datasource": {
+            "type": "grafana-testdata-datasource",
+            "uid": "impact-testdata"
+          },
+          "scenarioId": "random_walk",
+          "alias": "grid_kw",
+          "min": -4,
+          "max": 8,
+          "startValue": 3,
+          "spread": 1.5,
+          "noise": 0.3
+        },
+        {
+          "refId": "C",
+          "datasource": {
+            "type": "grafana-testdata-datasource",
+            "uid": "impact-testdata"
+          },
+          "scenarioId": "random_walk",
+          "alias": "battery_kw",
+          "min": -5,
+          "max": 5,
+          "startValue": 1,
+          "spread": 1.5,
+          "noise": 0.3
+        },
+        {
+          "refId": "D",
+          "datasource": {
+            "type": "grafana-testdata-datasource",
+            "uid": "impact-testdata"
+          },
+          "scenarioId": "random_walk",
+          "alias": "bus_kw",
+          "min": 10,
+          "max": 25,
+          "startValue": 17,
+          "spread": 1.5,
+          "noise": 0.3
+        },
+        {
+          "refId": "E",
+          "datasource": {
+            "type": "grafana-testdata-datasource",
+            "uid": "impact-testdata"
+          },
+          "scenarioId": "random_walk",
+          "alias": "house_kw",
+          "min": 2,
+          "max": 16,
+          "startValue": 6,
+          "spread": 1.5,
+          "noise": 0.3
+        },
+        {
+          "refId": "F",
+          "datasource": {
+            "type": "grafana-testdata-datasource",
+            "uid": "impact-testdata"
+          },
+          "scenarioId": "random_walk",
+          "alias": "export_kw",
+          "min": 0,
+          "max": 10,
+          "startValue": 4,
+          "spread": 1.5,
+          "noise": 0.3
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "kwatt",
+          "decimals": 1,
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 10
+              },
+              {
+                "color": "red",
+                "value": 14
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "battery_kw"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "kwatt"
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "appearance": {
+          "background": "panel",
+          "nodeStyle": "cards",
+          "fontSize": 12,
+          "edgeColor": "blue",
+          "particleSpeed": 1
+        },
+        "animation": {
+          "enabled": false,
+          "speed": 1
+        },
+        "layout": {
+          "editMode": false,
+          "gridSize": 20,
+          "snap": true,
+          "autoFit": true
+        },
+        "diagram": {
+          "nodes": [
+            {
+              "w": 140,
+              "h": 52,
+              "shape": "card",
+              "status": "ok",
+              "id": "solar",
+              "label": "Solar array",
+              "x": 40,
+              "y": 120,
+              "icon": "power",
+              "valueField": "solar_kw"
+            },
+            {
+              "w": 140,
+              "h": 52,
+              "shape": "card",
+              "status": "warn",
+              "id": "grid",
+              "label": "Grid import",
+              "x": 40,
+              "y": 200,
+              "icon": "plug",
+              "valueField": "grid_kw"
+            },
+            {
+              "w": 140,
+              "h": 52,
+              "shape": "card",
+              "status": "ok",
+              "id": "battery",
+              "label": "Battery",
+              "x": 40,
+              "y": 280,
+              "icon": "bolt",
+              "valueField": "battery_kw"
+            },
+            {
+              "w": 140,
+              "h": 52,
+              "shape": "card",
+              "status": "error",
+              "id": "generator",
+              "label": "Generator",
+              "x": 40,
+              "y": 360,
+              "icon": "cog",
+              "sublabel": "offline"
+            },
+            {
+              "w": 160,
+              "h": 110,
+              "shape": "hub",
+              "status": "ok",
+              "id": "bus",
+              "label": "Site bus",
+              "x": 330,
+              "y": 205,
+              "icon": "crosshair",
+              "valueField": "bus_kw"
+            },
+            {
+              "w": 150,
+              "h": 52,
+              "shape": "card",
+              "status": "ok",
+              "id": "house",
+              "label": "House loads",
+              "x": 620,
+              "y": 100,
+              "icon": "home",
+              "valueField": "house_kw"
+            },
+            {
+              "w": 150,
+              "h": 32,
+              "shape": "pill",
+              "status": "ok",
+              "id": "ev",
+              "label": "Vehicle charger",
+              "x": 620,
+              "y": 182,
+              "icon": "rocket"
+            },
+            {
+              "w": 150,
+              "h": 32,
+              "shape": "pill",
+              "status": "warn",
+              "id": "hvac",
+              "label": "Climate",
+              "x": 620,
+              "y": 244,
+              "icon": "cloud"
+            },
+            {
+              "w": 150,
+              "h": 32,
+              "shape": "pill",
+              "status": "ok",
+              "id": "servers",
+              "label": "Server room",
+              "x": 620,
+              "y": 306,
+              "icon": "database"
+            },
+            {
+              "w": 150,
+              "h": 52,
+              "shape": "card",
+              "status": "ok",
+              "id": "export",
+              "label": "Grid export",
+              "x": 620,
+              "y": 380,
+              "icon": "arrow-to-right",
+              "valueField": "export_kw"
+            }
+          ],
+          "edges": [
+            {
+              "fromSide": "auto",
+              "toSide": "auto",
+              "style": "bezier",
+              "curvature": 0.55,
+              "stroke": 2,
+              "color": "#19D3F0",
+              "dash": "solid",
+              "arrow": true,
+              "glow": true,
+              "particles": {
+                "enabled": true,
+                "count": 3,
+                "speed": 1.4,
+                "size": 2
+              },
+              "id": "e1",
+              "from": "solar",
+              "to": "bus",
+              "bind": {
+                "field": "solar_kw",
+                "mapTo": "speed",
+                "min": 0,
+                "max": 20
+              }
+            },
+            {
+              "fromSide": "auto",
+              "toSide": "auto",
+              "style": "orthogonal",
+              "curvature": 0.55,
+              "stroke": 1.5,
+              "color": "orange",
+              "dash": "solid",
+              "arrow": true,
+              "glow": true,
+              "particles": {
+                "enabled": true,
+                "count": 2,
+                "speed": 1.2,
+                "size": 2
+              },
+              "id": "e2",
+              "from": "grid",
+              "to": "bus",
+              "bind": {
+                "field": "grid_kw",
+                "mapTo": "speed",
+                "min": 0,
+                "max": 10,
+                "reverseBelowZero": true
+              }
+            },
+            {
+              "fromSide": "auto",
+              "toSide": "auto",
+              "style": "bezier",
+              "curvature": 0.55,
+              "stroke": 1.5,
+              "color": "blue",
+              "dash": "solid",
+              "arrow": false,
+              "glow": true,
+              "particles": {
+                "enabled": true,
+                "count": 2,
+                "speed": 1,
+                "size": 2
+              },
+              "id": "e3",
+              "from": "battery",
+              "to": "bus",
+              "bind": {
+                "field": "battery_kw",
+                "mapTo": "speed",
+                "min": -5,
+                "max": 5,
+                "reverseBelowZero": true
+              }
+            },
+            {
+              "fromSide": "auto",
+              "toSide": "auto",
+              "style": "straight",
+              "curvature": 0.55,
+              "stroke": 1.2,
+              "color": "red",
+              "dash": "dash",
+              "arrow": false,
+              "glow": false,
+              "particles": {
+                "enabled": false,
+                "count": 0,
+                "speed": 1,
+                "size": 2
+              },
+              "id": "e4",
+              "from": "generator",
+              "to": "bus"
+            },
+            {
+              "fromSide": "auto",
+              "toSide": "auto",
+              "style": "bezier",
+              "curvature": 0.6,
+              "stroke": 2,
+              "color": "green",
+              "dash": "solid",
+              "arrow": true,
+              "glow": true,
+              "particles": {
+                "enabled": true,
+                "count": 3,
+                "speed": 1.2,
+                "size": 2
+              },
+              "id": "e5",
+              "from": "bus",
+              "to": "house",
+              "bind": {
+                "field": "house_kw",
+                "mapTo": "color"
+              }
+            },
+            {
+              "fromSide": "auto",
+              "toSide": "auto",
+              "style": "orthogonal",
+              "curvature": 0.55,
+              "stroke": 1.5,
+              "color": "green",
+              "dash": "solid",
+              "arrow": true,
+              "glow": true,
+              "particles": {
+                "enabled": true,
+                "count": 2,
+                "speed": 1,
+                "size": 2
+              },
+              "id": "e6",
+              "from": "bus",
+              "to": "ev"
+            },
+            {
+              "fromSide": "auto",
+              "toSide": "auto",
+              "style": "straight",
+              "curvature": 0.55,
+              "stroke": 1.5,
+              "color": "purple",
+              "dash": "solid",
+              "arrow": true,
+              "glow": true,
+              "particles": {
+                "enabled": true,
+                "count": 2,
+                "speed": 1.6,
+                "size": 2
+              },
+              "id": "e7",
+              "from": "bus",
+              "to": "hvac"
+            },
+            {
+              "fromSide": "auto",
+              "toSide": "auto",
+              "style": "step",
+              "curvature": 0.55,
+              "stroke": 1.5,
+              "color": "blue",
+              "dash": "solid",
+              "arrow": true,
+              "glow": true,
+              "particles": {
+                "enabled": true,
+                "count": 2,
+                "speed": 1,
+                "size": 2
+              },
+              "id": "e8",
+              "from": "bus",
+              "to": "servers"
+            },
+            {
+              "fromSide": "auto",
+              "toSide": "auto",
+              "style": "bezier",
+              "curvature": 0.6,
+              "stroke": 1.5,
+              "color": "#19D3F0",
+              "dash": "solid",
+              "arrow": true,
+              "glow": true,
+              "particles": {
+                "enabled": true,
+                "count": 2,
+                "speed": 1,
+                "size": 2
+              },
+              "id": "e9",
+              "from": "bus",
+              "to": "export",
+              "bind": {
+                "field": "export_kw",
+                "mapTo": "width",
+                "min": 0,
+                "max": 10
+              }
+            }
+          ],
+          "viewport": {
+            "x": 0,
+            "y": 0,
+            "zoom": 1
+          },
+          "grid": {
+            "show": true,
+            "size": 20,
+            "snap": true
+          }
+        }
+      }
+    },
+    {
+      "id": 4,
+      "type": "sparkanswers-impact-flow-panel",
+      "title": "Minimal node style, line grid",
+      "gridPos": {
+        "x": 16,
+        "y": 10,
+        "w": 8,
+        "h": 7
+      },
+      "datasource": {
+        "type": "grafana-testdata-datasource",
+        "uid": "impact-testdata"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-testdata-datasource",
+            "uid": "impact-testdata"
+          },
+          "scenarioId": "random_walk",
+          "alias": "solar_kw",
+          "min": 0,
+          "max": 20,
+          "startValue": 12,
+          "spread": 1.5,
+          "noise": 0.3
+        },
+        {
+          "refId": "B",
+          "datasource": {
+            "type": "grafana-testdata-datasource",
+            "uid": "impact-testdata"
+          },
+          "scenarioId": "random_walk",
+          "alias": "grid_kw",
+          "min": -4,
+          "max": 8,
+          "startValue": 3,
+          "spread": 1.5,
+          "noise": 0.3
+        },
+        {
+          "refId": "C",
+          "datasource": {
+            "type": "grafana-testdata-datasource",
+            "uid": "impact-testdata"
+          },
+          "scenarioId": "random_walk",
+          "alias": "battery_kw",
+          "min": -5,
+          "max": 5,
+          "startValue": 1,
+          "spread": 1.5,
+          "noise": 0.3
+        },
+        {
+          "refId": "D",
+          "datasource": {
+            "type": "grafana-testdata-datasource",
+            "uid": "impact-testdata"
+          },
+          "scenarioId": "random_walk",
+          "alias": "bus_kw",
+          "min": 10,
+          "max": 25,
+          "startValue": 17,
+          "spread": 1.5,
+          "noise": 0.3
+        },
+        {
+          "refId": "E",
+          "datasource": {
+            "type": "grafana-testdata-datasource",
+            "uid": "impact-testdata"
+          },
+          "scenarioId": "random_walk",
+          "alias": "house_kw",
+          "min": 2,
+          "max": 16,
+          "startValue": 6,
+          "spread": 1.5,
+          "noise": 0.3
+        },
+        {
+          "refId": "F",
+          "datasource": {
+            "type": "grafana-testdata-datasource",
+            "uid": "impact-testdata"
+          },
+          "scenarioId": "random_walk",
+          "alias": "export_kw",
+          "min": 0,
+          "max": 10,
+          "startValue": 4,
+          "spread": 1.5,
+          "noise": 0.3
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "kwatt",
+          "decimals": 1,
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 10
+              },
+              {
+                "color": "red",
+                "value": 14
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "battery_kw"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "kwatt"
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "appearance": {
+          "background": "lines",
+          "nodeStyle": "minimal",
+          "fontSize": 11,
+          "edgeColor": "blue",
+          "particleSpeed": 1
+        },
+        "animation": {
+          "enabled": true,
+          "speed": 1
+        },
+        "layout": {
+          "editMode": false,
+          "gridSize": 20,
+          "snap": true,
+          "autoFit": true
+        },
+        "diagram": {
+          "nodes": [
+            {
+              "w": 140,
+              "h": 52,
+              "shape": "card",
+              "status": "ok",
+              "id": "solar",
+              "label": "Solar array",
+              "x": 40,
+              "y": 120,
+              "icon": "power",
+              "valueField": "solar_kw"
+            },
+            {
+              "w": 140,
+              "h": 52,
+              "shape": "card",
+              "status": "warn",
+              "id": "grid",
+              "label": "Grid import",
+              "x": 40,
+              "y": 200,
+              "icon": "plug",
+              "valueField": "grid_kw"
+            },
+            {
+              "w": 140,
+              "h": 52,
+              "shape": "card",
+              "status": "ok",
+              "id": "battery",
+              "label": "Battery",
+              "x": 40,
+              "y": 280,
+              "icon": "bolt",
+              "valueField": "battery_kw"
+            },
+            {
+              "w": 140,
+              "h": 52,
+              "shape": "card",
+              "status": "error",
+              "id": "generator",
+              "label": "Generator",
+              "x": 40,
+              "y": 360,
+              "icon": "cog",
+              "sublabel": "offline"
+            },
+            {
+              "w": 160,
+              "h": 110,
+              "shape": "hub",
+              "status": "ok",
+              "id": "bus",
+              "label": "Site bus",
+              "x": 330,
+              "y": 205,
+              "icon": "crosshair",
+              "valueField": "bus_kw"
+            },
+            {
+              "w": 150,
+              "h": 52,
+              "shape": "card",
+              "status": "ok",
+              "id": "house",
+              "label": "House loads",
+              "x": 620,
+              "y": 100,
+              "icon": "home",
+              "valueField": "house_kw"
+            },
+            {
+              "w": 150,
+              "h": 32,
+              "shape": "pill",
+              "status": "ok",
+              "id": "ev",
+              "label": "Vehicle charger",
+              "x": 620,
+              "y": 182,
+              "icon": "rocket"
+            },
+            {
+              "w": 150,
+              "h": 32,
+              "shape": "pill",
+              "status": "warn",
+              "id": "hvac",
+              "label": "Climate",
+              "x": 620,
+              "y": 244,
+              "icon": "cloud"
+            },
+            {
+              "w": 150,
+              "h": 32,
+              "shape": "pill",
+              "status": "ok",
+              "id": "servers",
+              "label": "Server room",
+              "x": 620,
+              "y": 306,
+              "icon": "database"
+            },
+            {
+              "w": 150,
+              "h": 52,
+              "shape": "card",
+              "status": "ok",
+              "id": "export",
+              "label": "Grid export",
+              "x": 620,
+              "y": 380,
+              "icon": "arrow-to-right",
+              "valueField": "export_kw"
+            }
+          ],
+          "edges": [
+            {
+              "fromSide": "auto",
+              "toSide": "auto",
+              "style": "bezier",
+              "curvature": 0.55,
+              "stroke": 1.2,
+              "color": "#19D3F0",
+              "dash": "solid",
+              "arrow": true,
+              "glow": false,
+              "particles": {
+                "enabled": true,
+                "count": 3,
+                "speed": 1.4,
+                "size": 2
+              },
+              "id": "e1",
+              "from": "solar",
+              "to": "bus",
+              "bind": {
+                "field": "solar_kw",
+                "mapTo": "speed",
+                "min": 0,
+                "max": 20
+              }
+            },
+            {
+              "fromSide": "auto",
+              "toSide": "auto",
+              "style": "orthogonal",
+              "curvature": 0.55,
+              "stroke": 1.2,
+              "color": "orange",
+              "dash": "solid",
+              "arrow": true,
+              "glow": false,
+              "particles": {
+                "enabled": true,
+                "count": 2,
+                "speed": 1.2,
+                "size": 2
+              },
+              "id": "e2",
+              "from": "grid",
+              "to": "bus",
+              "bind": {
+                "field": "grid_kw",
+                "mapTo": "speed",
+                "min": 0,
+                "max": 10,
+                "reverseBelowZero": true
+              }
+            },
+            {
+              "fromSide": "auto",
+              "toSide": "auto",
+              "style": "bezier",
+              "curvature": 0.55,
+              "stroke": 1.2,
+              "color": "blue",
+              "dash": "solid",
+              "arrow": false,
+              "glow": false,
+              "particles": {
+                "enabled": true,
+                "count": 2,
+                "speed": 1,
+                "size": 2
+              },
+              "id": "e3",
+              "from": "battery",
+              "to": "bus",
+              "bind": {
+                "field": "battery_kw",
+                "mapTo": "speed",
+                "min": -5,
+                "max": 5,
+                "reverseBelowZero": true
+              }
+            },
+            {
+              "fromSide": "auto",
+              "toSide": "auto",
+              "style": "straight",
+              "curvature": 0.55,
+              "stroke": 1.2,
+              "color": "red",
+              "dash": "dash",
+              "arrow": false,
+              "glow": false,
+              "particles": {
+                "enabled": false,
+                "count": 0,
+                "speed": 1,
+                "size": 2
+              },
+              "id": "e4",
+              "from": "generator",
+              "to": "bus"
+            },
+            {
+              "fromSide": "auto",
+              "toSide": "auto",
+              "style": "bezier",
+              "curvature": 0.6,
+              "stroke": 1.2,
+              "color": "green",
+              "dash": "solid",
+              "arrow": true,
+              "glow": false,
+              "particles": {
+                "enabled": true,
+                "count": 3,
+                "speed": 1.2,
+                "size": 2
+              },
+              "id": "e5",
+              "from": "bus",
+              "to": "house",
+              "bind": {
+                "field": "house_kw",
+                "mapTo": "color"
+              }
+            },
+            {
+              "fromSide": "auto",
+              "toSide": "auto",
+              "style": "orthogonal",
+              "curvature": 0.55,
+              "stroke": 1.2,
+              "color": "green",
+              "dash": "solid",
+              "arrow": true,
+              "glow": false,
+              "particles": {
+                "enabled": true,
+                "count": 2,
+                "speed": 1,
+                "size": 2
+              },
+              "id": "e6",
+              "from": "bus",
+              "to": "ev"
+            },
+            {
+              "fromSide": "auto",
+              "toSide": "auto",
+              "style": "straight",
+              "curvature": 0.55,
+              "stroke": 1.2,
+              "color": "purple",
+              "dash": "solid",
+              "arrow": true,
+              "glow": false,
+              "particles": {
+                "enabled": true,
+                "count": 2,
+                "speed": 1.6,
+                "size": 2
+              },
+              "id": "e7",
+              "from": "bus",
+              "to": "hvac"
+            },
+            {
+              "fromSide": "auto",
+              "toSide": "auto",
+              "style": "step",
+              "curvature": 0.55,
+              "stroke": 1.2,
+              "color": "blue",
+              "dash": "solid",
+              "arrow": true,
+              "glow": false,
+              "particles": {
+                "enabled": true,
+                "count": 2,
+                "speed": 1,
+                "size": 2
+              },
+              "id": "e8",
+              "from": "bus",
+              "to": "servers"
+            },
+            {
+              "fromSide": "auto",
+              "toSide": "auto",
+              "style": "bezier",
+              "curvature": 0.6,
+              "stroke": 1.2,
+              "color": "#19D3F0",
+              "dash": "solid",
+              "arrow": true,
+              "glow": false,
+              "particles": {
+                "enabled": true,
+                "count": 2,
+                "speed": 1,
+                "size": 2
+              },
+              "id": "e9",
+              "from": "bus",
+              "to": "export",
+              "bind": {
+                "field": "export_kw",
+                "mapTo": "width",
+                "min": 0,
+                "max": 10
+              }
+            }
+          ],
+          "viewport": {
+            "x": 0,
+            "y": 0,
+            "zoom": 1
+          },
+          "grid": {
+            "show": true,
+            "size": 20,
+            "snap": true
+          }
+        }
+      }
+    },
+    {
+      "id": 5,
+      "type": "sparkanswers-impact-flow-panel",
+      "title": "Design mode (Edit layout on) - drag things!",
+      "gridPos": {
+        "x": 0,
+        "y": 17,
+        "w": 12,
+        "h": 12
+      },
+      "datasource": {
+        "type": "grafana-testdata-datasource",
+        "uid": "impact-testdata"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-testdata-datasource",
+            "uid": "impact-testdata"
+          },
+          "scenarioId": "random_walk",
+          "alias": "solar_kw",
+          "min": 0,
+          "max": 20,
+          "startValue": 12,
+          "spread": 1.5,
+          "noise": 0.3
+        },
+        {
+          "refId": "B",
+          "datasource": {
+            "type": "grafana-testdata-datasource",
+            "uid": "impact-testdata"
+          },
+          "scenarioId": "random_walk",
+          "alias": "grid_kw",
+          "min": -4,
+          "max": 8,
+          "startValue": 3,
+          "spread": 1.5,
+          "noise": 0.3
+        },
+        {
+          "refId": "C",
+          "datasource": {
+            "type": "grafana-testdata-datasource",
+            "uid": "impact-testdata"
+          },
+          "scenarioId": "random_walk",
+          "alias": "battery_kw",
+          "min": -5,
+          "max": 5,
+          "startValue": 1,
+          "spread": 1.5,
+          "noise": 0.3
+        },
+        {
+          "refId": "D",
+          "datasource": {
+            "type": "grafana-testdata-datasource",
+            "uid": "impact-testdata"
+          },
+          "scenarioId": "random_walk",
+          "alias": "bus_kw",
+          "min": 10,
+          "max": 25,
+          "startValue": 17,
+          "spread": 1.5,
+          "noise": 0.3
+        },
+        {
+          "refId": "E",
+          "datasource": {
+            "type": "grafana-testdata-datasource",
+            "uid": "impact-testdata"
+          },
+          "scenarioId": "random_walk",
+          "alias": "house_kw",
+          "min": 2,
+          "max": 16,
+          "startValue": 6,
+          "spread": 1.5,
+          "noise": 0.3
+        },
+        {
+          "refId": "F",
+          "datasource": {
+            "type": "grafana-testdata-datasource",
+            "uid": "impact-testdata"
+          },
+          "scenarioId": "random_walk",
+          "alias": "export_kw",
+          "min": 0,
+          "max": 10,
+          "startValue": 4,
+          "spread": 1.5,
+          "noise": 0.3
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "kwatt",
+          "decimals": 1,
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 10
+              },
+              {
+                "color": "red",
+                "value": 14
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "battery_kw"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "kwatt"
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "appearance": {
+          "background": "dots",
+          "nodeStyle": "cards",
+          "fontSize": 12,
+          "edgeColor": "blue",
+          "particleSpeed": 1
+        },
+        "animation": {
+          "enabled": true,
+          "speed": 1
+        },
+        "layout": {
+          "editMode": true,
+          "gridSize": 20,
+          "snap": true,
+          "autoFit": false
+        },
+        "diagram": {
+          "nodes": [
+            {
+              "w": 140,
+              "h": 52,
+              "shape": "card",
+              "status": "ok",
+              "id": "solar",
+              "label": "Solar array",
+              "x": 40,
+              "y": 120,
+              "icon": "power",
+              "valueField": "solar_kw"
+            },
+            {
+              "w": 140,
+              "h": 52,
+              "shape": "card",
+              "status": "warn",
+              "id": "grid",
+              "label": "Grid import",
+              "x": 40,
+              "y": 200,
+              "icon": "plug",
+              "valueField": "grid_kw"
+            },
+            {
+              "w": 140,
+              "h": 52,
+              "shape": "card",
+              "status": "ok",
+              "id": "battery",
+              "label": "Battery",
+              "x": 40,
+              "y": 280,
+              "icon": "bolt",
+              "valueField": "battery_kw"
+            },
+            {
+              "w": 140,
+              "h": 52,
+              "shape": "card",
+              "status": "error",
+              "id": "generator",
+              "label": "Generator",
+              "x": 40,
+              "y": 360,
+              "icon": "cog",
+              "sublabel": "offline"
+            },
+            {
+              "w": 160,
+              "h": 110,
+              "shape": "hub",
+              "status": "ok",
+              "id": "bus",
+              "label": "Site bus",
+              "x": 330,
+              "y": 205,
+              "icon": "crosshair",
+              "valueField": "bus_kw"
+            },
+            {
+              "w": 150,
+              "h": 52,
+              "shape": "card",
+              "status": "ok",
+              "id": "house",
+              "label": "House loads",
+              "x": 620,
+              "y": 100,
+              "icon": "home",
+              "valueField": "house_kw"
+            },
+            {
+              "w": 150,
+              "h": 32,
+              "shape": "pill",
+              "status": "ok",
+              "id": "ev",
+              "label": "Vehicle charger",
+              "x": 620,
+              "y": 182,
+              "icon": "rocket"
+            },
+            {
+              "w": 150,
+              "h": 32,
+              "shape": "pill",
+              "status": "warn",
+              "id": "hvac",
+              "label": "Climate",
+              "x": 620,
+              "y": 244,
+              "icon": "cloud"
+            },
+            {
+              "w": 150,
+              "h": 32,
+              "shape": "pill",
+              "status": "ok",
+              "id": "servers",
+              "label": "Server room",
+              "x": 620,
+              "y": 306,
+              "icon": "database"
+            },
+            {
+              "w": 150,
+              "h": 52,
+              "shape": "card",
+              "status": "ok",
+              "id": "export",
+              "label": "Grid export",
+              "x": 620,
+              "y": 380,
+              "icon": "arrow-to-right",
+              "valueField": "export_kw"
+            }
+          ],
+          "edges": [
+            {
+              "fromSide": "auto",
+              "toSide": "auto",
+              "style": "bezier",
+              "curvature": 0.55,
+              "stroke": 2,
+              "color": "#19D3F0",
+              "dash": "solid",
+              "arrow": true,
+              "glow": true,
+              "particles": {
+                "enabled": true,
+                "count": 3,
+                "speed": 1.4,
+                "size": 2
+              },
+              "id": "e1",
+              "from": "solar",
+              "to": "bus",
+              "bind": {
+                "field": "solar_kw",
+                "mapTo": "speed",
+                "min": 0,
+                "max": 20
+              }
+            },
+            {
+              "fromSide": "auto",
+              "toSide": "auto",
+              "style": "orthogonal",
+              "curvature": 0.55,
+              "stroke": 1.5,
+              "color": "orange",
+              "dash": "solid",
+              "arrow": true,
+              "glow": true,
+              "particles": {
+                "enabled": true,
+                "count": 2,
+                "speed": 1.2,
+                "size": 2
+              },
+              "id": "e2",
+              "from": "grid",
+              "to": "bus",
+              "bind": {
+                "field": "grid_kw",
+                "mapTo": "speed",
+                "min": 0,
+                "max": 10,
+                "reverseBelowZero": true
+              }
+            },
+            {
+              "fromSide": "auto",
+              "toSide": "auto",
+              "style": "bezier",
+              "curvature": 0.55,
+              "stroke": 1.5,
+              "color": "blue",
+              "dash": "solid",
+              "arrow": false,
+              "glow": true,
+              "particles": {
+                "enabled": true,
+                "count": 2,
+                "speed": 1,
+                "size": 2
+              },
+              "id": "e3",
+              "from": "battery",
+              "to": "bus",
+              "bind": {
+                "field": "battery_kw",
+                "mapTo": "speed",
+                "min": -5,
+                "max": 5,
+                "reverseBelowZero": true
+              }
+            },
+            {
+              "fromSide": "auto",
+              "toSide": "auto",
+              "style": "straight",
+              "curvature": 0.55,
+              "stroke": 1.2,
+              "color": "red",
+              "dash": "dash",
+              "arrow": false,
+              "glow": false,
+              "particles": {
+                "enabled": false,
+                "count": 0,
+                "speed": 1,
+                "size": 2
+              },
+              "id": "e4",
+              "from": "generator",
+              "to": "bus"
+            },
+            {
+              "fromSide": "auto",
+              "toSide": "auto",
+              "style": "bezier",
+              "curvature": 0.6,
+              "stroke": 2,
+              "color": "green",
+              "dash": "solid",
+              "arrow": true,
+              "glow": true,
+              "particles": {
+                "enabled": true,
+                "count": 3,
+                "speed": 1.2,
+                "size": 2
+              },
+              "id": "e5",
+              "from": "bus",
+              "to": "house",
+              "bind": {
+                "field": "house_kw",
+                "mapTo": "color"
+              }
+            },
+            {
+              "fromSide": "auto",
+              "toSide": "auto",
+              "style": "orthogonal",
+              "curvature": 0.55,
+              "stroke": 1.5,
+              "color": "green",
+              "dash": "solid",
+              "arrow": true,
+              "glow": true,
+              "particles": {
+                "enabled": true,
+                "count": 2,
+                "speed": 1,
+                "size": 2
+              },
+              "id": "e6",
+              "from": "bus",
+              "to": "ev"
+            },
+            {
+              "fromSide": "auto",
+              "toSide": "auto",
+              "style": "straight",
+              "curvature": 0.55,
+              "stroke": 1.5,
+              "color": "purple",
+              "dash": "solid",
+              "arrow": true,
+              "glow": true,
+              "particles": {
+                "enabled": true,
+                "count": 2,
+                "speed": 1.6,
+                "size": 2
+              },
+              "id": "e7",
+              "from": "bus",
+              "to": "hvac"
+            },
+            {
+              "fromSide": "auto",
+              "toSide": "auto",
+              "style": "step",
+              "curvature": 0.55,
+              "stroke": 1.5,
+              "color": "blue",
+              "dash": "solid",
+              "arrow": true,
+              "glow": true,
+              "particles": {
+                "enabled": true,
+                "count": 2,
+                "speed": 1,
+                "size": 2
+              },
+              "id": "e8",
+              "from": "bus",
+              "to": "servers"
+            },
+            {
+              "fromSide": "auto",
+              "toSide": "auto",
+              "style": "bezier",
+              "curvature": 0.6,
+              "stroke": 1.5,
+              "color": "#19D3F0",
+              "dash": "solid",
+              "arrow": true,
+              "glow": true,
+              "particles": {
+                "enabled": true,
+                "count": 2,
+                "speed": 1,
+                "size": 2
+              },
+              "id": "e9",
+              "from": "bus",
+              "to": "export",
+              "bind": {
+                "field": "export_kw",
+                "mapTo": "width",
+                "min": 0,
+                "max": 10
+              }
+            }
+          ],
+          "viewport": {
+            "x": 0,
+            "y": 0,
+            "zoom": 1
+          },
+          "grid": {
+            "show": true,
+            "size": 20,
+            "snap": true
+          }
+        }
+      }
+    },
+    {
+      "id": 6,
+      "type": "sparkanswers-impact-flow-panel",
+      "title": "Transparent background, faster particles",
+      "gridPos": {
+        "x": 12,
+        "y": 17,
+        "w": 12,
+        "h": 12
+      },
+      "datasource": {
+        "type": "grafana-testdata-datasource",
+        "uid": "impact-testdata"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-testdata-datasource",
+            "uid": "impact-testdata"
+          },
+          "scenarioId": "random_walk",
+          "alias": "solar_kw",
+          "min": 0,
+          "max": 20,
+          "startValue": 12,
+          "spread": 1.5,
+          "noise": 0.3
+        },
+        {
+          "refId": "B",
+          "datasource": {
+            "type": "grafana-testdata-datasource",
+            "uid": "impact-testdata"
+          },
+          "scenarioId": "random_walk",
+          "alias": "grid_kw",
+          "min": -4,
+          "max": 8,
+          "startValue": 3,
+          "spread": 1.5,
+          "noise": 0.3
+        },
+        {
+          "refId": "C",
+          "datasource": {
+            "type": "grafana-testdata-datasource",
+            "uid": "impact-testdata"
+          },
+          "scenarioId": "random_walk",
+          "alias": "battery_kw",
+          "min": -5,
+          "max": 5,
+          "startValue": 1,
+          "spread": 1.5,
+          "noise": 0.3
+        },
+        {
+          "refId": "D",
+          "datasource": {
+            "type": "grafana-testdata-datasource",
+            "uid": "impact-testdata"
+          },
+          "scenarioId": "random_walk",
+          "alias": "bus_kw",
+          "min": 10,
+          "max": 25,
+          "startValue": 17,
+          "spread": 1.5,
+          "noise": 0.3
+        },
+        {
+          "refId": "E",
+          "datasource": {
+            "type": "grafana-testdata-datasource",
+            "uid": "impact-testdata"
+          },
+          "scenarioId": "random_walk",
+          "alias": "house_kw",
+          "min": 2,
+          "max": 16,
+          "startValue": 6,
+          "spread": 1.5,
+          "noise": 0.3
+        },
+        {
+          "refId": "F",
+          "datasource": {
+            "type": "grafana-testdata-datasource",
+            "uid": "impact-testdata"
+          },
+          "scenarioId": "random_walk",
+          "alias": "export_kw",
+          "min": 0,
+          "max": 10,
+          "startValue": 4,
+          "spread": 1.5,
+          "noise": 0.3
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "kwatt",
+          "decimals": 1,
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 10
+              },
+              {
+                "color": "red",
+                "value": 14
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "battery_kw"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "kwatt"
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "appearance": {
+          "background": "transparent",
+          "nodeStyle": "cards",
+          "fontSize": 12,
+          "edgeColor": "blue",
+          "particleSpeed": 2
+        },
+        "animation": {
+          "enabled": true,
+          "speed": 1.2
+        },
+        "layout": {
+          "editMode": false,
+          "gridSize": 20,
+          "snap": true,
+          "autoFit": true
+        },
+        "diagram": {
+          "nodes": [
+            {
+              "w": 140,
+              "h": 52,
+              "shape": "card",
+              "status": "ok",
+              "id": "solar",
+              "label": "Solar array",
+              "x": 40,
+              "y": 120,
+              "icon": "power",
+              "valueField": "solar_kw"
+            },
+            {
+              "w": 140,
+              "h": 52,
+              "shape": "card",
+              "status": "warn",
+              "id": "grid",
+              "label": "Grid import",
+              "x": 40,
+              "y": 200,
+              "icon": "plug",
+              "valueField": "grid_kw"
+            },
+            {
+              "w": 140,
+              "h": 52,
+              "shape": "card",
+              "status": "ok",
+              "id": "battery",
+              "label": "Battery",
+              "x": 40,
+              "y": 280,
+              "icon": "bolt",
+              "valueField": "battery_kw"
+            },
+            {
+              "w": 140,
+              "h": 52,
+              "shape": "card",
+              "status": "error",
+              "id": "generator",
+              "label": "Generator",
+              "x": 40,
+              "y": 360,
+              "icon": "cog",
+              "sublabel": "offline"
+            },
+            {
+              "w": 160,
+              "h": 110,
+              "shape": "hub",
+              "status": "ok",
+              "id": "bus",
+              "label": "Site bus",
+              "x": 330,
+              "y": 205,
+              "icon": "crosshair",
+              "valueField": "bus_kw"
+            },
+            {
+              "w": 150,
+              "h": 52,
+              "shape": "card",
+              "status": "ok",
+              "id": "house",
+              "label": "House loads",
+              "x": 620,
+              "y": 100,
+              "icon": "home",
+              "valueField": "house_kw"
+            },
+            {
+              "w": 150,
+              "h": 32,
+              "shape": "pill",
+              "status": "ok",
+              "id": "ev",
+              "label": "Vehicle charger",
+              "x": 620,
+              "y": 182,
+              "icon": "rocket"
+            },
+            {
+              "w": 150,
+              "h": 32,
+              "shape": "pill",
+              "status": "warn",
+              "id": "hvac",
+              "label": "Climate",
+              "x": 620,
+              "y": 244,
+              "icon": "cloud"
+            },
+            {
+              "w": 150,
+              "h": 32,
+              "shape": "pill",
+              "status": "ok",
+              "id": "servers",
+              "label": "Server room",
+              "x": 620,
+              "y": 306,
+              "icon": "database"
+            },
+            {
+              "w": 150,
+              "h": 52,
+              "shape": "card",
+              "status": "ok",
+              "id": "export",
+              "label": "Grid export",
+              "x": 620,
+              "y": 380,
+              "icon": "arrow-to-right",
+              "valueField": "export_kw"
+            }
+          ],
+          "edges": [
+            {
+              "fromSide": "auto",
+              "toSide": "auto",
+              "style": "bezier",
+              "curvature": 0.55,
+              "stroke": 2,
+              "color": "#19D3F0",
+              "dash": "solid",
+              "arrow": true,
+              "glow": true,
+              "particles": {
+                "enabled": true,
+                "count": 3,
+                "speed": 1.4,
+                "size": 2
+              },
+              "id": "e1",
+              "from": "solar",
+              "to": "bus",
+              "bind": {
+                "field": "solar_kw",
+                "mapTo": "speed",
+                "min": 0,
+                "max": 20
+              }
+            },
+            {
+              "fromSide": "auto",
+              "toSide": "auto",
+              "style": "orthogonal",
+              "curvature": 0.55,
+              "stroke": 1.5,
+              "color": "orange",
+              "dash": "solid",
+              "arrow": true,
+              "glow": true,
+              "particles": {
+                "enabled": true,
+                "count": 2,
+                "speed": 1.2,
+                "size": 2
+              },
+              "id": "e2",
+              "from": "grid",
+              "to": "bus",
+              "bind": {
+                "field": "grid_kw",
+                "mapTo": "speed",
+                "min": 0,
+                "max": 10,
+                "reverseBelowZero": true
+              }
+            },
+            {
+              "fromSide": "auto",
+              "toSide": "auto",
+              "style": "bezier",
+              "curvature": 0.55,
+              "stroke": 1.5,
+              "color": "blue",
+              "dash": "solid",
+              "arrow": false,
+              "glow": true,
+              "particles": {
+                "enabled": true,
+                "count": 2,
+                "speed": 1,
+                "size": 2
+              },
+              "id": "e3",
+              "from": "battery",
+              "to": "bus",
+              "bind": {
+                "field": "battery_kw",
+                "mapTo": "speed",
+                "min": -5,
+                "max": 5,
+                "reverseBelowZero": true
+              }
+            },
+            {
+              "fromSide": "auto",
+              "toSide": "auto",
+              "style": "straight",
+              "curvature": 0.55,
+              "stroke": 1.2,
+              "color": "red",
+              "dash": "dash",
+              "arrow": false,
+              "glow": false,
+              "particles": {
+                "enabled": false,
+                "count": 0,
+                "speed": 1,
+                "size": 2
+              },
+              "id": "e4",
+              "from": "generator",
+              "to": "bus"
+            },
+            {
+              "fromSide": "auto",
+              "toSide": "auto",
+              "style": "bezier",
+              "curvature": 0.6,
+              "stroke": 2,
+              "color": "green",
+              "dash": "solid",
+              "arrow": true,
+              "glow": true,
+              "particles": {
+                "enabled": true,
+                "count": 3,
+                "speed": 1.2,
+                "size": 2
+              },
+              "id": "e5",
+              "from": "bus",
+              "to": "house",
+              "bind": {
+                "field": "house_kw",
+                "mapTo": "color"
+              }
+            },
+            {
+              "fromSide": "auto",
+              "toSide": "auto",
+              "style": "orthogonal",
+              "curvature": 0.55,
+              "stroke": 1.5,
+              "color": "green",
+              "dash": "solid",
+              "arrow": true,
+              "glow": true,
+              "particles": {
+                "enabled": true,
+                "count": 2,
+                "speed": 1,
+                "size": 2
+              },
+              "id": "e6",
+              "from": "bus",
+              "to": "ev"
+            },
+            {
+              "fromSide": "auto",
+              "toSide": "auto",
+              "style": "straight",
+              "curvature": 0.55,
+              "stroke": 1.5,
+              "color": "purple",
+              "dash": "solid",
+              "arrow": true,
+              "glow": true,
+              "particles": {
+                "enabled": true,
+                "count": 2,
+                "speed": 1.6,
+                "size": 2
+              },
+              "id": "e7",
+              "from": "bus",
+              "to": "hvac"
+            },
+            {
+              "fromSide": "auto",
+              "toSide": "auto",
+              "style": "step",
+              "curvature": 0.55,
+              "stroke": 1.5,
+              "color": "blue",
+              "dash": "solid",
+              "arrow": true,
+              "glow": true,
+              "particles": {
+                "enabled": true,
+                "count": 2,
+                "speed": 1,
+                "size": 2
+              },
+              "id": "e8",
+              "from": "bus",
+              "to": "servers"
+            },
+            {
+              "fromSide": "auto",
+              "toSide": "auto",
+              "style": "bezier",
+              "curvature": 0.6,
+              "stroke": 1.5,
+              "color": "#19D3F0",
+              "dash": "solid",
+              "arrow": true,
+              "glow": true,
+              "particles": {
+                "enabled": true,
+                "count": 2,
+                "speed": 1,
+                "size": 2
+              },
+              "id": "e9",
+              "from": "bus",
+              "to": "export",
+              "bind": {
+                "field": "export_kw",
+                "mapTo": "width",
+                "min": 0,
+                "max": 10
+              }
+            }
+          ],
+          "viewport": {
+            "x": 0,
+            "y": 0,
+            "zoom": 1
+          },
+          "grid": {
+            "show": true,
+            "size": 20,
+            "snap": true
+          }
+        }
+      },
+      "transparent": true
+    }
+  ]
+}

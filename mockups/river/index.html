@@ -1,0 +1,339 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Flow River — Grafana panel mockup</title>
+<style>
+  :root{
+    --bg:#181b1f; --panel:#111217; --border:#2c3038; --text:#d8d9da; --muted:#8e9299; --accent:#6e9fff;
+    --font:"Inter",-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:#0b0c0e;color:var(--text);font-family:var(--font);font-size:12px}
+  #panel{position:relative;width:1100px;height:620px;background:var(--bg);border:1px solid var(--border);border-radius:3px;overflow:hidden;display:flex}
+  #stage{position:relative;width:860px;height:620px;background:#141619;border-right:1px solid var(--border)}
+  #river{position:absolute;left:0;top:0;width:860px;height:470px}
+  #riverCanvas{position:absolute;left:0;top:0;width:860px;height:470px;display:block}
+  .overlay{position:absolute;pointer-events:none}
+  #title{left:20px;top:14px}
+  #title h1{margin:0;font-size:19px;font-weight:700;letter-spacing:-.2px;color:#f3f4f5;text-shadow:0 1px 6px rgba(0,0,0,.8)}
+  #title p{margin:2px 0 0;font-size:11px;color:#b9bcc2;text-shadow:0 1px 4px rgba(0,0,0,.8)}
+  #legend{left:20px;top:58px;width:230px}
+  #legend .bar{height:5px;border-radius:3px;box-shadow:0 0 0 1px rgba(0,0,0,.5)}
+  #legend .ticks{position:relative;height:14px;margin-top:3px;font-size:10px;color:#cfd2d6;text-shadow:0 1px 3px #000}
+  #legend .ticks span{position:absolute;transform:translateX(-50%)}
+  #legend .unit{position:absolute;left:236px;top:-5px;font-size:10px;color:#cfd2d6;text-shadow:0 1px 3px #000}
+  #caption{left:20px;bottom:16px}
+  #captionShade{position:absolute;left:0;bottom:0;width:520px;height:220px;background:radial-gradient(ellipse at 20% 100%,rgba(10,12,16,.92) 0%,rgba(10,12,16,.7) 40%,rgba(10,12,16,0) 72%);pointer-events:none}
+  #caption .big{font-size:28px;font-weight:800;letter-spacing:-.5px;color:#fff;text-shadow:0 2px 10px rgba(0,0,0,.9);line-height:1.05}
+  #caption .sub{font-size:14px;color:#d5d8dc;margin-top:4px;text-shadow:0 1px 6px rgba(0,0,0,.9)}
+  #caption .sub b{color:#ffcf5a;font-weight:600}
+  #caption .src{font-size:9.5px;color:#7d8187;margin-top:8px}
+  .anchor{position:absolute;pointer-events:none;font-size:10.5px;color:#f1f2f3;text-shadow:0 1px 3px #000,0 0 6px rgba(0,0,0,.8);white-space:nowrap}
+  .anchor.caps{letter-spacing:1.6px;font-size:10px;font-weight:600;color:#e9ecf0;opacity:.9}
+  .anchor .dot{position:absolute;width:5px;height:5px;border-radius:50%;background:#fff;box-shadow:0 0 4px #000}
+  .anchor .line{position:absolute;height:1px;background:rgba(255,255,255,.75)}
+  #hud{right:14px;bottom:14px;font-size:10px;color:#6f737a;text-align:right;line-height:1.5}
+  #hud b{color:#9fa3a9;font-weight:600}
+
+  /* pipe variant */
+  #pipe{position:absolute;left:0;top:470px;width:860px;height:150px;border-top:1px solid var(--border);background:#121417}
+  #pipeCanvas{position:absolute;left:0;top:0;width:860px;height:150px;display:block}
+  #pipeTitle{left:20px;top:12px}
+  #pipeTitle h2{margin:0;font-size:13px;font-weight:700;color:#eef0f2}
+  #pipeTitle p{margin:1px 0 0;font-size:10.5px;color:#9a9ea5}
+  #pipeVal{right:20px;top:12px;text-align:right}
+  #pipeVal .v{font-size:22px;font-weight:800;color:#8ff0ff;letter-spacing:-.4px;line-height:1}
+  #pipeVal .l{font-size:10px;color:#9a9ea5;margin-top:3px}
+  #pipeLegend{left:20px;bottom:12px;display:flex;align-items:center;gap:8px;font-size:10px;color:#aeb2b8}
+  #pipeLegend .bar{width:120px;height:4px;border-radius:2px}
+  .pipeAnchor{position:absolute;pointer-events:none;font-size:10px;color:#dfe3e8;text-shadow:0 1px 3px #000}
+  .pipeAnchor:before{content:"";position:absolute;left:50%;top:-10px;width:1px;height:8px;background:rgba(255,255,255,.5)}
+
+  /* inspector */
+  #inspector{width:240px;height:620px;background:#1b1e23;overflow:hidden;font-size:11px}
+  #inspector .head{padding:10px 12px 8px;border-bottom:1px solid var(--border);font-weight:700;font-size:12px;color:#eef0f2;display:flex;justify-content:space-between;align-items:center}
+  #inspector .head span{font-weight:500;color:var(--muted);font-size:10px}
+  .sec{padding:6px 12px 4px;border-bottom:1px solid #23262c}
+  .sec h4{margin:0 0 5px;font-size:10px;letter-spacing:.6px;text-transform:uppercase;color:#9ea2a9;font-weight:600}
+  .row{display:flex;align-items:center;justify-content:space-between;gap:6px;margin:3px 0}
+  .row label{color:#c7cacf;flex:0 0 86px;font-size:10.5px}
+  .ctl{flex:1;display:flex;align-items:center;gap:5px;min-width:0}
+  .sel,.inp{flex:1;height:20px;border:1px solid #363a42;background:#111318;color:#e4e6e9;border-radius:2px;padding:0 6px;font-size:10.5px;line-height:18px;position:relative;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+  .sel:after{content:"";position:absolute;right:6px;top:7px;border:4px solid transparent;border-top:5px solid #9ea2a9}
+  .sl{flex:1;height:4px;border-radius:2px;background:#2b2f37;position:relative}
+  .sl i{position:absolute;left:0;top:0;height:100%;border-radius:2px;background:var(--accent)}
+  .sl b{position:absolute;top:-4px;width:12px;height:12px;border-radius:50%;background:#e8eaed;border:2px solid var(--accent);margin-left:-6px}
+  .val{flex:0 0 34px;text-align:right;color:#aeb2b8;font-variant-numeric:tabular-nums;font-size:10px}
+  .tg{display:flex;border:1px solid #363a42;border-radius:2px;overflow:hidden;flex:1}
+  .tg span{flex:1;text-align:center;padding:2px 0;color:#9ea2a9;background:#111318;font-size:10px}
+  .tg span.on{background:#2a3a5e;color:#dfe7ff}
+  .swatch{height:10px;flex:1;border-radius:2px;border:1px solid rgba(255,255,255,.08)}
+  .chip{display:inline-flex;align-items:center;gap:4px;border:1px solid #363a42;background:#111318;border-radius:2px;padding:1px 6px;margin:2px 3px 0 0;color:#d6d9dd;font-size:10px}
+  .chip i{width:6px;height:6px;border-radius:50%;background:#fff;display:inline-block}
+  .chip.add{color:var(--accent);border-style:dashed}
+  .mini{font-size:9.5px;color:#7d8187;margin-top:2px}
+</style>
+</head>
+<body>
+<div id="panel">
+  <div id="stage">
+    <div id="river">
+      <canvas id="riverCanvas"></canvas>
+      <div class="overlay" id="title">
+        <h1>The Niagara River, in Motion</h1>
+        <p>Current speed, Lake Erie to Lake Ontario</p>
+      </div>
+      <div class="overlay" id="legend">
+        <div class="bar" id="legendBar"></div>
+        <div class="ticks" id="legendTicks"></div>
+        <div class="unit">mph</div>
+      </div>
+      <div class="overlay" id="hud"><b>Flow River</b> · 3,200 particles · 60 fps<br>field: <b>speed_mph</b> · width: <b>channel_w</b></div>
+      <div id="captionShade"></div>
+      <div class="overlay" id="caption">
+        <div class="big">Peace Bridge</div>
+        <div class="sub">a third of a mile wide, about <b>7.2 mph</b></div>
+        <div class="src">A model, from NOAA chart depths, lidar and river gauges · last 5m</div>
+      </div>
+      <div id="anchors"></div>
+    </div>
+
+    <div id="pipe">
+      <canvas id="pipeCanvas"></canvas>
+      <div class="overlay" id="pipeTitle">
+        <h2>Core uplink · eth0 → bb-core-1</h2>
+        <p>Throughput along the pipeline, last 15m · horizontal variant</p>
+      </div>
+      <div class="overlay" id="pipeVal"><div class="v">12.4 Gb/s</div><div class="l">p95 queue depth 4.1 ms</div></div>
+      <div class="overlay" id="pipeLegend"><span>0</span><div class="bar" id="pipeLegendBar"></div><span>20 Gb/s</span></div>
+      <div id="pipeAnchors"></div>
+    </div>
+  </div>
+
+  <div id="inspector">
+    <div class="head">Flow River <span>panel options</span></div>
+
+    <div class="sec"><h4>Colour scale</h4>
+      <div class="row"><label>Preset</label><div class="ctl"><div class="sel">Turbo</div></div></div>
+      <div class="row"><label>Preview</label><div class="ctl"><div class="swatch" id="swTurbo"></div><div class="swatch" id="swViridis"></div><div class="swatch" id="swTesla"></div><div class="swatch" id="swCustom"></div></div></div>
+      <div class="mini">Turbo · Viridis · Tesla · Custom stops</div>
+      <div class="row"><label>Stops (mph)</label><div class="ctl"><div class="inp">0, 1, 2, 4, 7, 11, 16</div></div></div>
+    </div>
+
+    <div class="sec"><h4>Particles</h4>
+      <div class="row"><label>Count</label><div class="ctl"><div class="sl"><i style="width:62%"></i><b style="left:62%"></b></div><div class="val">3200</div></div></div>
+      <div class="row"><label>Speed</label><div class="ctl"><div class="sl"><i style="width:45%"></i><b style="left:45%"></b></div><div class="val">1.0×</div></div></div>
+      <div class="row"><label>Trail length</label><div class="ctl"><div class="sl"><i style="width:70%"></i><b style="left:70%"></b></div><div class="val">0.90</div></div></div>
+      <div class="row"><label>Streak width</label><div class="ctl"><div class="sl"><i style="width:30%"></i><b style="left:30%"></b></div><div class="val">1.2px</div></div></div>
+      <div class="row"><label>Streak colour</label><div class="ctl"><div class="tg"><span class="on">White</span><span>By speed</span></div></div></div>
+    </div>
+
+    <div class="sec"><h4>Channel</h4>
+      <div class="row"><label>Width</label><div class="ctl"><div class="sl"><i style="width:55%"></i><b style="left:55%"></b></div><div class="val">1.0×</div></div></div>
+      <div class="row"><label>Opacity</label><div class="ctl"><div class="sl"><i style="width:85%"></i><b style="left:85%"></b></div><div class="val">0.85</div></div></div>
+      <div class="row"><label>Direction</label><div class="ctl"><div class="tg"><span class="on">Forward</span><span>Reverse</span></div></div></div>
+      <div class="row"><label>Background</label><div class="ctl"><div class="sel">Map (dark)</div></div></div>
+      <div class="mini">None · Image URL · Map</div>
+    </div>
+
+    <div class="sec"><h4>Data mapping</h4>
+      <div class="row"><label>Speed field</label><div class="ctl"><div class="sel">speed_mph</div></div></div>
+      <div class="row"><label>Width field</label><div class="ctl"><div class="sel">channel_w</div></div></div>
+      <div class="row"><label>Path</label><div class="ctl"><div class="sel">Waypoints (7)</div></div></div>
+      <div class="row"><label>Unit</label><div class="ctl"><div class="inp">mph</div></div></div>
+    </div>
+
+    <div class="sec" style="border-bottom:0"><h4>Label anchors</h4>
+      <span class="chip"><i></i>Lake Erie · 4%</span><span class="chip"><i></i>Black Rock · 44%</span><span class="chip"><i></i>Peace Bridge · 68%</span><span class="chip"><i></i>Grand Island · 93%</span><span class="chip add">+ Add</span>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+'use strict';
+// ---------- colour scales ----------
+function turbo(t){ t=Math.max(0,Math.min(1,t));
+  const r=34.61+t*(1172.33-t*(10793.56-t*(33300.12-t*(38394.49-t*14825.05))));
+  const g=23.31+t*(557.33+t*(1225.33-t*(3574.96-t*(1073.77+t*707.56))));
+  const b=27.2+t*(3211.1-t*(15327.97-t*(27814.0-t*(22569.18-t*6838.66))));
+  return [r,g,b].map(v=>Math.max(0,Math.min(255,v))); }
+function stops(list){ return t=>{ t=Math.max(0,Math.min(1,t)); const n=list.length-1; const i=Math.min(n-1,Math.floor(t*n)); const f=t*n-i; const a=list[i],b=list[i+1]; return [a[0]+(b[0]-a[0])*f,a[1]+(b[1]-a[1])*f,a[2]+(b[2]-a[2])*f]; }; }
+const viridis=stops([[68,1,84],[72,40,120],[62,74,137],[49,104,142],[38,130,142],[31,158,137],[53,183,121],[109,205,89],[180,222,44],[253,231,37]]);
+const tesla=stops([[0,0,0],[80,0,140],[200,0,120],[255,80,0],[255,200,0],[255,255,255]]);
+const cool=stops([[6,24,70],[10,60,140],[20,120,200],[40,200,230],[160,245,255],[255,255,255]]);
+const custom=stops([[20,40,120],[40,180,200],[240,240,120],[255,60,40]]);
+const css=c=>`rgb(${c[0]|0},${c[1]|0},${c[2]|0})`;
+function gradientCSS(fn){ const s=[]; for(let i=0;i<=20;i++) s.push(css(fn(i/20))); return `linear-gradient(90deg,${s.join(',')})`; }
+
+// speed stops -> t (piecewise linear so the legend ticks sit evenly, like the reference)
+const TICKS=[0,1,2,4,7,11,16];
+function speedT(v){ for(let i=0;i<TICKS.length-1;i++){ if(v<=TICKS[i+1]) return (i+(v-TICKS[i])/(TICKS[i+1]-TICKS[i]))/(TICKS.length-1); } return 1; }
+
+// legend
+document.getElementById('legendBar').style.background=gradientCSS(turbo);
+document.getElementById('legendTicks').innerHTML=TICKS.map((v,i)=>`<span style="left:${i/(TICKS.length-1)*100}%">${v}</span>`).join('');
+document.getElementById('pipeLegendBar').style.background=gradientCSS(cool);
+document.getElementById('swTurbo').style.background=gradientCSS(turbo);
+document.getElementById('swViridis').style.background=gradientCSS(viridis);
+document.getElementById('swTesla').style.background=gradientCSS(tesla);
+document.getElementById('swCustom').style.background=gradientCSS(custom);
+
+// ---------- path geometry ----------
+function catmull(pts,n){ // closed=false; returns array of {x,y}
+  const out=[]; const P=i=>pts[Math.max(0,Math.min(pts.length-1,i))];
+  for(let i=0;i<pts.length-1;i++){ const p0=P(i-1),p1=P(i),p2=P(i+1),p3=P(i+2); const seg=Math.ceil(n/(pts.length-1));
+    for(let k=0;k<seg;k++){ const t=k/seg,t2=t*t,t3=t2*t;
+      out.push({x:0.5*((2*p1.x)+(-p0.x+p2.x)*t+(2*p0.x-5*p1.x+4*p2.x-p3.x)*t2+(-p0.x+3*p1.x-3*p2.x+p3.x)*t3),
+                y:0.5*((2*p1.y)+(-p0.y+p2.y)*t+(2*p0.y-5*p1.y+4*p2.y-p3.y)*t2+(-p0.y+3*p1.y-3*p2.y+p3.y)*t3)}); } }
+  out.push({...pts[pts.length-1]}); return out; }
+function smoothSample(arr,s){ // cosine interpolation over normalised s
+  const n=arr.length-1; const x=Math.max(0,Math.min(n,s*n)); const i=Math.min(n-1,Math.floor(x)); const f=x-i; const m=(1-Math.cos(f*Math.PI))/2; return arr[i]*(1-m)+arr[i+1]*m; }
+
+function buildField(waypoints,speedSeries,widthSeries,N){
+  const pts=catmull(waypoints,N); const n=pts.length;
+  // arc-length resample
+  const cum=[0]; for(let i=1;i<n;i++) cum.push(cum[i-1]+Math.hypot(pts[i].x-pts[i-1].x,pts[i].y-pts[i-1].y));
+  const L=cum[n-1]; const M=N; const X=new Float32Array(M),Y=new Float32Array(M),TX=new Float32Array(M),TY=new Float32Array(M),W=new Float32Array(M),V=new Float32Array(M);
+  let j=0; for(let i=0;i<M;i++){ const d=i/(M-1)*L; while(j<n-2&&cum[j+1]<d) j++; const f=(d-cum[j])/((cum[j+1]-cum[j])||1);
+    X[i]=pts[j].x+(pts[j+1].x-pts[j].x)*f; Y[i]=pts[j].y+(pts[j+1].y-pts[j].y)*f; }
+  for(let i=0;i<M;i++){ const a=Math.max(0,i-2),b=Math.min(M-1,i+2); let dx=X[b]-X[a],dy=Y[b]-Y[a]; const l=Math.hypot(dx,dy)||1; TX[i]=dx/l; TY[i]=dy/l;
+    const s=i/(M-1); V[i]=smoothSample(speedSeries,s); W[i]=smoothSample(widthSeries,s); }
+  return {X,Y,TX,TY,W,V,M,L};
+}
+
+// ---------- a flow instance ----------
+function makeFlow(opts){
+  const cv=opts.canvas, dpr=Math.min(2,window.devicePixelRatio||1), w=opts.w,h=opts.h;
+  cv.width=w*dpr; cv.height=h*dpr; const ctx=cv.getContext('2d');
+  const pc=document.createElement('canvas'); pc.width=w*dpr; pc.height=h*dpr; const px=pc.getContext('2d');
+  const bg=document.createElement('canvas'); bg.width=w*dpr; bg.height=h*dpr; const bx=bg.getContext('2d');
+  const F=buildField(opts.waypoints,opts.speed,opts.width,900);
+  const scale=opts.scale, vmax=opts.vmax, toT=opts.toT||(v=>v/vmax);
+
+  // --- static background + channel, rendered once ---
+  bx.scale(dpr,dpr);
+  if(opts.drawBackground) opts.drawBackground(bx,w,h);
+  // soft dark halo under channel
+  bx.save(); bx.lineCap='round'; bx.lineJoin='round';
+  for(let pass=0;pass<2;pass++){ bx.strokeStyle=pass?'rgba(0,0,0,0.45)':'rgba(0,0,0,0.22)';
+    for(let i=0;i<F.M-1;i++){ bx.lineWidth=F.W[i]*opts.widthScale+(pass?8:22); bx.beginPath(); bx.moveTo(F.X[i],F.Y[i]); bx.lineTo(F.X[i+1],F.Y[i+1]); bx.stroke(); } }
+  bx.restore();
+  // channel: quads coloured by speed, with lateral shading (faster/hotter in the core)
+  bx.globalAlpha=opts.channelOpacity;
+  const bands=opts.bands||[[-1,-0.55,0.72],[-0.55,0.55,1.0],[0.55,1,0.72]];
+  for(const [a,b,k] of bands){
+    for(let i=0;i<F.M-1;i++){
+      const ws=opts.widthScale; const w0=F.W[i]*ws/2,w1=F.W[i+1]*ws/2; const nx0=-F.TY[i],ny0=F.TX[i],nx1=-F.TY[i+1],ny1=F.TX[i+1];
+      const v=F.V[i]*k + (k<1?0.15:0); // edges a bit slower
+      bx.fillStyle=css(scale(toT(v))); bx.strokeStyle=bx.fillStyle; bx.lineWidth=0.8;
+      bx.beginPath(); bx.moveTo(F.X[i]+nx0*w0*a,F.Y[i]+ny0*w0*a); bx.lineTo(F.X[i+1]+nx1*w1*a,F.Y[i+1]+ny1*w1*a);
+      bx.lineTo(F.X[i+1]+nx1*w1*b,F.Y[i+1]+ny1*w1*b); bx.lineTo(F.X[i]+nx0*w0*b,F.Y[i]+ny0*w0*b); bx.closePath(); bx.fill(); bx.stroke(); } }
+  // blend the band seams with a semi-transparent full-width pass
+  bx.globalAlpha=opts.channelOpacity*0.55;
+  for(let i=0;i<F.M-1;i++){ const ws=opts.widthScale; const w0=F.W[i]*ws/2,w1=F.W[i+1]*ws/2; const nx0=-F.TY[i],ny0=F.TX[i],nx1=-F.TY[i+1],ny1=F.TX[i+1];
+    bx.fillStyle=css(scale(toT(F.V[i]*0.9))); bx.beginPath(); bx.moveTo(F.X[i]-nx0*w0,F.Y[i]-ny0*w0); bx.lineTo(F.X[i+1]-nx1*w1,F.Y[i+1]-ny1*w1); bx.lineTo(F.X[i+1]+nx1*w1,F.Y[i+1]+ny1*w1); bx.lineTo(F.X[i]+nx0*w0,F.Y[i]+ny0*w0); bx.closePath(); bx.fill(); }
+  bx.globalAlpha=1;
+  // subtle bright rim
+  bx.save(); bx.strokeStyle='rgba(255,255,255,0.10)'; bx.lineWidth=1;
+  for(const side of [-1,1]){ bx.beginPath(); for(let i=0;i<F.M;i++){ const ww=F.W[i]*opts.widthScale/2; const x=F.X[i]-F.TY[i]*ww*side,y=F.Y[i]+F.TX[i]*ww*side; i?bx.lineTo(x,y):bx.moveTo(x,y);} bx.stroke(); }
+  bx.restore();
+
+  // --- particles ---
+  const N=opts.count; const S=new Float32Array(N),U=new Float32Array(N),AGE=new Float32Array(N),PX=new Float32Array(N),PY=new Float32Array(N);
+  const ws=opts.widthScale;
+  function pos(i){ const k=Math.min(F.M-1,Math.max(0,Math.round(S[i]*(F.M-1)))); const ww=F.W[k]*ws/2*U[i]; PX[i]=F.X[k]-F.TY[k]*ww; PY[i]=F.Y[k]+F.TX[k]*ww; return k; }
+  const CW=new Float32Array(F.M); { let acc=0; for(let k=0;k<F.M;k++){ acc+=F.W[k]; CW[k]=acc; } for(let k=0;k<F.M;k++) CW[k]/=acc; }
+  function spawnS(){ const r=Math.random(); let lo=0,hi=F.M-1; while(lo<hi){ const m=(lo+hi)>>1; if(CW[m]<r) lo=m+1; else hi=m; } return lo/(F.M-1); }
+  function spawn(i,uniform){ S[i]=uniform?spawnS():Math.random()*0.08; U[i]=(Math.random()*2-1)*0.97; AGE[i]=(60+Math.random()*160)|0; pos(i); }
+  for(let i=0;i<N;i++) spawn(i,true);
+  px.scale(dpr,dpr); px.lineCap='round';
+  const dir=opts.direction||1;
+  function step(dt){
+    px.globalCompositeOperation='destination-in'; px.fillStyle=`rgba(0,0,0,${opts.trail})`; px.fillRect(0,0,w,h);
+    px.globalCompositeOperation='source-over'; px.strokeStyle=opts.streakColor; px.lineWidth=opts.streakWidth; px.beginPath();
+    for(let i=0;i<N;i++){
+      const x0=PX[i],y0=PY[i];
+      const k=Math.min(F.M-1,Math.max(0,Math.round(S[i]*(F.M-1))));
+      const v=F.V[k]; const dpx=v*opts.pxPerUnit*opts.speedScale*dt*60; // px per frame
+      S[i]+=dir*dpx/F.L; U[i]+=(Math.random()-0.5)*0.01*(1-U[i]*U[i]); if(U[i]>0.98)U[i]=0.98; if(U[i]<-0.98)U[i]=-0.98;
+      AGE[i]-=1;
+      if(S[i]>=1||S[i]<=0||AGE[i]<=0){ spawn(i,AGE[i]<=0); if(dir<0&&S[i]<0.1) S[i]=1-S[i]; continue; }
+      pos(i); px.moveTo(x0,y0); px.lineTo(PX[i],PY[i]);
+    }
+    px.stroke();
+    ctx.setTransform(1,0,0,1,0,0); ctx.clearRect(0,0,cv.width,cv.height); ctx.drawImage(bg,0,0); ctx.drawImage(pc,0,0);
+  }
+  // helper to place labels at s with a lateral offset
+  function at(s,u){ const k=Math.round(s*(F.M-1)); const ww=F.W[k]*ws/2*u; return {x:F.X[k]-F.TY[k]*ww, y:F.Y[k]+F.TX[k]*ww}; }
+  return {step,at,F};
+}
+
+// ---------- faux dark map background ----------
+function drawMap(c,w,h){
+  c.fillStyle='#17191d'; c.fillRect(0,0,w,h);
+  // land texture: faint blocks
+  let seed=7; const rnd=()=>{ seed=(seed*16807)%2147483647; return seed/2147483647; };
+  for(let i=0;i<260;i++){ const x=rnd()*w,y=rnd()*h,s=4+rnd()*22; c.fillStyle=`rgba(${60+rnd()*30|0},${64+rnd()*30|0},${58+rnd()*26|0},${0.10+rnd()*0.12})`; c.fillRect(x,y,s,s*(0.5+rnd())); }
+  // street grid (two orientations)
+  c.strokeStyle='rgba(255,255,255,0.045)'; c.lineWidth=1;
+  for(let x=-200;x<w+200;x+=26){ c.beginPath(); c.moveTo(x,0); c.lineTo(x+70,h); c.stroke(); }
+  for(let y=-100;y<h+100;y+=26){ c.beginPath(); c.moveTo(0,y); c.lineTo(w,y-40); c.stroke(); }
+  // a couple of major roads
+  c.strokeStyle='rgba(255,255,255,0.10)'; c.lineWidth=2;
+  [[0,210,860,120],[300,0,420,470],[560,0,720,470]].forEach(([a,b,d,e])=>{ c.beginPath(); c.moveTo(a,b); c.lineTo(d,e); c.stroke(); });
+  // dark lake area in bottom-left
+  const g=c.createRadialGradient(80,440,10,80,440,420); g.addColorStop(0,'rgba(4,8,20,0.95)'); g.addColorStop(1,'rgba(4,8,20,0)'); c.fillStyle=g; c.fillRect(0,0,w,h);
+  // vignette
+  const vg=c.createRadialGradient(w*0.5,h*0.5,h*0.3,w*0.5,h*0.5,w*0.75); vg.addColorStop(0,'rgba(0,0,0,0)'); vg.addColorStop(1,'rgba(0,0,0,0.5)'); c.fillStyle=vg; c.fillRect(0,0,w,h);
+}
+
+// ---------- main river ----------
+// Mock data: speed series (mph) along the path and channel width (px). In the plugin these come from two query fields.
+const riverSpeed=[0.6,0.9,1.3,2.0,3.2,5.5,9.5,13.5,15.5,12.0,8.0,5.0,3.6,3.0];
+const riverWidth=[170,160,142,122,100,76,50,36,32,42,60,76,86,88];
+const river=makeFlow({
+  canvas:document.getElementById('riverCanvas'), w:860,h:470,
+  waypoints:[{x:30,y:380},{x:160,y:372},{x:290,y:340},{x:410,y:300},{x:500,y:240},{x:570,y:175},{x:650,y:130},{x:760,y:110},{x:870,y:90}],
+  speed:riverSpeed, width:riverWidth, widthScale:1.0, channelOpacity:0.86,
+  scale:turbo, vmax:16, toT:speedT,
+  count:3200, pxPerUnit:0.30, speedScale:1.0, trail:0.85, streakWidth:1.1, streakColor:'rgba(255,255,255,0.42)',
+  drawBackground:drawMap
+});
+
+// label anchors (s along path, u across, dx/dy text offset)
+const anchors=[
+  {s:0.08,u:0.0,text:'LAKE ERIE',caps:true,dx:-36,dy:-6,line:false},
+  {s:0.46,u:-1.0,text:'Black Rock Canal',dx:-110,dy:6,line:true},
+  {s:0.68,u:1.0,text:'Peace Bridge',dx:14,dy:-6,line:true},
+  {s:0.9,u:1.0,text:'Grand Island',dx:-30,dy:16,line:true},
+];
+const an=document.getElementById('anchors');
+for(const a of anchors){ const p=river.at(a.s,a.u); const el=document.createElement('div'); el.className='anchor'+(a.caps?' caps':''); el.style.left=(p.x+a.dx)+'px'; el.style.top=(p.y+a.dy)+'px'; el.textContent=a.text; an.appendChild(el);
+  if(a.line){ const d=document.createElement('div'); d.className='anchor'; d.innerHTML='<span class="dot"></span>'; d.style.left=(p.x-2.5)+'px'; d.style.top=(p.y-2.5)+'px'; an.appendChild(d);
+    const l=document.createElement('div'); l.className='anchor'; const ln=document.createElement('div'); ln.className='line'; const ex=p.x+a.dx+(a.dx<0?el.offsetWidth+3:-4), ey=p.y+a.dy+7; const len=Math.hypot(ex-p.x,ey-p.y); ln.style.width=len+'px'; ln.style.left=p.x+'px'; ln.style.top=p.y+'px'; ln.style.transformOrigin='0 0'; ln.style.transform=`rotate(${Math.atan2(ey-p.y,ex-p.x)}rad)`; l.appendChild(ln); an.appendChild(l); } }
+
+// ---------- pipe variant ----------
+const pipeSpeed=[6,7,9,12,14,17,19.5,18,13,9,7,6.5,8,10];
+const pipeWidth=[34,34,34,34,34,34,34,34,34,34,34,34,34,34];
+const pipe=makeFlow({
+  canvas:document.getElementById('pipeCanvas'), w:860,h:150,
+  waypoints:[{x:20,y:84},{x:300,y:84},{x:560,y:84},{x:840,y:84}],
+  speed:pipeSpeed, width:pipeWidth, widthScale:1.0, channelOpacity:0.9,
+  scale:cool, vmax:20,
+  bands:[[-1,1,1]],
+  count:500, pxPerUnit:0.11, speedScale:1.0, trail:0.84, streakWidth:1.3, streakColor:'rgba(235,250,255,0.6)',
+  drawBackground:(c,w,h)=>{ c.fillStyle='#121417'; c.fillRect(0,0,w,h); c.strokeStyle='rgba(255,255,255,0.04)'; for(let x=20;x<w;x+=40){ c.beginPath(); c.moveTo(x,60); c.lineTo(x,108); c.stroke(); } }
+});
+const pa=document.getElementById('pipeAnchors');
+[['eth0',0.01],['sw-agg-3',0.33],['fw-edge',0.62],['bb-core-1',0.97]].forEach(([t,s])=>{ const p=pipe.at(s,0); const el=document.createElement('div'); el.className='pipeAnchor'; el.style.left=(p.x-18)+'px'; el.style.top=(p.y+30)+'px'; el.textContent=t; pa.appendChild(el); });
+
+// ---------- loop ----------
+let last=performance.now();
+function frame(now){ const dt=Math.min(0.05,(now-last)/1000); last=now; river.step(dt); pipe.step(dt); requestAnimationFrame(frame); }
+requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>

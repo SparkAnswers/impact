@@ -1,0 +1,85 @@
+# Impact dev/demo stack. Every target in the Makefile runs through these services;
+# nothing calls npm on the host.
+#
+#   docker compose up          Grafana 13 + Impact + demo dashboards at http://localhost:3001
+#   make dev                   webpack watch with livereload (second terminal)
+
+x-node: &node
+  image: node:22-alpine
+  working_dir: /app
+  volumes:
+    - .:/app
+    - node_modules:/app/node_modules   # container-side deps; never shares the host's node_modules
+    - npm-cache:/root/.npm
+  environment:
+    NPM_CONFIG_UPDATE_NOTIFIER: 'false'
+
+services:
+  install:
+    <<: *node
+    command: sh ./scripts/ensure-deps.sh
+    profiles: [tools]
+
+  build:
+    <<: *node
+    command: sh -c "sh ./scripts/ensure-deps.sh && npm run build"
+
+  dev:
+    <<: *node
+    command: sh -c "sh ./scripts/ensure-deps.sh && npm run dev"
+    ports:
+      - 35729:35729
+    profiles: [tools]
+
+  typecheck:
+    <<: *node
+    command: sh -c "sh ./scripts/ensure-deps.sh && npm run typecheck"
+    profiles: [tools]
+
+  lint:
+    <<: *node
+    command: sh -c "sh ./scripts/ensure-deps.sh && npm run lint"
+    profiles: [tools]
+
+  test:
+    <<: *node
+    command: sh -c "sh ./scripts/ensure-deps.sh && npm run test:ci"
+    profiles: [tools]
+
+  package:
+    <<: *node
+    command: sh -c "sh ./scripts/ensure-deps.sh && sh ./scripts/package.sh"
+    profiles: [tools]
+
+  validate:
+    image: grafana/plugin-validator-cli:latest
+    volumes:
+      - .:/plugin:ro
+    working_dir: /plugin
+    entrypoint: sh
+    command: -c "/app/bin/linux_amd64/plugincheck2 -config ./scripts/validator.yaml ./$$(ls *.zip | head -n1)"
+    profiles: [tools]
+
+  grafana:
+    image: grafana/${GRAFANA_IMAGE:-grafana}:${GRAFANA_VERSION:-13.0.10}
+    container_name: impact-grafana
+    depends_on:
+      build:
+        condition: service_completed_successfully
+    ports:
+      - ${IMPACT_PORT:-3000}:3000
+    environment:
+      GF_PLUGINS_ALLOW_LOADING_UNSIGNED_PLUGINS: sparkanswers-impact-app,sparkanswers-impact-flow-panel,sparkanswers-impact-gauge-panel,sparkanswers-impact-river-panel,sparkanswers-impact-bars-panel
+      GF_AUTH_ANONYMOUS_ENABLED: 'true'
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Viewer
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_LOG_FILTERS: plugin.sparkanswers-impact-app:debug
+      GF_LOG_LEVEL: info
+    volumes:
+      - ./dist:/var/lib/grafana/plugins/sparkanswers-impact-app:ro
+      - ./provisioning:/etc/grafana/provisioning:ro
+
+volumes:
+  node_modules:
+  npm-cache:

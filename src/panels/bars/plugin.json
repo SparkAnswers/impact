@@ -1,0 +1,16 @@
+{
+  "$schema": "https://raw.githubusercontent.com/grafana/grafana/main/docs/sources/developers/plugins/plugin.schema.json",
+  "type": "panel",
+  "name": "Impact Status Bars",
+  "id": "sparkanswers-impact-bars-panel",
+  "info": {
+    "keywords": ["panel", "impact", "bars"],
+    "description": "Modern table of rows with animated progress bars, sparklines and status pills",
+    "author": { "name": "SparkAnswers" },
+    "logos": { "small": "img/logo.svg", "large": "img/logo.svg" },
+    "screenshots": [],
+    "version": "%VERSION%",
+    "updated": "%TODAY%"
+  },
+  "dependencies": { "grafanaDependency": ">=12.0.0", "plugins": [] }
+}
