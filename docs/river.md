@@ -60,10 +60,84 @@ on the stops like a hand-made map legend). The scale domain is *Auto* (field min
 range) or *Fixed*. Legend ticks are formatted by the field display processor (unit, decimals from
 **Standard options**).
 
+## Network map
+
+**Data > Channel source = Network map** generates the channels from data instead of hand-placed waypoints: every
+link (switch uplink, service call, pipeline stage) becomes a channel flowing between two node pucks. Links are
+parsed exactly like the flow panel's data-driven mode:
+
+| Shape          | What the panel reads                                                                                   |
+| -------------- | ------------------------------------------------------------------------------------------------------ |
+| Edge table     | A string **Source field** and **Target field** per row (`source`, `target` by default), a numeric **Value field** (empty = first numeric field), an optional **Width field** (second numeric field) and **Label field**. A Prometheus instant query in *Table* format produces this. |
+| Labelled series| One numeric series per link whose labels hold the source and target names; the last value is the link value. A second query whose metric / display name matches **Width field** supplies the width. |
+| Node table     | Optional: a frame with the **Node id field** (`id`) and no source/target fields adds labels (**Node label field**) and a status (**Node status field**: `ok` / `warn` / `error`, or 1 / 2 / 3) that colours the puck. |
+
+The value drives the colour scale (one shared domain across all links) and the particle speed; the width comes
+from the width field (normalised to its maximum) or is fixed (**Channel width**). **Direction** = *By sign* sends
+links with a negative value backwards. Links in both directions between the same two nodes are offset to opposite
+sides so they never overlap; every other link bends gently (**Curve**).
+
+### Node placement
+
+- **Auto layout**: the layered (left to right / top to bottom) or radial layout. Positions are deterministic for a
+  given set of node ids, so nodes stay put across refreshes.
+- **Positions**: a list of node id → x, y (0..1, y downwards). *Seed from auto layout* fills the list from the
+  current query; edit the numbers to match a floor plan or a map set as the **Background** image.
+- **Edit on canvas** shows drag handles on the pucks in both modes. Dragged positions are stored as overrides and
+  win over the list and the auto layout; *Reset dragged* in the Positions editor forgets them. Switch the handles
+  off before saving.
+
+Labels: each node shows its label (or id) under the puck; each channel shows its formatted value at its midpoint
+(**Node labels** / **Value labels**). `{value}` in the title, subtitle and caption is the **sum** of all link
+values, or the value of one link when **Caption channel** is set (`source>target`). Caps: 60 channels (the highest
+values are kept) and 100 nodes (the most connected); a note in the corner says when the data was truncated.
+The **Particle budget** is shared by all links in proportion to their value, with a small floor per link, and the
+global 20000 cap still applies.
+
+### Network map options
+
+| Option                              | Description                                                                          |
+| ----------------------------------- | ------------------------------------------------------------------------------------ |
+| Data > Channel source               | *Manual* (the Channels list) or *Network map* (channels from links in the data).     |
+| Network map > Node placement        | *Auto layout* or *Positions*.                                                         |
+| Network map > Layout direction      | Left to right, top to bottom, or radial around the most connected node.              |
+| Network map > Positions             | Node id → x, y list with *Seed from auto layout*, *Add* and *Reset dragged*.          |
+| Network map > Edit on canvas        | Drag handles on the nodes; dragged positions are stored as overrides.                |
+| Network map > Node size             | Puck radius in pixels.                                                               |
+| Network map > Channel width (px)    | Fixed width, or the widest channel when a width field is set.                        |
+| Network map > Curve                 | Bend of each channel as a fraction of its length (0 = straight).                     |
+| Network map > Colour scale / domain | Preset or thresholds; auto or fixed domain shared by all links.                      |
+| Network map > Direction             | Forward, Reverse, By sign.                                                           |
+| Network map > Particle budget / speed / colour | Particles shared by value share; speed factor; white, by value or fixed colour. |
+| Network map > Node labels / Value labels | Toggle the two label layers.                                                    |
+| Network map > Caption channel       | `source>target` whose value feeds `{value}`; empty = sum of all links.               |
+| Network map fields > Source / Target / Value / Width / Label field | Edge field (or series label) names.                |
+| Network map fields > Node id / label / status field | Node frame field names.                                          |
+
+### PromQL recipe
+
+Instant queries in *Table* format, one row per link. Rename the label columns with the field options or set the
+field names to match:
+
+```promql
+# A: link throughput, bits per second (Source field = "src", Target field = "dst")
+sum by (src, dst) (rate(link_rx_bytes_total[5m])) * 8
+
+# B (optional, Width field = "link_capacity_bits"): link capacity for the channel width
+max by (src, dst) (link_capacity_bits)
+
+# N (optional node frame; Node id field = "device", Node status field = "status")
+max by (device, status) (device_up)
+```
+
+With range queries (series shape) the panel uses the last value of each series and matches the width series by its
+metric name, so `Width field = link_capacity_bits` works for both shapes.
+
 ## Options
 
 | Option                       | Description                                                                               |
 | ---------------------------- | ----------------------------------------------------------------------------------------- |
+| Data > Channel source        | *Manual* (default) uses the Channels list; *Network map* generates one channel per link in the data (see above). |
 | Data > Demo data             | Built-in generated data (three smooth 0..100 series). *When no data* (default): used only when the query returns no frames or no numeric field. *Always*: ignores the query. *Off*: never; the empty state says "Needs one or more numeric series". A "Demo data" pill marks generated data. |
 | Channels                     | List editor: add, remove, reorder channels. Each card has path, data, width, colour, particles and labels. |
 | Channel > Path               | Waypoints as normalised `x, y` pairs (0..1). Presets: Horizontal, S-curve, Diagonal, U. **Edit on canvas** shows draggable handles on the panel. |
@@ -107,3 +181,5 @@ Standard field options (unit, decimals, min, max, thresholds, display name, over
   time field.
 - Use the "Edit on canvas" switch on a channel to drag its waypoints, then switch it off before saving so the
   handles disappear.
+- Network map over a floor plan: set **Background** to the plan image, pick *Positions*, seed from the auto layout,
+  then drag the pucks onto the rooms with **Edit on canvas**; the dragged positions persist with the panel.

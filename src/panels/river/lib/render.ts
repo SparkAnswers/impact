@@ -383,3 +383,36 @@ export function trailKeep(trail: number, dt: number): number {
   const t = Math.max(0, Math.min(0.995, trail));
   return Math.pow(t, Math.max(0.001, dt * 60));
 }
+
+export interface NodePuck {
+  x: number;
+  y: number;
+  r: number;
+  /** Fill colour (status colour or the theme accent). */
+  color: string;
+}
+
+/** Draws labelled-puck bodies for the network map: glow, dark ring, coloured core, highlight. */
+export function paintNodes(ctx: CanvasRenderingContext2D, nodes: NodePuck[], ringColor: string, glow = 1) {
+  ctx.save();
+  for (const n of nodes) {
+    if (glow > 0) {
+      ctx.shadowColor = n.color;
+      ctx.shadowBlur = n.r * 1.6 * glow;
+    }
+    ctx.beginPath();
+    ctx.arc(n.x, n.y, n.r + 2, 0, Math.PI * 2);
+    ctx.fillStyle = ringColor;
+    ctx.fill();
+    ctx.shadowBlur = 0;
+    ctx.beginPath();
+    ctx.arc(n.x, n.y, n.r, 0, Math.PI * 2);
+    ctx.fillStyle = n.color;
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(n.x - n.r * 0.3, n.y - n.r * 0.3, n.r * 0.45, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(255,255,255,0.28)';
+    ctx.fill();
+  }
+  ctx.restore();
+}

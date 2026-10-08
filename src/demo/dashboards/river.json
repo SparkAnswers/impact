@@ -820,6 +820,241 @@
           }
         ]
       }
+    },
+    {
+      "id": 7,
+      "type": "sparkanswers-impact-river-panel",
+      "title": "Network map · auto layout",
+      "description": "Channel source = Network map: one channel per link from a source/target/value table (query A), nodes decorated by a node table (query N). Layered left-to-right auto layout; the two reverse pairs (Dist 2 ↔ Access 2, Dist 3 ↔ Access 3) are offset so both directions stay visible.",
+      "gridPos": {
+        "x": 0,
+        "y": 55,
+        "w": 24,
+        "h": 14
+      },
+      "datasource": {
+        "type": "grafana-testdata-datasource",
+        "uid": "${DS_TESTDATA}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-testdata-datasource",
+            "uid": "${DS_TESTDATA}"
+          },
+          "scenarioId": "csv_content",
+          "csvContent": "source,target,value,width\ncore-a,dist-1,460,10\ncore-a,dist-2,390,10\ncore-b,dist-1,260,10\ncore-b,dist-2,410,10\ncore-b,dist-3,300,10\ndist-1,access-1,180,1\ndist-1,access-2,150,1\ndist-2,access-2,220,1\naccess-2,dist-2,140,1\ndist-2,access-3,170,1\ndist-3,access-3,130,1\naccess-3,dist-3,90,1\ndist-3,access-4,90,1\naccess-4,storage,60,25\n"
+        },
+        {
+          "refId": "N",
+          "datasource": {
+            "type": "grafana-testdata-datasource",
+            "uid": "${DS_TESTDATA}"
+          },
+          "scenarioId": "csv_content",
+          "csvContent": "id,label,status\ncore-a,Core A,ok\ncore-b,Core B,ok\ndist-1,Dist 1,ok\ndist-2,Dist 2,ok\ndist-3,Dist 3,warn\naccess-1,Access 1,ok\naccess-2,Access 2,ok\naccess-3,Access 3,ok\naccess-4,Access 4,error\nstorage,Storage,ok\n"
+        }
+      ],
+      "options": {
+        "channelSource": "network",
+        "title": "Switch uplinks",
+        "subtitle": "Throughput per link, auto layout",
+        "caption": "All uplinks",
+        "captionBig": false,
+        "captionValue": true,
+        "showLegend": true,
+        "legendPosition": "bottom-right",
+        "particleCountMultiplier": 1,
+        "channels": [],
+        "network": {
+          "sourceField": "source",
+          "targetField": "target",
+          "valueField": "value",
+          "value2Field": "",
+          "labelField": "label",
+          "nodeIdField": "id",
+          "nodeLabelField": "label",
+          "nodeStatusField": "status",
+          "placement": "auto",
+          "layoutDirection": "lr",
+          "layout": {
+            "positions": [],
+            "overrides": {}
+          },
+          "editNodes": false,
+          "nodeSize": 14,
+          "widthPx": 28,
+          "curve": 0.12,
+          "colorScale": "turbo",
+          "scaleDomain": {
+            "mode": "auto"
+          },
+          "direction": "forward",
+          "particleBudget": 6000,
+          "particles": {
+            "count": 0,
+            "speed": 1,
+            "trail": 0.88,
+            "width": 1.2,
+            "color": "white",
+            "fixedColor": "#ffffff"
+          },
+          "showNodeLabels": true,
+          "showValueLabels": true,
+          "captionChannel": ""
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "Mbits",
+          "decimals": 0
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 8,
+      "type": "sparkanswers-impact-river-panel",
+      "title": "Network map · placed over a background",
+      "description": "Same data with Node placement = Positions: every node id has an x, y (0..1) so the map matches a site plan (cores at the top, distribution in the middle, access at the bottom, storage to the right). Width from the second numeric field (uplinks wide, access links narrow); caption follows one link.",
+      "gridPos": {
+        "x": 0,
+        "y": 69,
+        "w": 24,
+        "h": 14
+      },
+      "datasource": {
+        "type": "grafana-testdata-datasource",
+        "uid": "${DS_TESTDATA}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-testdata-datasource",
+            "uid": "${DS_TESTDATA}"
+          },
+          "scenarioId": "csv_content",
+          "csvContent": "source,target,value,width\ncore-a,dist-1,460,10\ncore-a,dist-2,390,10\ncore-b,dist-1,260,10\ncore-b,dist-2,410,10\ncore-b,dist-3,300,10\ndist-1,access-1,180,1\ndist-1,access-2,150,1\ndist-2,access-2,220,1\naccess-2,dist-2,140,1\ndist-2,access-3,170,1\ndist-3,access-3,130,1\naccess-3,dist-3,90,1\ndist-3,access-4,90,1\naccess-4,storage,60,25\n"
+        },
+        {
+          "refId": "N",
+          "datasource": {
+            "type": "grafana-testdata-datasource",
+            "uid": "${DS_TESTDATA}"
+          },
+          "scenarioId": "csv_content",
+          "csvContent": "id,label,status\ncore-a,Core A,ok\ncore-b,Core B,ok\ndist-1,Dist 1,ok\ndist-2,Dist 2,ok\ndist-3,Dist 3,warn\naccess-1,Access 1,ok\naccess-2,Access 2,ok\naccess-3,Access 3,ok\naccess-4,Access 4,error\nstorage,Storage,ok\n"
+        }
+      ],
+      "options": {
+        "channelSource": "network",
+        "title": "Site plan",
+        "subtitle": "Nodes pinned to typed positions; width = link capacity",
+        "caption": "Core B → Dist 2",
+        "captionBig": false,
+        "captionValue": true,
+        "showLegend": true,
+        "legendPosition": "top-right",
+        "particleCountMultiplier": 1,
+        "channels": [],
+        "network": {
+          "sourceField": "source",
+          "targetField": "target",
+          "valueField": "value",
+          "value2Field": "width",
+          "labelField": "label",
+          "nodeIdField": "id",
+          "nodeLabelField": "label",
+          "nodeStatusField": "status",
+          "placement": "positions",
+          "layoutDirection": "lr",
+          "layout": {
+            "positions": [
+              {
+                "id": "core-a",
+                "x": 0.36,
+                "y": 0.3
+              },
+              {
+                "id": "core-b",
+                "x": 0.64,
+                "y": 0.3
+              },
+              {
+                "id": "dist-1",
+                "x": 0.18,
+                "y": 0.52
+              },
+              {
+                "id": "dist-2",
+                "x": 0.5,
+                "y": 0.6
+              },
+              {
+                "id": "dist-3",
+                "x": 0.86,
+                "y": 0.56
+              },
+              {
+                "id": "access-1",
+                "x": 0.14,
+                "y": 0.8
+              },
+              {
+                "id": "access-2",
+                "x": 0.32,
+                "y": 0.88
+              },
+              {
+                "id": "access-3",
+                "x": 0.68,
+                "y": 0.88
+              },
+              {
+                "id": "access-4",
+                "x": 0.9,
+                "y": 0.86
+              },
+              {
+                "id": "storage",
+                "x": 0.96,
+                "y": 0.52
+              }
+            ],
+            "overrides": {}
+          },
+          "editNodes": false,
+          "nodeSize": 14,
+          "widthPx": 44,
+          "curve": 0.08,
+          "colorScale": "cool",
+          "scaleDomain": {
+            "mode": "auto"
+          },
+          "direction": "forward",
+          "particleBudget": 6000,
+          "particles": {
+            "count": 0,
+            "speed": 1,
+            "trail": 0.88,
+            "width": 1.2,
+            "color": "byValue",
+            "fixedColor": "#ffffff"
+          },
+          "showNodeLabels": true,
+          "showValueLabels": true,
+          "captionChannel": "core-b>dist-2"
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "Mbits",
+          "decimals": 0
+        },
+        "overrides": []
+      }
     }
   ]
 }

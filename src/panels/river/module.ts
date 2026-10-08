@@ -3,8 +3,15 @@ import { MOTION_PREFERENCE_CHOICES, MOTION_PREFERENCE_DESCRIPTION } from '../../
 import { FieldConfigProperty, PanelPlugin, ThresholdsMode } from '@grafana/data';
 import { RiverPanel } from './RiverPanel';
 import { ChannelsEditor } from './editors/ChannelsEditor';
+import { PositionsEditor } from './editors/PositionsEditor';
 import { COLOR_PRESET_OPTIONS } from './lib/colors';
-import { DEFAULT_OPTIONS, type RiverOptions } from './types';
+import { DEFAULT_NETWORK, DEFAULT_OPTIONS, type RiverOptions } from './types';
+
+const NETWORK = ['Network map'];
+const NETWORK_FIELDS = ['Network map fields'];
+const isNetwork = (o: RiverOptions) => o.channelSource === 'network';
+const isManual = (o: RiverOptions) => !isNetwork(o);
+const N = DEFAULT_NETWORK;
 
 export const plugin = new PanelPlugin<RiverOptions>(RiverPanel)
   .useFieldConfig({
@@ -33,6 +40,20 @@ export const plugin = new PanelPlugin<RiverOptions>(RiverPanel)
         defaultValue: DEFAULT_OPTIONS.demoData,
         settings: { options: DEMO_MODE_CHOICES },
       })
+      .addRadio({
+        path: 'channelSource',
+        name: 'Channel source',
+        description:
+          'Manual: the hand-placed channel list below. Network map: one channel per link in the data (source, target, value), flowing between node pucks laid out automatically or placed over a background.',
+        category: ['Data'],
+        defaultValue: DEFAULT_OPTIONS.channelSource,
+        settings: {
+          options: [
+            { value: 'manual', label: 'Manual' },
+            { value: 'network', label: 'Network map' },
+          ],
+        },
+      })
       .addCustomEditor({
         id: 'channels',
         path: 'channels',
@@ -42,6 +63,265 @@ export const plugin = new PanelPlugin<RiverOptions>(RiverPanel)
         category: ['Channels'],
         editor: ChannelsEditor,
         defaultValue: DEFAULT_OPTIONS.channels,
+        showIf: isManual,
+      })
+      .addRadio({
+        path: 'network.placement',
+        name: 'Node placement',
+        description: 'Auto layout: positions from the layered or radial layout. Positions: the list below (seed it from the auto layout, then edit). Dragged positions win in both modes.',
+        category: NETWORK,
+        defaultValue: N.placement,
+        settings: {
+          options: [
+            { value: 'auto', label: 'Auto layout' },
+            { value: 'positions', label: 'Positions' },
+          ],
+        },
+        showIf: isNetwork,
+      })
+      .addRadio({
+        path: 'network.layoutDirection',
+        name: 'Layout direction',
+        description: 'Direction of the auto layout: layered left to right, top to bottom, or radial around the most connected node.',
+        category: NETWORK,
+        defaultValue: N.layoutDirection,
+        settings: {
+          options: [
+            { value: 'lr', label: 'Left to right' },
+            { value: 'tb', label: 'Top to bottom' },
+            { value: 'radial', label: 'Radial' },
+          ],
+        },
+        showIf: isNetwork,
+      })
+      .addCustomEditor({
+        id: 'network.layout',
+        path: 'network.layout',
+        name: 'Positions',
+        description: 'Node id to x, y (0..1) so nodes can match a floor plan or map. Seed from the auto layout, then edit; Reset forgets dragged positions.',
+        category: NETWORK,
+        editor: PositionsEditor,
+        defaultValue: N.layout,
+        showIf: (o) => isNetwork(o) && o.network?.placement === 'positions',
+      })
+      .addBooleanSwitch({
+        path: 'network.editNodes',
+        name: 'Edit on canvas',
+        description: 'Show drag handles on the nodes. Dragged positions are stored as overrides; switch off before saving.',
+        category: NETWORK,
+        defaultValue: N.editNodes,
+        showIf: isNetwork,
+      })
+      .addSliderInput({
+        path: 'network.nodeSize',
+        name: 'Node size',
+        description: 'Radius of the node pucks in pixels.',
+        category: NETWORK,
+        defaultValue: N.nodeSize,
+        settings: { min: 4, max: 40, step: 1 },
+        showIf: isNetwork,
+      })
+      .addSliderInput({
+        path: 'network.widthPx',
+        name: 'Channel width (px)',
+        description: 'Width of every channel, or of the widest one when the width field is set.',
+        category: NETWORK,
+        defaultValue: N.widthPx,
+        settings: { min: 4, max: 160, step: 1 },
+        showIf: isNetwork,
+      })
+      .addSliderInput({
+        path: 'network.curve',
+        name: 'Curve',
+        description: 'Bend of each channel as a fraction of its length. 0 draws straight links; reverse pairs are always offset so they do not overlap.',
+        category: NETWORK,
+        defaultValue: N.curve,
+        settings: { min: 0, max: 0.5, step: 0.01 },
+        showIf: isNetwork,
+      })
+      .addSelect({
+        path: 'network.colorScale',
+        name: 'Colour scale',
+        description: 'Colour preset, thresholds or custom stops for the link values. One shared domain across all links.',
+        category: NETWORK,
+        defaultValue: N.colorScale,
+        settings: { options: COLOR_PRESET_OPTIONS.filter((o) => o.value !== 'custom') },
+        showIf: isNetwork,
+      })
+      .addRadio({
+        path: 'network.scaleDomain.mode',
+        name: 'Scale domain',
+        description: 'Auto: field min/max if set, otherwise the range of the link values. Fixed: the limits below.',
+        category: NETWORK,
+        defaultValue: N.scaleDomain.mode,
+        settings: {
+          options: [
+            { value: 'auto', label: 'Auto' },
+            { value: 'fixed', label: 'Fixed' },
+          ],
+        },
+        showIf: isNetwork,
+      })
+      .addNumberInput({
+        path: 'network.scaleDomain.min',
+        name: 'Domain min',
+        description: 'Lower end of the fixed colour domain.',
+        category: NETWORK,
+        showIf: (o) => isNetwork(o) && o.network?.scaleDomain?.mode === 'fixed',
+      })
+      .addNumberInput({
+        path: 'network.scaleDomain.max',
+        name: 'Domain max',
+        description: 'Upper end of the fixed colour domain.',
+        category: NETWORK,
+        showIf: (o) => isNetwork(o) && o.network?.scaleDomain?.mode === 'fixed',
+      })
+      .addRadio({
+        path: 'network.direction',
+        name: 'Direction',
+        description: 'Forward flows from source to target; By sign reverses links with a negative value.',
+        category: NETWORK,
+        defaultValue: N.direction,
+        settings: {
+          options: [
+            { value: 'forward', label: 'Forward' },
+            { value: 'reverse', label: 'Reverse' },
+            { value: 'bySign', label: 'By sign' },
+          ],
+        },
+        showIf: isNetwork,
+      })
+      .addSliderInput({
+        path: 'network.particleBudget',
+        name: 'Particle budget',
+        description: 'Particles shared by all links in proportion to their value (each link keeps at least a few; total capped at 20000).',
+        category: NETWORK,
+        defaultValue: N.particleBudget,
+        settings: { min: 500, max: 20000, step: 100 },
+        showIf: isNetwork,
+      })
+      .addSliderInput({
+        path: 'network.particles.speed',
+        name: 'Particle speed',
+        description: 'Speed factor for the link particles (the value still drives the relative speed).',
+        category: NETWORK,
+        defaultValue: N.particles.speed,
+        settings: { min: 0.1, max: 4, step: 0.1 },
+        showIf: isNetwork,
+      })
+      .addRadio({
+        path: 'network.particles.color',
+        name: 'Particle colour',
+        description: 'White streaks, streaks tinted by the link value, or a fixed colour.',
+        category: NETWORK,
+        defaultValue: N.particles.color,
+        settings: {
+          options: [
+            { value: 'white', label: 'White' },
+            { value: 'byValue', label: 'By value' },
+            { value: 'fixed', label: 'Fixed' },
+          ],
+        },
+        showIf: isNetwork,
+      })
+      .addColorPicker({
+        path: 'network.particles.fixedColor',
+        name: 'Fixed particle colour',
+        description: 'Streak colour when Particle colour is Fixed.',
+        category: NETWORK,
+        defaultValue: N.particles.fixedColor,
+        showIf: (o) => isNetwork(o) && o.network?.particles?.color === 'fixed',
+      })
+      .addBooleanSwitch({
+        path: 'network.showNodeLabels',
+        name: 'Node labels',
+        description: 'Label under each node: the node label field, or the id.',
+        category: NETWORK,
+        defaultValue: N.showNodeLabels,
+        showIf: isNetwork,
+      })
+      .addBooleanSwitch({
+        path: 'network.showValueLabels',
+        name: 'Value labels',
+        description: 'Formatted link value at the midpoint of each channel.',
+        category: NETWORK,
+        defaultValue: N.showValueLabels,
+        showIf: isNetwork,
+      })
+      .addTextInput({
+        path: 'network.captionChannel',
+        name: 'Caption channel',
+        description: 'Link whose value feeds {value} and the caption line, as source>target. Empty: the sum of all link values.',
+        category: NETWORK,
+        defaultValue: N.captionChannel,
+        settings: { placeholder: 'sum of all links' },
+        showIf: isNetwork,
+      })
+      .addTextInput({
+        path: 'network.sourceField',
+        name: 'Source field',
+        description: 'Field (or series label) holding the link source node id.',
+        category: NETWORK_FIELDS,
+        defaultValue: N.sourceField,
+        showIf: isNetwork,
+      })
+      .addTextInput({
+        path: 'network.targetField',
+        name: 'Target field',
+        description: 'Field (or series label) holding the link target node id.',
+        category: NETWORK_FIELDS,
+        defaultValue: N.targetField,
+        showIf: isNetwork,
+      })
+      .addTextInput({
+        path: 'network.valueField',
+        name: 'Value field',
+        description: 'Numeric field with the link value (colour, particle speed, caption). Empty: the first numeric field of the frame, or the series value.',
+        category: NETWORK_FIELDS,
+        defaultValue: N.valueField,
+        settings: { placeholder: 'auto' },
+        showIf: isNetwork,
+      })
+      .addTextInput({
+        path: 'network.value2Field',
+        name: 'Width field',
+        description: 'Optional second numeric field (or series / metric name) that drives the channel width, normalised to its maximum.',
+        category: NETWORK_FIELDS,
+        defaultValue: N.value2Field,
+        settings: { placeholder: 'none: fixed width' },
+        showIf: isNetwork,
+      })
+      .addTextInput({
+        path: 'network.labelField',
+        name: 'Label field',
+        description: 'Optional field (or series label) with a name for the link, used in the caption and legend.',
+        category: NETWORK_FIELDS,
+        defaultValue: N.labelField,
+        showIf: isNetwork,
+      })
+      .addTextInput({
+        path: 'network.nodeIdField',
+        name: 'Node id field',
+        description: 'Node frames (optional): field with the node id. A frame with this field and no source/target fields decorates the nodes.',
+        category: NETWORK_FIELDS,
+        defaultValue: N.nodeIdField,
+        showIf: isNetwork,
+      })
+      .addTextInput({
+        path: 'network.nodeLabelField',
+        name: 'Node label field',
+        description: 'Node frames: field with the label drawn under the puck.',
+        category: NETWORK_FIELDS,
+        defaultValue: N.nodeLabelField,
+        showIf: isNetwork,
+      })
+      .addTextInput({
+        path: 'network.nodeStatusField',
+        name: 'Node status field',
+        description: 'Node frames: field with a status (ok / warn / error, or 1 / 2 / 3) that colours the puck.',
+        category: NETWORK_FIELDS,
+        defaultValue: N.nodeStatusField,
+        showIf: isNetwork,
       })
       .addSelect({
         path: 'defaultColorScale',
@@ -50,6 +330,7 @@ export const plugin = new PanelPlugin<RiverOptions>(RiverPanel)
         category: ['Colour'],
         defaultValue: DEFAULT_OPTIONS.defaultColorScale,
         settings: { options: COLOR_PRESET_OPTIONS },
+        showIf: isManual,
       })
       .addBooleanSwitch({
         path: 'showLegend',

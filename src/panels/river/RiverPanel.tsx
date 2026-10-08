@@ -7,12 +7,14 @@ import { DemoBadge, rollingMultiSeries, useDemoFrames, type DemoGenerator } from
 import { useMotionAllowed } from '../../shared/motion';
 import { ReducedMotionHint } from '../../shared/ReducedMotionHint';
 import { Legend } from './components/Legend';
+import { NodeEditor } from './components/NodeEditor';
 import { PathEditor } from './components/PathEditor';
 import { bindChannels, effectiveChannels, getNumericFields } from './lib/data';
 import { applyValueToken, displayFor, formatValue, isSafeImageUrl, legendFormatter, mapperFor } from './lib/format';
+import { buildNetwork, demoNetworkFrames, hasEdges, networkParticleCounts, spreadLabels } from './lib/network';
 import { pointAt } from './lib/path';
-import { ParticleSystem, allocateParticles, buildChannelGeometry, paintRibbon, trailKeep } from './lib/render';
-import { DEFAULT_OPTIONS, MAX_TOTAL_PARTICLES, type RiverOptions, type Waypoint } from './types';
+import { ParticleSystem, allocateParticles, buildChannelGeometry, paintNodes, paintRibbon, trailKeep } from './lib/render';
+import { DEFAULT_NETWORK, DEFAULT_OPTIONS, MAX_TOTAL_PARTICLES, type RiverOptions, type Waypoint } from './types';
 
 /**
  * Overlay styles. `onImage` = a picture is behind the text, so use light text with strong shadows;
@@ -77,6 +79,40 @@ const getStyles = (theme: GrafanaTheme2, onImage: boolean) => {
       transform: 'translate(-50%,-50%)',
       pointerEvents: 'none',
     }),
+    nodeLabel: css({
+      position: 'absolute',
+      pointerEvents: 'none',
+      fontSize: 11,
+      fontWeight: 600,
+      letterSpacing: 0.2,
+      color: strong,
+      textShadow: onImage ? '0 1px 3px #000,0 0 6px rgba(0,0,0,.8)' : shadow,
+      whiteSpace: 'nowrap',
+      transform: 'translate(-50%,0)',
+    }),
+    valueLabel: css({
+      position: 'absolute',
+      pointerEvents: 'none',
+      fontSize: 10,
+      fontWeight: 600,
+      color: strong,
+      background: onImage ? 'rgba(10,12,16,.72)' : theme.colors.background.primary,
+      border: `1px solid ${onImage ? 'rgba(255,255,255,.18)' : theme.colors.border.weak}`,
+      borderRadius: 3,
+      padding: '0 4px',
+      lineHeight: '15px',
+      whiteSpace: 'nowrap',
+      transform: 'translate(-50%,-50%)',
+    }),
+    notice: css({
+      position: 'absolute',
+      right: 10,
+      bottom: 8,
+      fontSize: 10,
+      color: soft,
+      textShadow: shadow,
+      pointerEvents: 'none',
+    }),
   };
 };
 
@@ -85,10 +121,13 @@ const demoGenerator: DemoGenerator = (w) =>
   rollingMultiSeries(3, w.now, w.durationMs, Math.max(w.stepMs, Math.ceil(w.durationMs / 240_000) * 1000), {
     unit: 'percent',
   });
+/** Demo network for the "Network map" channel source (edges table + node table). */
+const demoNetworkGenerator: DemoGenerator = (w) => demoNetworkFrames(w.now);
 /** Real data counts as usable when it has at least one numeric field. */
 const hasNumericField = (series: Parameters<typeof getNumericFields>[0]) => getNumericFields(series).length > 0;
 
 export const RIVER_NO_DATA_MESSAGE = 'Needs one or more numeric series';
+export const RIVER_NO_EDGES_MESSAGE = 'Needs edges: a source and a target field (or series labels) per link';
 
 export const RiverPanel: React.FC<PanelProps<RiverOptions>> = (props) => {
   const { data, width, height, fieldConfig, replaceVariables, onOptionsChange, timeZone, timeRange, id } = props;
@@ -99,29 +138,36 @@ export const RiverPanel: React.FC<PanelProps<RiverOptions>> = (props) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const motionOn = useMotionAllowed(options.animate, options.reducedMotion);
   const [loadedBg, setLoadedBg] = useState<{ url: string; img: HTMLImageElement } | null>(null);
+  const isNetwork = options.channelSource === 'network';
+  const networkOptions = useMemo(() => ({ ...DEFAULT_NETWORK, ...(options.network ?? {}) }), [options.network]);
 
   // Generated data when the query has nothing usable (or always), through the same field-config pipeline.
-  const { frames, isDemo } = useDemoFrames(data, options.demoData, demoGenerator, {
+  const isUsable = useCallback(
+    (series: Parameters<typeof getNumericFields>[0]) => (isNetwork ? hasEdges(series, networkOptions) : hasNumericField(series)),
+    [isNetwork, networkOptions]
+  );
+  const { frames, isDemo } = useDemoFrames(data, options.demoData, isNetwork ? demoNetworkGenerator : demoGenerator, {
     fieldConfig,
     replaceVariables,
     theme,
     timeZone,
     timeRange,
-    isUsable: hasNumericField,
+    isUsable,
   });
 
-  const channels = useMemo(() => effectiveChannels(options), [options]);
-  const bound = useMemo(() => bindChannels(channels, frames), [channels, frames]);
+  const channels = useMemo(() => (isNetwork ? [] : effectiveChannels(options)), [isNetwork, options]);
+  const network = useMemo(() => (isNetwork ? buildNetwork(frames, networkOptions, width, height) : null), [isNetwork, frames, networkOptions, width, height]);
+  const bound = useMemo(() => (network ? network.bound : bindChannels(channels, frames)), [network, channels, frames]);
   const geometries = useMemo(
-    () => bound.map((b) => buildChannelGeometry(b, mapperFor(b, fieldConfig, theme), width, height)),
-    [bound, fieldConfig, theme, width, height]
+    () => bound.map((b) => buildChannelGeometry(b, mapperFor(b, fieldConfig, theme), width, height, network ? 240 : 600)),
+    [bound, fieldConfig, theme, width, height, network]
   );
   const primary = geometries[0];
   const display = useMemo(
-    () => displayFor(primary?.bound.field, fieldConfig, theme, timeZone),
-    [primary, fieldConfig, theme, timeZone]
+    () => displayFor(network ? network.valueField : primary?.bound.field, fieldConfig, theme, timeZone),
+    [network, primary, fieldConfig, theme, timeZone]
   );
-  const latestText = formatValue(display, primary?.bound.latest);
+  const latestText = formatValue(display, network ? network.captionValue : primary?.bound.latest);
   const legend = useMemo(
     () => (primary ? legendFormatter(primary.mapper, primary.bound.field, fieldConfig, theme, timeZone) : undefined),
     [primary, fieldConfig, theme, timeZone]
@@ -192,17 +238,33 @@ export const RiverPanel: React.FC<PanelProps<RiverOptions>> = (props) => {
     }
     for (const g of geometries) {
       for (const r of g.ribbons) {
-        paintRibbon(sx, r, options.channelHalo === false ? 0 : theme.isDark ? 1 : 0.45);
+        // Network maps have many narrow channels: a lighter halo keeps crossings readable.
+        paintRibbon(sx, r, options.channelHalo === false ? 0 : (theme.isDark ? 1 : 0.45) * (network ? 0.55 : 1));
       }
+    }
+    if (network) {
+      const statusColor = (s: string | undefined) =>
+        s === 'ok' ? theme.colors.success.main : s === 'warn' ? theme.colors.warning.main : s === 'error' ? theme.colors.error.main : theme.colors.primary.main;
+      paintNodes(
+        sx,
+        network.nodes.map((n) => ({ x: n.x, y: n.y, r: n.r, color: statusColor(n.status) })),
+        onImage ? '#0b0c0e' : theme.colors.background.primary,
+        theme.isDark ? 1 : 0.5
+      );
     }
 
     // --- particles
     const ribbons = geometries.flatMap((g) => g.ribbons);
-    const requested = ribbons.map((r) => {
-      const perChannel = (r.channel.particles?.count ?? 1500) * options.particleCountMultiplier;
-      const laneCount = r.channel.multiSeries === 'lanes' ? geometries.find((g) => g.ribbons.includes(r))?.ribbons.length ?? 1 : 1;
-      return perChannel / laneCount;
-    });
+    const requested = network
+      ? networkParticleCounts(
+          network.bound.map((b) => b.latest),
+          networkOptions.particleBudget * options.particleCountMultiplier
+        )
+      : ribbons.map((r) => {
+          const perChannel = (r.channel.particles?.count ?? 1500) * options.particleCountMultiplier;
+          const laneCount = r.channel.multiSeries === 'lanes' ? geometries.find((g) => g.ribbons.includes(r))?.ribbons.length ?? 1 : 1;
+          return perChannel / laneCount;
+        });
     const counts = allocateParticles(requested, MAX_TOTAL_PARTICLES);
     const systems = ribbons.map(
       (r, i) => new ParticleSystem(r, { count: counts[i], speedMultiplier: options.particleSpeedMultiplier * options.animationSpeed })
@@ -270,7 +332,7 @@ export const RiverPanel: React.FC<PanelProps<RiverOptions>> = (props) => {
       stop();
       document.removeEventListener('visibilitychange', onVisibility);
     };
-  }, [geometries, options, theme, width, height, bgImage, motionOn]);
+  }, [geometries, options, theme, width, height, bgImage, motionOn, network, networkOptions, onImage]);
 
   const onPathChange = useCallback(
     (channelId: string, path: Waypoint[]) => {
@@ -281,8 +343,21 @@ export const RiverPanel: React.FC<PanelProps<RiverOptions>> = (props) => {
     },
     [onOptionsChange, options]
   );
+  const onNodeChange = useCallback(
+    (nodeId: string, position: Waypoint) => {
+      const layout = networkOptions.layout ?? { positions: [], overrides: {} };
+      onOptionsChange({
+        ...options,
+        network: { ...networkOptions, layout: { positions: layout.positions ?? [], overrides: { ...(layout.overrides ?? {}), [nodeId]: position } } },
+      });
+    },
+    [onOptionsChange, options, networkOptions]
+  );
 
-  if (!hasNumericField(frames) && !channels.some((c) => c.speedSource?.mode === 'fixed')) {
+  if (network && network.graph.edges.length === 0) {
+    return <PanelDataErrorView panelId={id} data={data} fieldConfig={fieldConfig} needsStringField message={RIVER_NO_EDGES_MESSAGE} />;
+  }
+  if (!network && !hasNumericField(frames) && !channels.some((c) => c.speedSource?.mode === 'fixed')) {
     return <PanelDataErrorView panelId={id} data={data} fieldConfig={fieldConfig} needsNumberField message={RIVER_NO_DATA_MESSAGE} />;
   }
 
@@ -312,9 +387,24 @@ export const RiverPanel: React.FC<PanelProps<RiverOptions>> = (props) => {
           panelWidth={width}
           panelHeight={height}
           offsetTop={options.legendPosition === 'top-left' ? titleHeight + 6 : 0}
-          name={geometries.length > 1 ? primary.bound.channel.name : undefined}
+          name={network ? undefined : geometries.length > 1 ? primary.bound.channel.name : undefined}
         />
       ) : null}
+      {network && networkOptions.showValueLabels
+        ? spreadLabels(geometries.length, (i, t) => pointAt(geometries[i].centre, t)).map((p, i) => (
+            <span key={`v-${geometries[i].bound.channel.id}`} className={styles.valueLabel} style={{ left: p.x, top: p.y }}>
+              {formatValue(display, geometries[i].bound.latest)}
+            </span>
+          ))
+        : null}
+      {network && networkOptions.showNodeLabels
+        ? network.nodes.map((n) => (
+            <span key={`n-${n.id}`} className={styles.nodeLabel} style={{ left: n.x, top: n.y + n.r + 4 }}>
+              {n.label}
+            </span>
+          ))
+        : null}
+      {network && network.notices.length ? <div className={styles.notice}>{network.notices.join(' · ')}</div> : null}
       {geometries.map((g) =>
         (g.bound.channel.labels ?? []).map((l, i) => {
           const at = Math.max(0, Math.min(1, l.at ?? 0.5));
@@ -342,13 +432,14 @@ export const RiverPanel: React.FC<PanelProps<RiverOptions>> = (props) => {
             {caption ? <div className={options.captionBig ? styles.big : styles.small}>{caption}</div> : null}
             {options.captionValue && primary ? (
               <div className={styles.sub}>
-                {primary.bound.channel.name}: <b>{latestText}</b>
+                {network ? network.captionName : primary.bound.channel.name}: <b>{latestText}</b>
               </div>
             ) : null}
           </div>
         </>
       ) : null}
       {editing.length > 0 ? <PathEditor width={width} height={height} channels={editing} onChange={onPathChange} /> : null}
+      {network && networkOptions.editNodes ? <NodeEditor width={width} height={height} nodes={network.nodes} onChange={onNodeChange} /> : null}
       <DemoBadge visible={isDemo} width={width} />
       <ReducedMotionHint animationEnabled={options.animate} preference={options.reducedMotion} width={width} />
     </div>

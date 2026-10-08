@@ -1,4 +1,5 @@
 import type { DemoMode } from '../../shared/demo';
+import type { LayoutDirection } from '../../shared/graph/layout';
 import type { MotionPreference } from '../../shared/motion';
 
 /** Normalised waypoint, 0..1 in panel coordinates (x to the right, y downwards). */
@@ -83,10 +84,69 @@ export type LegendPosition = 'top-left' | 'top-right' | 'bottom-left' | 'bottom-
 export type BackgroundMode = 'panel' | 'image' | 'none';
 export type BackgroundFit = 'cover' | 'contain';
 
+/** Where the channels come from: the hand-placed list, or one channel per edge of a data-driven graph. */
+export type ChannelSource = 'manual' | 'network';
+export type NodePlacement = 'auto' | 'positions';
+
+/** A node pinned to a normalised panel position (0..1). */
+export interface NodePosition {
+  id: string;
+  x: number;
+  y: number;
+}
+
+/** Hand-placed and dragged node positions (one object so the editor can reset both). */
+export interface NetworkLayout {
+  /** Positions typed into the editor (or seeded from the auto layout). */
+  positions: NodePosition[];
+  /** Positions dragged on the canvas; they win over `positions` and the auto layout. */
+  overrides: Record<string, Waypoint>;
+}
+
+export interface NetworkOptions {
+  /** Field (or series label) holding the edge source node id. */
+  sourceField: string;
+  /** Field (or series label) holding the edge target node id. */
+  targetField: string;
+  /** Numeric edge value: colour scale, particle speed, caption. Empty = first numeric field. */
+  valueField: string;
+  /** Optional second numeric field (or series / metric name): channel width. */
+  value2Field: string;
+  /** Optional edge label field. */
+  labelField: string;
+  /** Node frames: id, label and status fields. */
+  nodeIdField: string;
+  nodeLabelField: string;
+  nodeStatusField: string;
+  placement: NodePlacement;
+  layoutDirection: LayoutDirection;
+  layout: NetworkLayout;
+  /** Draggable node handles on the panel. */
+  editNodes: boolean;
+  /** Node puck radius in CSS pixels. */
+  nodeSize: number;
+  /** Channel width in CSS pixels (the widest channel when a second value drives the width). */
+  widthPx: number;
+  /** Bend of each channel as a fraction of its length (0 = straight). */
+  curve: number;
+  colorScale: ColorPreset;
+  scaleDomain: ScaleDomain;
+  direction: Direction;
+  /** Particle budget shared by all channels in proportion to their value (before the global multiplier). */
+  particleBudget: number;
+  particles: ParticleOptions;
+  showNodeLabels: boolean;
+  showValueLabels: boolean;
+  /** Channel whose value feeds `{value}` and the caption line, as `source>target`. Empty = sum of all channels. */
+  captionChannel: string;
+}
+
 export interface RiverOptions {
   /** Built-in generated data: never, only when the query has nothing usable, or always. */
   demoData: DemoMode;
+  channelSource: ChannelSource;
   channels: Channel[];
+  network: NetworkOptions;
   defaultColorScale: ColorPreset;
   showLegend: boolean;
   legendPosition: LegendPosition;
@@ -145,9 +205,37 @@ export function createChannel(partial: Partial<Channel> = {}): Channel {
   };
 }
 
+export const DEFAULT_NETWORK: NetworkOptions = {
+  sourceField: 'source',
+  targetField: 'target',
+  valueField: '',
+  value2Field: '',
+  labelField: 'label',
+  nodeIdField: 'id',
+  nodeLabelField: 'label',
+  nodeStatusField: 'status',
+  placement: 'auto',
+  layoutDirection: 'lr',
+  layout: { positions: [], overrides: {} },
+  editNodes: false,
+  nodeSize: 14,
+  widthPx: 28,
+  curve: 0.12,
+  colorScale: 'turbo',
+  scaleDomain: { mode: 'auto' },
+  direction: 'bySign',
+  particleBudget: 6000,
+  particles: { ...DEFAULT_PARTICLES, count: 0, trail: 0.88, width: 1.2 },
+  showNodeLabels: true,
+  showValueLabels: true,
+  captionChannel: '',
+};
+
 export const DEFAULT_OPTIONS: RiverOptions = {
   demoData: 'whenNoData',
+  channelSource: 'manual',
   channels: [],
+  network: DEFAULT_NETWORK,
   defaultColorScale: 'turbo',
   showLegend: true,
   legendPosition: 'top-left',
@@ -170,3 +258,8 @@ export const DEFAULT_OPTIONS: RiverOptions = {
 
 /** Hard cap on particles across all channels and lanes. */
 export const MAX_TOTAL_PARTICLES = 20000;
+/** Network map caps: edges become channels, so keep the counts drawable. */
+export const MAX_NETWORK_CHANNELS = 60;
+export const MAX_NETWORK_NODES = 100;
+/** Smallest particle count a network channel gets, so thin links still show motion. */
+export const MIN_NETWORK_PARTICLES = 120;
