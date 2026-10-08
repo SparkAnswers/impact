@@ -9,10 +9,15 @@ export type HistoryColorMode = 'sign' | 'thresholds';
 export type SecondaryMode = 'text' | 'reducer';
 export type TickMode = 'auto' | 'custom' | 'none';
 export type TitlePosition = 'hidden' | 'top' | 'bottom';
+export type BackgroundMode = 'panel' | 'transparent' | 'solid';
 
 export interface GaugeOptions {
   // Data
   fieldName?: string;
+
+  // Appearance
+  background: BackgroundMode;
+  backgroundColor: string;
 
   // Arc
   startAngle: number;
@@ -64,9 +69,20 @@ export interface GaugeOptions {
   // Animation
   animate: boolean;
   animationDuration: number;
+
+  // Live motion (between refreshes; all derived from samples already received)
+  liveScroll: boolean;
+  liveDrift: boolean;
+  liveDriftDuration: number;
+  liveBreathing: number;
+  liveTrail: boolean;
+  liveTrailSamples: number;
+  liveStale: boolean;
 }
 
 export const DEFAULT_OPTIONS: GaugeOptions = {
+  background: 'panel',
+  backgroundColor: '',
   startAngle: 225,
   sweepAngle: 195,
   clockwise: false,
@@ -110,4 +126,12 @@ export const DEFAULT_OPTIONS: GaugeOptions = {
 
   animate: true,
   animationDuration: 400,
+
+  liveScroll: true,
+  liveDrift: true,
+  liveDriftDuration: 750,
+  liveBreathing: 0.35,
+  liveTrail: true,
+  liveTrailSamples: 6,
+  liveStale: true,
 };

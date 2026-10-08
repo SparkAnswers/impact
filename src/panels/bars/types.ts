@@ -24,6 +24,12 @@ export type LabelPosition = 'left' | 'right' | 'inside' | 'hidden';
 /** Row density. */
 export type Density = 'compact' | 'comfortable';
 
+/**
+ * Table background. The table never paints an opaque fill in `panel` or `transparent` mode, so Grafana's own
+ * "Transparent background" panel option works; the mode only decides how the sticky header is filled.
+ */
+export type TableBackground = 'panel' | 'transparent' | 'solid';
+
 /** Per-field custom config (available through field overrides). */
 export interface BarsFieldConfig {
   /** Overrides the panel-level bar style for rows produced by this field ('default' = use panel option). */
@@ -69,6 +75,8 @@ export interface BarsOptions {
   density: Density;
   rowHeight: number;
   showFooter: boolean;
+  background: TableBackground;
+  backgroundColor: string;
 
   // Animation
   animate: boolean;
@@ -100,6 +108,8 @@ export const DEFAULT_OPTIONS: BarsOptions = {
   density: 'comfortable',
   rowHeight: 0,
   showFooter: true,
+  background: 'panel',
+  backgroundColor: 'dark-blue',
 
   animate: true,
 };

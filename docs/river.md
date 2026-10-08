@@ -80,12 +80,16 @@ range) or *Fixed*. Legend ticks are formatted by the field display processor (un
 | Title / Subtitle / Caption   | Free text overlays. Variables are interpolated and `{value}` is replaced by the latest value of the first channel. |
 | Big caption                  | Render the caption in a large display style.                                              |
 | Show latest value            | Show "Channel: value" under the caption.                                                  |
-| Background                   | Panel (dark fill), Image URL (`http(s)` or `data:image` only; cover/contain; dim slider), None (transparent). |
+| Background                   | Panel (inherits the panel background, so Grafana's built-in *Transparent background* switch works), Image URL (`http(s)` or `data:image` only; cover/contain; dim slider), Transparent (paints nothing behind the channels). |
+| Channel halo                 | Soft dark halo around each channel (default on). Switch off for a flat look on light or transparent backgrounds. |
 | Animate / Animation speed    | Toggle the particle loop and scale its speed. The loop pauses while the tab is hidden and stops on unmount. |
 
 Standard field options (unit, decimals, min, max, thresholds, display name, overrides) apply to the bound fields.
 
 ## Tips
+
+- Transparent panels: set Grafana's *Transparent background* on the panel (or Background = Transparent) and turn off
+  **Channel halo**. Text overlays use the theme colours so they stay legible on the light theme.
 
 - Reduced motion: when the OS asks for reduced motion the panel renders the channel with static streaks instead of
   animating.

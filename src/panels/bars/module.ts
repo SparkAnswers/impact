@@ -339,6 +339,29 @@ export const plugin = new PanelPlugin<BarsOptions, BarsFieldConfig>(BarsPanel)
         category: TABLE,
         defaultValue: DEFAULT_OPTIONS.showFooter,
       })
+      .addRadio({
+        path: 'background',
+        name: 'Background',
+        description:
+          'Panel: no fill, header in the theme panel colour. Transparent: no fill, translucent blurred header (use with the "Transparent background" panel option). Solid colour: fill the table with a colour.',
+        category: TABLE,
+        defaultValue: DEFAULT_OPTIONS.background,
+        settings: {
+          options: [
+            { value: 'panel', label: 'Panel' },
+            { value: 'transparent', label: 'Transparent' },
+            { value: 'solid', label: 'Solid colour' },
+          ],
+        },
+      })
+      .addColorPicker({
+        path: 'backgroundColor',
+        name: 'Background colour',
+        description: 'Fill colour of the table and its header in Solid colour mode.',
+        category: TABLE,
+        defaultValue: DEFAULT_OPTIONS.backgroundColor,
+        showIf: (o) => o.background === 'solid',
+      })
 
       // Animation
       .addBooleanSwitch({

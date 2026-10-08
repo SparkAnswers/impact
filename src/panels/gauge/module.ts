@@ -4,12 +4,14 @@ import { REDUCER_OPTIONS } from './lib/reducers';
 import { DEFAULT_OPTIONS, type GaugeOptions } from './types';
 
 const CAT_DATA = ['Data'];
+const CAT_APPEARANCE = ['Appearance'];
 const CAT_ARC = ['Arc'];
 const CAT_SCALE = ['Scale'];
 const CAT_COLORS = ['Colours'];
 const CAT_HISTORY = ['History'];
 const CAT_TEXT = ['Text'];
 const CAT_ANIM = ['Animation'];
+const CAT_LIVE = ['Live motion'];
 
 export const plugin = new PanelPlugin<GaugeOptions>(GaugePanel)
   .useFieldConfig({
@@ -32,6 +34,31 @@ export const plugin = new PanelPlugin<GaugeOptions>(GaugePanel)
         description: 'Numeric field to display. Defaults to the first numeric field of the first series.',
         category: CAT_DATA,
         settings: { filter: (f) => f.type === FieldType.number, noFieldsMessage: 'No numeric fields found' },
+      })
+
+      // Appearance
+      .addRadio({
+        path: 'background',
+        name: 'Background',
+        description:
+          'Panel: draw no background so the panel background (or the dashboard "Transparent background" option) shows through. Transparent: same, listed for parity. Solid colour: fill with a custom colour.',
+        category: CAT_APPEARANCE,
+        defaultValue: DEFAULT_OPTIONS.background,
+        settings: {
+          options: [
+            { value: 'panel', label: 'Panel' },
+            { value: 'transparent', label: 'Transparent' },
+            { value: 'solid', label: 'Solid colour' },
+          ],
+        },
+      })
+      .addColorPicker({
+        path: 'backgroundColor',
+        name: 'Background colour',
+        description: 'Fill colour behind the gauge.',
+        category: CAT_APPEARANCE,
+        defaultValue: DEFAULT_OPTIONS.backgroundColor,
+        showIf: (o) => o.background === 'solid',
       })
 
       // Arc
@@ -386,6 +413,69 @@ export const plugin = new PanelPlugin<GaugeOptions>(GaugePanel)
         category: CAT_ANIM,
         defaultValue: DEFAULT_OPTIONS.animationDuration,
         settings: { min: 50, max: 3000, step: 50 },
+        showIf: (o) => o.animate,
+      })
+
+      // Live motion
+      .addBooleanSwitch({
+        path: 'liveScroll',
+        name: 'Continuous scroll',
+        description:
+          'Between refreshes the history keeps scrolling left at the real sample cadence (inferred from the timestamps, else the dashboard refresh interval). Only existing samples move; nothing is invented.',
+        category: CAT_LIVE,
+        defaultValue: DEFAULT_OPTIONS.liveScroll,
+        showIf: (o) => o.animate,
+      })
+      .addBooleanSwitch({
+        path: 'liveDrift',
+        name: 'Marker drift',
+        description: 'Ease the fill and marker to the latest value with a longer easing and let the glow breathe between refreshes. The number itself never changes without data.',
+        category: CAT_LIVE,
+        defaultValue: DEFAULT_OPTIONS.liveDrift,
+        showIf: (o) => o.animate,
+      })
+      .addSliderInput({
+        path: 'liveDriftDuration',
+        name: 'Drift duration',
+        description: 'Easing duration in milliseconds for the marker drift.',
+        category: CAT_LIVE,
+        defaultValue: DEFAULT_OPTIONS.liveDriftDuration,
+        settings: { min: 100, max: 3000, step: 50 },
+        showIf: (o) => o.animate && o.liveDrift,
+      })
+      .addSliderInput({
+        path: 'liveBreathing',
+        name: 'Breathing',
+        description: 'Amplitude of the glow breathing (opacity and blur oscillation, period about 2.4 s). 0 disables it.',
+        category: CAT_LIVE,
+        defaultValue: DEFAULT_OPTIONS.liveBreathing,
+        settings: { min: 0, max: 1, step: 0.05 },
+        showIf: (o) => o.animate && o.liveDrift,
+      })
+      .addBooleanSwitch({
+        path: 'liveTrail',
+        name: 'Trail',
+        description: 'Short fading trail along the ring showing where the marker came from, built from the last samples and their timestamps.',
+        category: CAT_LIVE,
+        defaultValue: DEFAULT_OPTIONS.liveTrail,
+        showIf: (o) => o.animate,
+      })
+      .addNumberInput({
+        path: 'liveTrailSamples',
+        name: 'Trail samples',
+        description: 'Number of recent samples used for the trail.',
+        category: CAT_LIVE,
+        defaultValue: DEFAULT_OPTIONS.liveTrailSamples,
+        settings: { min: 2, max: 50, integer: true },
+        showIf: (o) => o.animate && o.liveTrail,
+      })
+      .addBooleanSwitch({
+        path: 'liveStale',
+        name: 'Stale indicator',
+        description:
+          'When the newest sample is older than max(3 x sample interval, 2 x refresh interval), dim the marker glow and show a small "stale" caption with the age under the subtitle.',
+        category: CAT_LIVE,
+        defaultValue: DEFAULT_OPTIONS.liveStale,
         showIf: (o) => o.animate,
       });
   });

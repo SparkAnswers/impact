@@ -1,5 +1,5 @@
 import React from 'react';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { FieldType, LoadingState, getDefaultTimeRange, toDataFrame, type PanelProps } from '@grafana/data';
 import { BarsPanel } from '../BarsPanel';
 import { DEFAULT_OPTIONS, type BarsOptions } from '../types';
@@ -109,6 +109,29 @@ describe('BarsPanel', () => {
     renderPanel({ barStyle: 'sparkline' }, ts);
     expect(screen.getAllByTestId('impact-sparkline')).toHaveLength(2);
     expect(screen.getByText('Core Switch')).toBeInTheDocument();
+  });
+
+  it('paints no table fill unless the Solid colour background is chosen', () => {
+    renderPanel();
+    let root = screen.getByTestId('impact-bars');
+    const panelRootClass = root.className;
+    const panelTableClass = root.querySelector('table')?.className;
+    expect(root.dataset.background).toBe('panel');
+    expect(root.style.backgroundColor).toBe('');
+    cleanup();
+
+    renderPanel({ background: 'transparent' });
+    root = screen.getByTestId('impact-bars');
+    expect(root.dataset.background).toBe('transparent');
+    expect(root.className).toBe(panelRootClass);
+    expect(root.querySelector('table')?.className).not.toBe(panelTableClass);
+    cleanup();
+
+    renderPanel({ background: 'solid', backgroundColor: 'dark-blue' });
+    root = screen.getByTestId('impact-bars');
+    expect(root.className).not.toBe(panelRootClass);
+    expect(root.querySelector('table')?.className).toBe(panelTableClass);
+    expect(root.style.getPropertyValue('--pb-bg')).not.toBe('');
   });
 
   it('shows the no-data view when there are no rows', () => {

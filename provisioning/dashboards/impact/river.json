@@ -649,6 +649,108 @@
         },
         "overrides": []
       }
+    },
+    {
+      "id": 5,
+      "type": "sparkanswers-impact-river-panel",
+      "title": "Transparent over dashboard",
+      "description": "Grafana's built-in Transparent background switch; Background mode Transparent and Channel halo off, so only the channel is painted.",
+      "gridPos": {
+        "x": 0,
+        "y": 36,
+        "w": 24,
+        "h": 9
+      },
+      "datasource": {
+        "type": "grafana-testdata-datasource",
+        "uid": "impact-testdata"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-testdata-datasource",
+            "uid": "impact-testdata"
+          },
+          "scenarioId": "random_walk",
+          "seriesCount": 1,
+          "min": 0,
+          "max": 100,
+          "spread": 8.333333333333334,
+          "alias": "load"
+        }
+      ],
+      "options": {
+        "title": "Transparent",
+        "subtitle": "Nothing opaque is painted: the dashboard shows through",
+        "background": "none",
+        "backgroundUrl": "",
+        "showLegend": true,
+        "legendPosition": "top-right",
+        "caption": "{value}",
+        "captionBig": true,
+        "captionValue": false,
+        "channels": [
+          {
+            "id": "tr",
+            "name": "Load",
+            "path": [
+              {
+                "x": 0.03,
+                "y": 0.6
+              },
+              {
+                "x": 0.3,
+                "y": 0.4
+              },
+              {
+                "x": 0.6,
+                "y": 0.65
+              },
+              {
+                "x": 0.97,
+                "y": 0.4
+              }
+            ],
+            "speedSource": {
+              "mode": "series",
+              "series": ""
+            },
+            "widthSource": {
+              "mode": "fixed"
+            },
+            "widthPx": 70,
+            "colorScale": "turbo",
+            "customStops": [],
+            "scaleDomain": {
+              "mode": "auto"
+            },
+            "particles": {
+              "count": 1200,
+              "speed": 1.2,
+              "trail": 0.9,
+              "width": 1.5,
+              "color": "byValue"
+            },
+            "direction": "forward",
+            "labels": [],
+            "opacity": 0.86,
+            "multiSeries": "ignore",
+            "editPath": false,
+            "smoothing": 0
+          }
+        ],
+        "channelHalo": false
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "min": 0,
+          "max": 100
+        },
+        "overrides": []
+      },
+      "transparent": true
     }
   ]
 }

@@ -101,18 +101,19 @@ const BANDS: Array<[number, number, number]> = [
 ];
 
 /** Paints the halo, speed-coloured quads, seam blend and rim for one ribbon. */
-export function paintRibbon(ctx: CanvasRenderingContext2D, r: Ribbon) {
+/** `halo` is the halo strength 0..1 (0 = none). */
+export function paintRibbon(ctx: CanvasRenderingContext2D, r: Ribbon, halo = 1) {
   const { line, W, V, mapper } = r;
   const { X, Y, TX, TY, M } = line;
   if (M < 2) {
     return;
   }
-  // soft dark halo
+  // soft dark halo (optional)
   ctx.save();
   ctx.lineCap = 'round';
   ctx.lineJoin = 'round';
-  for (let pass = 0; pass < 2; pass++) {
-    ctx.strokeStyle = pass ? 'rgba(0,0,0,0.45)' : 'rgba(0,0,0,0.22)';
+  for (let pass = 0; halo > 0 && pass < 2; pass++) {
+    ctx.strokeStyle = `rgba(0,0,0,${(pass ? 0.45 : 0.22) * Math.min(1, halo)})`;
     const extra = pass ? 8 : 22;
     for (let i = 0; i < M - 1; i++) {
       ctx.lineWidth = W[i] + extra;

@@ -9,6 +9,31 @@ shows how the value evolved over the visible window; below it the current value,
 Everything is drawn on a device-pixel-ratio aware canvas, scales with the panel size and hides tick
 labels, secondary text and the big value progressively as the panel gets small.
 
+## Live motion
+
+Most data sources behind a dashboard are polled every 5 to 30 seconds, so a gauge would normally sit
+frozen between refreshes. The *Live motion* options keep it visibly alive **without inventing data**:
+every bit of motion is derived from samples that were already received.
+
+- **Continuous scroll**: the history chart's x axis is wall-clock time. Between refreshes the window
+  keeps sliding at real speed, so the newest sample drifts away from the right edge; when the refresh
+  brings new samples the window eases (no jump) back to the new end. The scroll speed is the sample
+  cadence inferred from the last timestamps, falling back to the dashboard refresh interval; with
+  neither known, or with an absolute time range that does not end "now", nothing scrolls.
+- **Marker drift**: the fill and marker ease to the latest value over a slightly longer time and the
+  glow breathes gently. The number itself never changes without data.
+- **Trail**: a short fading trail along the ring shows where the marker came from, built from the
+  last few samples and their timestamps; it fades out as those samples age.
+- **Stale indicator**: when the newest sample is older than max(3 x sample interval, 2 x refresh
+  interval) the marker glow is dimmed and a small "stale · 42 s" caption appears under the subtitle.
+  The value's colours never change.
+
+All of this falls back to the plain static render when *Animation* is off, when the system prefers
+reduced motion, when the tab is hidden or when the panel is scrolled out of view. All gauges on a page
+share one animation frame loop, frames are capped at 60 per second and skipped when nothing changed,
+and only the moving layer (history, fill, marker) is redrawn; the ring, ticks and text are drawn once
+per data update.
+
 ## Data expectations
 
 - The panel reads **one numeric field**: by default the first numeric field of the first frame. Pick a
@@ -30,6 +55,13 @@ Standard field options used: Unit, Decimals, Min, Max, Thresholds, Color, Displa
 | Option | Description |
 | --- | --- |
 | Field | Numeric field to display. Empty = first numeric field of the first frame. |
+
+### Appearance
+
+| Option | Description |
+| --- | --- |
+| Background | Panel (default): nothing is painted, so the panel background or Grafana's "Transparent background" shows through. Transparent: identical, listed for parity with the other panels. Solid colour: custom fill. |
+| Background colour | Fill colour for the Solid colour mode. |
 
 ### Arc
 
@@ -99,6 +131,18 @@ Standard field options used: Unit, Decimals, Min, Max, Thresholds, Color, Displa
 | Animate | Ease the fill and marker to new values. Automatically off when the system prefers reduced motion or the tab is hidden. |
 | Duration | Easing duration in milliseconds. |
 
+### Live motion
+
+| Option | Description |
+| --- | --- |
+| Continuous scroll | Keep scrolling the history left between refreshes at the inferred sample cadence (fallback: dashboard refresh interval). |
+| Marker drift | Longer easing of the fill/marker to the latest value plus a breathing glow between refreshes. |
+| Drift duration | Easing duration in ms for the marker drift (default 750). |
+| Breathing | Amplitude 0..1 of the glow opacity/blur oscillation (period about 2.4 s). 0 disables. |
+| Trail | Fading trail along the ring from the last samples to the marker. |
+| Trail samples | Number of recent samples used for the trail. |
+| Stale indicator | Dim the marker glow and show a "stale · age" caption when the newest sample is older than max(3 x sample interval, 2 x refresh interval). |
+
 ## Tips
 
 - Set **Min/Max** in the standard options to fix the range; otherwise the panel uses the data range of
@@ -110,4 +154,6 @@ Standard field options used: Unit, Decimals, Min, Max, Thresholds, Color, Displa
   the Thresholds colour mode: the ring shows the bands and the fill picks up the active colour.
 - The secondary line accepts any free text, so `Net {value}` with the Sum reducer and a `kWh` unit
   override gives an energy total under a power reading.
-- Tiny panels (below about 150 px) hide tick labels, then the secondary line, then the value.
+- The canvas never paints an opaque background, so Grafana's panel option *Transparent background* works as expected.
+- Tiny panels (below about 150 px) hide tick labels, then the stale caption, subtitle and secondary line, then the value.
+- Live motion only animates samples you already have; to compare, put a copy of the panel next to it with the *Live motion* switches off (see the demo dashboard).

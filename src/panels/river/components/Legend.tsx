@@ -15,6 +15,8 @@ interface Props {
   name?: string;
   panelWidth: number;
   panelHeight: number;
+  /** Light text with shadow over a background image; theme text otherwise. */
+  onImage?: boolean;
 }
 
 const LEGEND_W = 230;
@@ -22,14 +24,14 @@ const UNIT_W = 44;
 /** Bottom legends move to the top when the panel is shorter than this. */
 const SHORT_PANEL = 240;
 
-const getStyles = (theme: GrafanaTheme2) => ({
+const getStyles = (theme: GrafanaTheme2, onImage: boolean) => ({
   root: css({
     position: 'absolute',
     width: LEGEND_W,
     pointerEvents: 'none',
     fontSize: 10,
-    color: '#cfd2d6',
-    textShadow: '0 1px 3px #000',
+    color: onImage ? '#cfd2d6' : theme.colors.text.secondary,
+    textShadow: onImage ? '0 1px 3px #000' : `0 0 2px ${theme.colors.background.primary}, 0 0 6px ${theme.colors.background.primary}`,
     fontFamily: theme.typography.fontFamily,
   }),
   name: css({ fontSize: 10, letterSpacing: 0.6, textTransform: 'uppercase', marginBottom: 3, opacity: 0.85 }),
@@ -62,8 +64,8 @@ function visibleTicks(ticks: LegendTick[], w: number, format: (v: number) => str
   return out;
 }
 
-export const Legend: React.FC<Props> = ({ mapper, format, unit, position, offsetTop = 0, name, panelWidth, panelHeight }) => {
-  const styles = useStyles2(getStyles);
+export const Legend: React.FC<Props> = ({ mapper, format, unit, position, offsetTop = 0, name, panelWidth, panelHeight, onImage = false }) => {
+  const styles = useStyles2(getStyles, onImage);
   const pos: React.CSSProperties = {};
   const top = position.startsWith('top') || panelHeight < SHORT_PANEL;
   if (top) {

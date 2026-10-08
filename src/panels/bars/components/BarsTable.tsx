@@ -2,7 +2,7 @@ import React, { useCallback, useMemo, useState } from 'react';
 import { cx } from '@emotion/css';
 import { dateTimeFormatTimeAgo, isIconName } from '@grafana/data';
 import type { TimeZone } from '@grafana/schema';
-import { Checkbox, Icon, useStyles2 } from '@grafana/ui';
+import { Checkbox, Icon, useStyles2, useTheme2 } from '@grafana/ui';
 import type { BarRow, BarsModel } from '../lib/rows';
 import { sortRows, type SortKey, type SortState } from '../lib/sort';
 import { DENSITY_ROW_HEIGHT, VIRTUALISE_THRESHOLD, type BarsOptions } from '../types';
@@ -59,6 +59,7 @@ export function defaultSortFor(model: BarsModel, options: BarsOptions): SortStat
 
 export const BarsTable: React.FC<Props> = ({ model, options, width, height, animate, timeZone, refreshedAt }) => {
   const styles = useStyles2(getStyles);
+  const theme = useTheme2();
   const [userSort, setUserSort] = useState<SortState | undefined>();
   const [selected, setSelected] = useState<ReadonlySet<string>>(() => new Set());
   const [scrollTop, setScrollTop] = useState(0);
@@ -123,11 +124,18 @@ export const BarsTable: React.FC<Props> = ({ model, options, width, height, anim
   }
   const visible = virtual ? rows.slice(start, end) : rows;
 
+  const background = options.background ?? 'panel';
+  const glass = background === 'transparent';
+  const fill =
+    background === 'solid'
+      ? theme.visualization.getColorByName(options.backgroundColor || 'transparent')
+      : theme.colors.background.primary;
   const cssVars = {
     '--pb-h': `${options.trackHeight}px`,
     '--pb-r': `${options.radius}px`,
     '--pb-w': `${options.trackWidth}px`,
     '--pb-speed': `${Math.max(0.2, options.animationSpeed)}s`,
+    '--pb-bg': fill,
   } as React.CSSProperties;
 
   const sortLabel = sort
@@ -135,9 +143,14 @@ export const BarsTable: React.FC<Props> = ({ model, options, width, height, anim
     : undefined;
 
   return (
-    <div className={styles.root} style={{ width, height, ...cssVars }} data-testid="impact-bars">
+    <div
+      className={cx(styles.root, background === 'solid' && styles.rootSolid)}
+      style={{ width, height, ...cssVars }}
+      data-testid="impact-bars"
+      data-background={background}
+    >
       <div className={styles.scroller} onScroll={virtual ? (e) => setScrollTop(e.currentTarget.scrollTop) : undefined}>
-        <table className={styles.table}>
+        <table className={cx(styles.table, glass ? styles.headerGlass : styles.headerSolid)}>
           <colgroup>
             {columns.map((c) => (
               <col key={c.key} style={c.width ? { width: c.width } : undefined} />
@@ -177,7 +190,11 @@ export const BarsTable: React.FC<Props> = ({ model, options, width, height, anim
               </tr>
             )}
             {visible.map((row) => (
-              <tr key={row.id} className={cx(selected.has(row.id) && styles.selected)} style={{ height: rowH }}>
+              <tr
+                key={row.id}
+                className={cx(selected.has(row.id) && (glass ? styles.selectedGlass : styles.selected))}
+                style={{ height: rowH }}
+              >
                 {columns.map((c) => renderCell(c, row))}
               </tr>
             ))}

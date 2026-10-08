@@ -12,6 +12,8 @@ export interface Layout {
   showValue: boolean;
   showSecondary: boolean;
   showSubtitle: boolean;
+  /** A stale caption may be drawn under the subtitle. */
+  showStale: boolean;
   showTitle: boolean;
   /** Font sizes in px. */
   valueFont: number;
@@ -27,6 +29,7 @@ export interface Layout {
   valueY: number;
   secondaryY: number;
   subtitleY: number;
+  staleY: number;
   titleY: number;
 }
 
@@ -42,6 +45,8 @@ export interface LayoutInput {
   showSubtitle: boolean;
   /** A small caption is drawn above the big value. */
   hasValueLabel?: boolean;
+  /** Reserve a line under the subtitle for the stale caption. */
+  reserveStaleLine?: boolean;
   titlePosition: 'hidden' | 'top' | 'bottom';
   valueFontPx?: number;
 }
@@ -101,7 +106,8 @@ function textBlockHeight(
   showValue: boolean,
   showSecondary: boolean,
   showSubtitle: boolean,
-  hasValueLabel: boolean
+  hasValueLabel: boolean,
+  showStale: boolean
 ): number {
   let h = 0;
   if (showValue) {
@@ -112,7 +118,10 @@ function textBlockHeight(
     if (showSubtitle) {
       h += f.subtitleFont * 1.3;
     }
-    h += (showSubtitle ? f.subtitleFont : f.secondaryFont) * 0.3;
+    if (showStale) {
+      h += f.subtitleFont * 1.25;
+    }
+    h += (showSubtitle || showStale ? f.subtitleFont : f.secondaryFont) * 0.3;
   } else if (showValue) {
     h += f.valueFont * 0.1;
   }
@@ -127,6 +136,7 @@ export function computeLayout(input: LayoutInput): Layout {
   const showValue = input.showValue && small >= 90;
   let showSecondary = input.showSecondary && small >= 170;
   let showSubtitle = showSecondary && input.showSubtitle;
+  let showStale = showSecondary && !!input.reserveStaleLine;
   const showTitle = input.titlePosition !== 'hidden' && small >= 200;
   const hasValueLabel = showValue && !!input.hasValueLabel;
   const hasText = showValue || showSecondary;
@@ -145,7 +155,7 @@ export function computeLayout(input: LayoutInput): Layout {
   let r = fitRadius();
   let fonts = fontsFor(r, input.valueFontPx);
   for (let pass = 0; pass < 3 && hasText; pass++) {
-    const needed = (0.14 * r + textBlockHeight(fonts, r, showValue, showSecondary, showSubtitle, hasValueLabel)) / r;
+    const needed = (0.14 * r + textBlockHeight(fonts, r, showValue, showSecondary, showSubtitle, hasValueLabel, showStale)) / r;
     if (needed <= box.maxY + 1e-6) {
       break;
     }
@@ -154,7 +164,9 @@ export function computeLayout(input: LayoutInput): Layout {
     fonts = fontsFor(r, input.valueFontPx);
     // When the box has grown far beyond the ring, the panel is too short: drop lines instead of shrinking the ring.
     if (box.maxY > ringBottom + 0.35 || r < 40) {
-      if (showSubtitle) {
+      if (showStale) {
+        showStale = false;
+      } else if (showSubtitle) {
         showSubtitle = false;
       } else if (showSecondary) {
         showSecondary = false;
@@ -187,6 +199,7 @@ export function computeLayout(input: LayoutInput): Layout {
   const valueY = historyBottom + valueFont * 0.95 + r * 0.04 + (hasValueLabel ? subtitleFont * 1.4 : 0);
   const secondaryY = (showValue ? valueY : historyBottom + r * 0.1) + secondaryFont * 1.45;
   const subtitleY = secondaryY + subtitleFont * 1.3;
+  const staleY = (showSubtitle ? subtitleY : secondaryY) + subtitleFont * 1.25;
   const titleY = input.titlePosition === 'top' ? pad + titleFont : height - pad - 4;
 
   return {
@@ -199,6 +212,7 @@ export function computeLayout(input: LayoutInput): Layout {
     showValue,
     showSecondary,
     showSubtitle,
+    showStale,
     showTitle,
     valueFont,
     valueUnitFont,
@@ -211,6 +225,7 @@ export function computeLayout(input: LayoutInput): Layout {
     valueY,
     secondaryY,
     subtitleY,
+    staleY,
     titleY,
   };
 }

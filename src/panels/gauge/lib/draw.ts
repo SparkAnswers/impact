@@ -1,5 +1,6 @@
 import { colorManipulator } from '@grafana/data';
 import { computeLayout, type Layout, type LayoutInput } from './layout';
+import { type LiveWindow, scrollX } from './live';
 import { type ArcSpec, clamp, fractionToAngle, polar, type ScaleSpec, signedArc, valueToFraction } from './scale';
 
 export interface TickModel {
@@ -14,7 +15,7 @@ export interface BandModel {
 }
 
 export interface HistoryModel {
-  points: Array<{ x: number; value: number }>;
+  points: Array<{ x: number; value: number; t?: number }>;
   positiveColor: string;
   negativeColor: string;
   /** Optional per-value colour (threshold mode). */
@@ -38,9 +39,11 @@ export interface GaugeModel {
   ringWidth: number;
   ringColor: string;
   glow: number;
-  /** Displayed (eased) value; null draws an empty gauge. */
+  /** Displayed (eased) value for the fill/marker; null draws an empty gauge. */
   value: number | null;
   fillColor: string;
+  /** Fill colour as a function of the displayed value (sign / thresholds). Falls back to `fillColor`. */
+  fillColorFor?: (value: number) => string;
   markerColor: string;
   bands?: BandModel[];
   ticks: TickModel[];
@@ -58,6 +61,8 @@ export interface GaugeModel {
   titleText?: string;
   titlePosition: 'hidden' | 'top' | 'bottom';
   valueFontPx?: number;
+  /** Reserve a line for the stale caption. */
+  reserveStaleLine?: boolean;
   fontFamily: string;
   colors: {
     text: string;
@@ -66,6 +71,38 @@ export interface GaugeModel {
     tick: string;
     baseline: string;
     background: string;
+  };
+}
+
+/** Per-frame state of the live layer. Mutated in place by the frame loop (no per-frame allocations). */
+export interface LiveState {
+  /** Eased fill/marker value. */
+  value: number | null;
+  /** Wall-clock window for the history x axis; null = use the static point positions. */
+  window: LiveWindow | null;
+  /** Multiplier for the glow blur (breathing). */
+  glowScale: number;
+  /** Opacity 0..1 of the glow pass. */
+  glowAlpha: number;
+  /** Stale: marker glow dimmed. */
+  dimmed: boolean;
+  trailCount: number;
+  trailAngles: Float64Array;
+  trailAlphas: Float64Array;
+  staleText: string | null;
+}
+
+export function defaultLiveState(value: number | null, trailCapacity = 0): LiveState {
+  return {
+    value,
+    window: null,
+    glowScale: 1,
+    glowAlpha: 1,
+    dimmed: false,
+    trailCount: 0,
+    trailAngles: new Float64Array(trailCapacity),
+    trailAlphas: new Float64Array(trailCapacity),
+    staleText: null,
   };
 }
 
@@ -119,18 +156,29 @@ export function layoutFor(model: GaugeModel): Layout {
     showSecondary: model.showSecondary && !!model.secondaryText,
     showSubtitle: !!model.subtitleText,
     hasValueLabel: !!model.valueLabel,
+    reserveStaleLine: !!model.reserveStaleLine,
     titlePosition: model.titleText ? model.titlePosition : 'hidden',
     valueFontPx: model.valueFontPx,
   };
   return computeLayout(input);
 }
 
-/** Draws the whole gauge. `ctx` must already be scaled for device pixel ratio. */
-export function drawGauge(ctx: CanvasRenderingContext2D, model: GaugeModel): Layout {
+/** Draws the whole gauge in one pass (static + live layer). `ctx` must already be scaled for DPR. */
+export function drawGauge(ctx: CanvasRenderingContext2D, model: GaugeModel, live?: LiveState): Layout {
   const L = layoutFor(model);
+  ctx.clearRect(0, 0, model.width, model.height);
+  drawStaticLayer(ctx, model, L, false);
+  drawLiveLayer(ctx, model, L, live ?? defaultLiveState(model.value), false);
+  return L;
+}
+
+/** Ring/bands, tick labels and all text that only changes with new data or options. */
+export function drawStaticLayer(ctx: CanvasRenderingContext2D, model: GaugeModel, L: Layout, clear = true) {
   const { cx, cy, r } = L;
   const font = model.fontFamily;
-  ctx.clearRect(0, 0, model.width, model.height);
+  if (clear) {
+    ctx.clearRect(0, 0, model.width, model.height);
+  }
 
   // Base ring (or threshold bands).
   if (model.bands && model.bands.length) {
@@ -155,46 +203,22 @@ export function drawGauge(ctx: CanvasRenderingContext2D, model: GaugeModel): Lay
     strokeArc(ctx, cx, cy, r, fractionToAngle(0, model.arc), fractionToAngle(1, model.arc), 1.5, model.ringColor);
   }
 
-  // Fill arc from the zero mark to the value.
-  let markerAngle = fractionToAngle(valueToFraction(model.scale.zero, model.scale), model.arc);
-  if (model.value !== null) {
-    const a = signedArc(model.value, model.scale, model.arc);
-    markerAngle = a.to;
-    if (a.size > 1e-4) {
-      if (model.glow > 0) {
-        strokeArc(ctx, cx, cy, r, a.from, a.to, model.ringWidth, model.fillColor, model.glow);
-      }
-      strokeArc(ctx, cx, cy, r, a.from, a.to, model.ringWidth, model.fillColor, 0);
-    }
-  }
-
-  // Ticks.
-  if (L.showTicks) {
+  // Tick labels.
+  if (L.showTicks && L.showTickLabels) {
     ctx.save();
     ctx.font = `500 ${L.tickFont}px ${font}`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.lineWidth = 1.5;
-    ctx.strokeStyle = alpha(model.colors.tick, 0.55);
     ctx.fillStyle = alpha(model.colors.tick, 0.8);
-    const tickLen = Math.max(3, Math.min(6, r * 0.04));
     for (const t of model.ticks) {
-      if (t.value < model.scale.min || t.value > model.scale.max) {
+      if (t.value < model.scale.min || t.value > model.scale.max || !t.label) {
         continue;
       }
-      const a = fractionToAngle(valueToFraction(t.value, model.scale), model.arc);
-      const [x1, y1] = polar(cx, cy, a, r - tickLen);
-      const [x2, y2] = polar(cx, cy, a, r + tickLen);
-      ctx.beginPath();
-      ctx.moveTo(x1, y1);
-      ctx.lineTo(x2, y2);
-      ctx.stroke();
-      if (L.showTickLabels && t.label) {
-        const isZero = t.value === model.scale.zero && !!model.zeroLabel;
-        if (!isZero) {
-          const [tx, ty] = polar(cx, cy, a, L.tickLabelRadius);
-          ctx.fillText(t.label, tx, ty);
-        }
+      const isZero = t.value === model.scale.zero && !!model.zeroLabel;
+      if (!isZero) {
+        const a = fractionToAngle(valueToFraction(t.value, model.scale), model.arc);
+        const [tx, ty] = polar(cx, cy, a, L.tickLabelRadius);
+        ctx.fillText(t.label, tx, ty);
       }
     }
     ctx.restore();
@@ -210,30 +234,6 @@ export function drawGauge(ctx: CanvasRenderingContext2D, model: GaugeModel): Lay
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText(model.zeroLabel, ux, uy);
-    ctx.restore();
-  }
-
-  // History chart inside the ring.
-  if (model.history && model.history.points.length > 1 && L.history.h > 8) {
-    drawHistory(ctx, model, L);
-  }
-
-  // Live marker on the ring.
-  {
-    const [dx, dy] = polar(cx, cy, markerAngle, r);
-    const dotR = clamp(model.ringWidth * 0.9, 3, 7);
-    ctx.save();
-    ctx.shadowBlur = 10;
-    ctx.shadowColor = alpha(model.markerColor, 0.9);
-    ctx.fillStyle = model.markerColor;
-    ctx.beginPath();
-    ctx.arc(dx, dy, dotR, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.shadowBlur = 0;
-    ctx.fillStyle = model.colors.background;
-    ctx.beginPath();
-    ctx.arc(dx, dy, dotR * 0.45, 0, Math.PI * 2);
-    ctx.fill();
     ctx.restore();
   }
 
@@ -283,7 +283,116 @@ export function drawGauge(ctx: CanvasRenderingContext2D, model: GaugeModel): Lay
     ctx.fillText(model.titleText.toUpperCase(), cx, L.titleY);
   }
   ctx.restore();
-  return L;
+}
+
+/** History chart, fill arc, trail, tick marks, marker and stale caption: everything that moves. */
+export function drawLiveLayer(ctx: CanvasRenderingContext2D, model: GaugeModel, L: Layout, live: LiveState, clear = true) {
+  const { cx, cy, r } = L;
+  const font = model.fontFamily;
+  if (clear) {
+    ctx.clearRect(0, 0, model.width, model.height);
+  }
+  const value = live.value;
+  const fillColor = value !== null && model.fillColorFor ? model.fillColorFor(value) : model.fillColor;
+
+  // History chart inside the ring.
+  if (model.history && model.history.points.length > 1 && L.history.h > 8) {
+    drawHistory(ctx, model, L, live.window);
+  }
+
+  // Trail along the ring (older samples -> marker).
+  if (live.trailCount > 1) {
+    ctx.save();
+    ctx.lineCap = 'round';
+    ctx.lineWidth = Math.max(1.5, model.ringWidth * 0.55);
+    const n = live.trailCount;
+    for (let i = 0; i < n - 1; i++) {
+      const a = Math.min(live.trailAlphas[i], live.trailAlphas[i + 1]);
+      if (a <= 0.01) {
+        continue;
+      }
+      let s = live.trailAngles[i];
+      let e = live.trailAngles[i + 1];
+      if (Math.abs(e - s) < 1e-4) {
+        continue;
+      }
+      if (s > e) {
+        [s, e] = [e, s];
+      }
+      ctx.strokeStyle = alpha(fillColor, 0.55 * a);
+      ctx.beginPath();
+      ctx.arc(cx, cy, r + model.ringWidth * 0.9, s, e);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  // Fill arc from the zero mark to the value.
+  let markerAngle = fractionToAngle(valueToFraction(model.scale.zero, model.scale), model.arc);
+  if (value !== null) {
+    const a = signedArc(value, model.scale, model.arc);
+    markerAngle = a.to;
+    if (a.size > 1e-4) {
+      if (model.glow > 0 && live.glowAlpha > 0.01) {
+        const blur = model.glow * live.glowScale;
+        strokeArc(ctx, cx, cy, r, a.from, a.to, model.ringWidth, alpha(fillColor, live.glowAlpha), blur);
+      }
+      strokeArc(ctx, cx, cy, r, a.from, a.to, model.ringWidth, fillColor, 0);
+    }
+  }
+
+  // Tick marks (over the fill, like the mockup).
+  if (L.showTicks) {
+    ctx.save();
+    ctx.lineWidth = 1.5;
+    ctx.strokeStyle = alpha(model.colors.tick, 0.55);
+    const tickLen = Math.max(3, Math.min(6, r * 0.04));
+    for (const t of model.ticks) {
+      if (t.value < model.scale.min || t.value > model.scale.max) {
+        continue;
+      }
+      const a = fractionToAngle(valueToFraction(t.value, model.scale), model.arc);
+      const [x1, y1] = polar(cx, cy, a, r - tickLen);
+      const [x2, y2] = polar(cx, cy, a, r + tickLen);
+      ctx.beginPath();
+      ctx.moveTo(x1, y1);
+      ctx.lineTo(x2, y2);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  // Live marker on the ring.
+  {
+    const [dx, dy] = polar(cx, cy, markerAngle, r);
+    const dotR = clamp(model.ringWidth * 0.9, 3, 7);
+    ctx.save();
+    if (!live.dimmed) {
+      ctx.shadowBlur = 10 * live.glowScale;
+      ctx.shadowColor = alpha(model.markerColor, 0.9);
+    }
+    ctx.fillStyle = live.dimmed ? alpha(model.markerColor, 0.6) : model.markerColor;
+    ctx.beginPath();
+    ctx.arc(dx, dy, dotR, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = model.colors.background;
+    ctx.beginPath();
+    ctx.arc(dx, dy, dotR * 0.45, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  // Stale caption.
+  if (live.staleText && L.showStale) {
+    ctx.save();
+    ctx.font = `400 ${L.subtitleFont}px ${font}`;
+    ctx.fillStyle = model.colors.textDisabled;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'alphabetic';
+    ctx.fillText(live.staleText, cx, L.staleY);
+    ctx.restore();
+  }
 }
 
 /** Draws "Avg. 378 Wh/mi" with the first number in bold. */
@@ -324,7 +433,7 @@ function drawEmphasisedLine(
   ctx.textAlign = 'center';
 }
 
-function drawHistory(ctx: CanvasRenderingContext2D, model: GaugeModel, L: Layout) {
+function drawHistory(ctx: CanvasRenderingContext2D, model: GaugeModel, L: Layout, window: LiveWindow | null) {
   const h = model.history!;
   const { x: hx, y: hyTop, w: hw, h: hh } = L.history;
   const { min, max, zero } = model.scale;
@@ -340,8 +449,14 @@ function drawHistory(ctx: CanvasRenderingContext2D, model: GaugeModel, L: Layout
       ? base - ((v - zero) / posSpan) * (base - hyTop)
       : base + ((zero - v) / negSpan) * (hyTop + hh - base);
   };
-  const xOf = (x: number) => hx + clamp(x, 0, 1) * hw;
   const pts = h.points;
+  const xOf = (i: number) => {
+    const p = pts[i];
+    if (window && p.t !== undefined) {
+      return hx + scrollX(p.t, window) * hw;
+    }
+    return hx + clamp(p.x, 0, 1) * hw;
+  };
 
   // Baseline.
   ctx.save();
@@ -366,22 +481,28 @@ function drawHistory(ctx: CanvasRenderingContext2D, model: GaugeModel, L: Layout
   };
   const pathLine = () => {
     ctx.beginPath();
-    pts.forEach((p, i) => {
-      const x = xOf(p.x);
-      const y = yOf(p.value);
+    for (let i = 0; i < pts.length; i++) {
+      const x = xOf(i);
+      const y = yOf(pts[i].value);
       if (i === 0) {
         ctx.moveTo(x, y);
       } else {
         ctx.lineTo(x, y);
       }
-    });
+    }
   };
   const pathArea = () => {
     pathLine();
-    ctx.lineTo(xOf(pts[pts.length - 1].x), base);
-    ctx.lineTo(xOf(pts[0].x), base);
+    ctx.lineTo(xOf(pts.length - 1), base);
+    ctx.lineTo(xOf(0), base);
     ctx.closePath();
   };
+
+  // Clip to the chart box so scrolled-out samples disappear at the edges.
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(hx - 1, hyTop - 2, hw + 2, hh + 4);
+  ctx.clip();
 
   const halves: Array<[number, number, string, boolean]> = [];
   if (hasPos) {
@@ -409,8 +530,8 @@ function drawHistory(ctx: CanvasRenderingContext2D, model: GaugeModel, L: Layout
         const a = h.fade ? Math.pow(i / pts.length, 1.3) : 1;
         ctx.strokeStyle = alpha(c, 0.15 + 0.85 * a);
         ctx.beginPath();
-        ctx.moveTo(xOf(pts[i - 1].x), yOf(pts[i - 1].value));
-        ctx.lineTo(xOf(pts[i].x), yOf(pts[i].value));
+        ctx.moveTo(xOf(i - 1), yOf(pts[i - 1].value));
+        ctx.lineTo(xOf(i), yOf(pts[i].value));
         ctx.stroke();
       }
     } else {
@@ -420,4 +541,5 @@ function drawHistory(ctx: CanvasRenderingContext2D, model: GaugeModel, L: Layout
     }
     ctx.restore();
   }
+  ctx.restore();
 }
