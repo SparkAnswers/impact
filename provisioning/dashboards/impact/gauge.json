@@ -18,7 +18,7 @@
     {
       "id": 1,
       "type": "sparkanswers-impact-gauge-panel",
-      "title": "Signed power (default)",
+      "title": "Live motion on (default) \u00b7 watch between refreshes",
       "description": "Default options: -50..200 kW range from the field min/max, square-root scale, positive values fill clockwise in orange from the zero mark, negative values fill the other way in green. The in-ring chart shows the panel time range. Live motion is on: between the 10 s refreshes the history keeps scrolling at the sample cadence, the marker drifts with a breathing glow and leaves a short trail.",
       "gridPos": {
         "x": 0,
@@ -202,7 +202,7 @@
     {
       "id": 7,
       "type": "sparkanswers-impact-gauge-panel",
-      "title": "Live motion off",
+      "title": "Live motion off \u00b7 only moves on refresh",
       "description": "Same query and options as the default panel with every Live motion switch off: the gauge only changes when a refresh brings new data.",
       "gridPos": {
         "x": 0,
