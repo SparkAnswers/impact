@@ -458,16 +458,6 @@ function drawHistory(ctx: CanvasRenderingContext2D, model: GaugeModel, L: Layout
     return hx + clamp(p.x, 0, 1) * hw;
   };
 
-  // Baseline.
-  ctx.save();
-  ctx.strokeStyle = model.colors.baseline;
-  ctx.lineWidth = 1;
-  ctx.beginPath();
-  ctx.moveTo(hx, base);
-  ctx.lineTo(hx + hw, base);
-  ctx.stroke();
-  ctx.restore();
-
   const fade = (color: string, alphaMax: number): string | CanvasGradient => {
     if (!h.fade) {
       return alpha(color, alphaMax);
@@ -498,11 +488,25 @@ function drawHistory(ctx: CanvasRenderingContext2D, model: GaugeModel, L: Layout
     ctx.closePath();
   };
 
-  // Clip to the chart box so scrolled-out samples disappear at the edges.
+  // Clip to the chart box (scrolled-out samples vanish at the edges) and to the ring interior so the
+  // chart can never cross the ring, whatever the arc geometry.
   ctx.save();
   ctx.beginPath();
   ctx.rect(hx - 1, hyTop - 2, hw + 2, hh + 4);
   ctx.clip();
+  ctx.beginPath();
+  ctx.arc(L.cx, L.cy, L.innerRadius, 0, Math.PI * 2);
+  ctx.clip();
+
+  // Baseline.
+  ctx.save();
+  ctx.strokeStyle = model.colors.baseline;
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(hx, base);
+  ctx.lineTo(hx + hw, base);
+  ctx.stroke();
+  ctx.restore();
 
   const halves: Array<[number, number, string, boolean]> = [];
   if (hasPos) {

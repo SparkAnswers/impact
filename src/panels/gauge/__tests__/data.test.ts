@@ -38,4 +38,18 @@ describe('extractSeries', () => {
     const empty = toDataFrame({ fields: [{ name: 'label', type: FieldType.string, values: ['x'] }] });
     expect(extractSeries([empty], { source: 'lastN', points: 10 })).toBeNull();
   });
+  it('stream mode shows only the last duration ending at the newest sample', () => {
+    const timeRange = { from: dateTime(0), to: dateTime(5000), raw: { from: 'now-5s', to: 'now' } };
+    const s = extractSeries([frame], { source: 'stream', points: 10, streamDuration: 2000, timeRange });
+    // value/reducers still use the full range window
+    expect(s?.windowValues).toEqual([1, -2, 4, 5]);
+    expect(s?.latest).toBe(5);
+    expect(s?.span).toBe(2000);
+    expect(s?.dataTo).toBe(5000);
+    // chart: samples from newest - 2.5 x duration (slack) with the newest at x = 1
+    expect(s?.history.map((p) => [p.t, Number(p.x.toFixed(2))])).toEqual([
+      [4000, 0.5],
+      [5000, 1],
+    ]);
+  });
 });

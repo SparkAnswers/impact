@@ -98,7 +98,8 @@ describe('GaugePanel', () => {
     expect(calls.arc).toBeGreaterThan(2);
     expect(calls.fillText).toBeGreaterThan(3);
     expect(calls.createLinearGradient ?? 0).toBeGreaterThanOrEqual(0);
-    expect(calls.clip).toBe(3);
+    // outer box clip + circular ring clip + one clip per sign half
+    expect(calls.clip).toBe(4);
   });
 
   it('renders with thresholds, custom ticks and no animation', () => {

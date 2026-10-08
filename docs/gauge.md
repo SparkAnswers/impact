@@ -7,7 +7,9 @@ shows how the value evolved over the visible window; below it the current value,
 (for example an average over the window) and a subtitle are drawn.
 
 Everything is drawn on a device-pixel-ratio aware canvas, scales with the panel size and hides tick
-labels, secondary text and the big value progressively as the panel gets small.
+labels, secondary text and the big value progressively as the panel gets small. The in-ring chart is
+sized to fit inside the ring (its width is the chord of the ring interior at its top and bottom) and
+clipped to a circle just inside the fill, so it never crosses the ring on any arc geometry.
 
 ## Live motion
 
@@ -17,9 +19,12 @@ every bit of motion is derived from samples that were already received.
 
 - **Continuous scroll**: the history chart's x axis is wall-clock time. Between refreshes the window
   keeps sliding at real speed, so the newest sample drifts away from the right edge; when the refresh
-  brings new samples the window eases (no jump) back to the new end. The scroll speed is the sample
-  cadence inferred from the last timestamps, falling back to the dashboard refresh interval; with
-  neither known, or with an absolute time range that does not end "now", nothing scrolls.
+  brings new samples the window eases (no jump) back to the new end. With the *Time range* window
+  the movement is proportional to the range (10 s on a 15 minute range is under a pixel), so for a
+  visible stream use *History > Window = Stream*: the chart then shows only the last *Stream duration*
+  and scrolls at a constant width / duration pixels per second with fractional positions (no pixel
+  snapping); newly arrived samples slide in from the right edge with a short easing. With no
+  timestamps, or with an absolute time range that does not end "now", nothing scrolls.
 - **Marker drift**: the fill and marker ease to the latest value over a slightly longer time and the
   glow breathes gently. The number itself never changes without data.
 - **Trail**: a short fading trail along the ring shows where the marker came from, built from the
@@ -100,7 +105,8 @@ Standard field options used: Unit, Decimals, Min, Max, Thresholds, Color, Displa
 | Option | Description |
 | --- | --- |
 | Show history | Draw the series as a chart inside the ring. |
-| Window | Time range (panel time range) or Last N samples. |
+| Window | Time range (panel time range), Last N samples, or Stream: only the last *Stream duration* of samples, newest at the right edge, scrolling continuously at a constant speed. The value, reducers and ring always use the time range. |
+| Stream duration | Seconds shown by the chart in stream mode (default 60; e.g. 30 to 600). The chart scrolls width / duration pixels per second. |
 | Samples | Number of most recent samples for the Last N window. |
 | Fade older samples | Older samples fade out towards the left. |
 | Line width | Stroke width of the history line. |

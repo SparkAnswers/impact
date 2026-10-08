@@ -5,6 +5,8 @@ export interface Layout {
   cy: number;
   /** Ring radius in px. */
   r: number;
+  /** Radius of the usable interior (inside the fill stroke minus padding); the history is clipped to it. */
+  innerRadius: number;
   /** Distance from centre to tick label anchor. */
   tickLabelRadius: number;
   showTicks: boolean;
@@ -186,12 +188,17 @@ export function computeLayout(input: LayoutInput): Layout {
 
   const { valueFont, valueUnitFont, secondaryFont, subtitleFont, tickFont, titleFont } = fonts;
 
-  const historyTop = cy - r * 0.8;
-  const historyBottom = cy + (hasText ? r * 0.14 : r * 0.55);
+  // History box: as large as fits entirely inside the ring's inner edge. Its half width is the chord of
+  // the inner circle at the box's top and bottom (whichever is narrower).
+  const innerRadius = Math.max(4, r - input.ringWidth / 2 - Math.max(4, r * 0.04));
+  const historyTop = cy - innerRadius * 0.74;
+  const historyBottom = cy + (hasText ? r * 0.14 : innerRadius * 0.5);
+  const chord = (dy: number) => Math.sqrt(Math.max(0, innerRadius * innerRadius - dy * dy));
+  const halfW = Math.max(2, Math.min(chord(historyTop - cy), chord(historyBottom - cy)));
   const history = {
-    x: cx - r * 0.78,
+    x: cx - halfW,
     y: historyTop,
-    w: r * 1.56,
+    w: halfW * 2,
     h: Math.max(4, historyBottom - historyTop),
   };
 
@@ -206,6 +213,7 @@ export function computeLayout(input: LayoutInput): Layout {
     cx,
     cy,
     r,
+    innerRadius,
     tickLabelRadius: r + Math.max(14, r * 0.13),
     showTicks,
     showTickLabels,

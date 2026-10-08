@@ -1,6 +1,6 @@
 import { type DataFrame, type Field, FieldType, getFieldDisplayName, type TimeRange } from '@grafana/data';
 
-export type HistorySource = 'timeRange' | 'lastN';
+export type HistorySource = 'timeRange' | 'lastN' | 'stream';
 
 export interface HistoryPoint {
   /** Horizontal position 0..1 (0 = oldest edge, 1 = newest edge). */
@@ -57,6 +57,8 @@ export interface ExtractOptions {
   source: HistorySource;
   /** Number of samples when `source` is `lastN`. */
   points: number;
+  /** Length (ms) of the chart window when `source` is `stream`. */
+  streamDuration?: number;
   timeRange?: TimeRange;
 }
 
@@ -129,6 +131,17 @@ export function extractSeries(frames: DataFrame[], opts: ExtractOptions): GaugeS
       newestTime = window[i].t;
       break;
     }
+  }
+  // Stream: the chart only shows the last `streamDuration` ending at the newest sample (the value,
+  // reducers and ring still use the full window above). Keeps a little slack on the left for scrolling.
+  if (opts.source === 'stream' && newestTime !== null && opts.streamDuration && opts.streamDuration > 0) {
+    const dur = opts.streamDuration;
+    const start = newestTime - dur;
+    span = dur;
+    dataTo = newestTime;
+    history = window
+      .filter((p) => p.t !== null && p.t >= start - dur * 0.25)
+      .map((p) => ({ x: (p.t! - start) / dur, value: p.value, t: p.t! }));
   }
 
   let dataMin: number | null = null;

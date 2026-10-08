@@ -228,16 +228,27 @@ export const plugin = new PanelPlugin<GaugeOptions>(GaugePanel)
       .addRadio({
         path: 'historySource',
         name: 'Window',
-        description: 'Time range: the panel time range. Last N: the most recent N samples.',
+        description:
+          'Time range: the panel time range. Last N: the most recent N samples. Stream: only the last "Stream duration" of samples, newest at the right edge, scrolling continuously at a constant speed.',
         category: CAT_HISTORY,
         defaultValue: DEFAULT_OPTIONS.historySource,
         settings: {
           options: [
             { value: 'timeRange', label: 'Time range' },
             { value: 'lastN', label: 'Last N' },
+            { value: 'stream', label: 'Stream' },
           ],
         },
         showIf: (o) => o.showHistory,
+      })
+      .addNumberInput({
+        path: 'streamDuration',
+        name: 'Stream duration',
+        description: 'Seconds of samples shown by the chart in stream mode (e.g. 30 to 600). The chart scrolls width / duration pixels per second.',
+        category: CAT_HISTORY,
+        defaultValue: DEFAULT_OPTIONS.streamDuration,
+        settings: { min: 5, max: 3600, integer: true },
+        showIf: (o) => o.showHistory && o.historySource === 'stream',
       })
       .addNumberInput({
         path: 'historyPoints',
