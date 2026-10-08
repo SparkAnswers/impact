@@ -1,0 +1,756 @@
+{
+  "uid": "impact-river",
+  "title": "Impact Flow River demo",
+  "tags": [
+    "impact",
+    "demo"
+  ],
+  "timezone": "browser",
+  "editable": true,
+  "schemaVersion": 41,
+  "version": 1,
+  "refresh": "",
+  "time": {
+    "from": "now-1h",
+    "to": "now"
+  },
+  "templating": {
+    "list": []
+  },
+  "annotations": {
+    "list": []
+  },
+  "panels": [
+    {
+      "id": 1,
+      "type": "sparkanswers-impact-river-panel",
+      "title": "Single stream: S-curve, random walk",
+      "description": "One channel bound to query A (speed, oldest at the start of the river); width driven by query B.",
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 24,
+        "h": 14
+      },
+      "datasource": {
+        "type": "grafana-testdata-datasource",
+        "uid": "${DS_TESTDATA}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-testdata-datasource",
+            "uid": "${DS_TESTDATA}"
+          },
+          "scenarioId": "random_walk",
+          "seriesCount": 1,
+          "min": 0,
+          "max": 16,
+          "spread": 1.3333333333333333,
+          "alias": "current"
+        },
+        {
+          "refId": "B",
+          "datasource": {
+            "type": "grafana-testdata-datasource",
+            "uid": "${DS_TESTDATA}"
+          },
+          "scenarioId": "random_walk",
+          "seriesCount": 1,
+          "min": 30,
+          "max": 170,
+          "spread": 10,
+          "alias": "width"
+        }
+      ],
+      "options": {
+        "title": "The river, in motion",
+        "subtitle": "Current speed from Intake to Outlet over the dashboard time range",
+        "caption": "Narrows",
+        "captionBig": true,
+        "captionValue": true,
+        "showLegend": true,
+        "legendPosition": "top-left",
+        "particleCountMultiplier": 1.3,
+        "channels": [
+          {
+            "id": "main",
+            "name": "Current",
+            "path": [
+              {
+                "x": 0.03,
+                "y": 0.8
+              },
+              {
+                "x": 0.18,
+                "y": 0.79
+              },
+              {
+                "x": 0.34,
+                "y": 0.72
+              },
+              {
+                "x": 0.48,
+                "y": 0.62
+              },
+              {
+                "x": 0.58,
+                "y": 0.5
+              },
+              {
+                "x": 0.66,
+                "y": 0.37
+              },
+              {
+                "x": 0.76,
+                "y": 0.27
+              },
+              {
+                "x": 0.88,
+                "y": 0.22
+              },
+              {
+                "x": 0.99,
+                "y": 0.18
+              }
+            ],
+            "speedSource": {
+              "mode": "series",
+              "series": ""
+            },
+            "widthSource": {
+              "mode": "series",
+              "series": "B"
+            },
+            "widthPx": 150,
+            "colorScale": "turbo",
+            "customStops": [],
+            "scaleDomain": {
+              "mode": "auto"
+            },
+            "particles": {
+              "count": 3200,
+              "speed": 1,
+              "trail": 0.9,
+              "width": 1.5,
+              "color": "white"
+            },
+            "direction": "forward",
+            "labels": [
+              {
+                "text": "INTAKE",
+                "at": 0.06,
+                "side": "center"
+              },
+              {
+                "text": "Narrows",
+                "at": 0.56,
+                "side": "right"
+              },
+              {
+                "text": "Outlet",
+                "at": 0.93,
+                "side": "right"
+              }
+            ],
+            "opacity": 0.86,
+            "multiSeries": "ignore",
+            "editPath": false,
+            "smoothing": 0
+          }
+        ]
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "velocitymph",
+          "decimals": 1,
+          "min": 0,
+          "max": 16
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 2,
+      "type": "sparkanswers-impact-river-panel",
+      "title": "Three channels auto-bound to A / B / C",
+      "description": "Three random-walk queries, three stacked horizontal channels with different colour presets.",
+      "gridPos": {
+        "x": 0,
+        "y": 14,
+        "w": 16,
+        "h": 12
+      },
+      "datasource": {
+        "type": "grafana-testdata-datasource",
+        "uid": "${DS_TESTDATA}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-testdata-datasource",
+            "uid": "${DS_TESTDATA}"
+          },
+          "scenarioId": "random_walk",
+          "seriesCount": 1,
+          "min": 0,
+          "max": 20,
+          "spread": 1.6666666666666667,
+          "alias": "uplink"
+        },
+        {
+          "refId": "B",
+          "datasource": {
+            "type": "grafana-testdata-datasource",
+            "uid": "${DS_TESTDATA}"
+          },
+          "scenarioId": "random_walk",
+          "seriesCount": 1,
+          "min": 0,
+          "max": 500,
+          "spread": 41.666666666666664,
+          "alias": "queue"
+        },
+        {
+          "refId": "C",
+          "datasource": {
+            "type": "grafana-testdata-datasource",
+            "uid": "${DS_TESTDATA}"
+          },
+          "scenarioId": "random_walk",
+          "seriesCount": 1,
+          "min": -50,
+          "max": 50,
+          "spread": 8.333333333333334,
+          "alias": "balance"
+        }
+      ],
+      "options": {
+        "title": "Three pipes",
+        "subtitle": "Channel i binds to series i when no source is chosen",
+        "showLegend": true,
+        "legendPosition": "top-right",
+        "captionValue": false,
+        "channels": [
+          {
+            "id": "a",
+            "name": "Uplink",
+            "path": [
+              {
+                "x": 0.03,
+                "y": 0.25
+              },
+              {
+                "x": 0.35,
+                "y": 0.25
+              },
+              {
+                "x": 0.65,
+                "y": 0.25
+              },
+              {
+                "x": 0.97,
+                "y": 0.25
+              }
+            ],
+            "speedSource": {
+              "mode": "series",
+              "series": ""
+            },
+            "widthSource": {
+              "mode": "fixed"
+            },
+            "widthPx": 48,
+            "colorScale": "cool",
+            "customStops": [],
+            "scaleDomain": {
+              "mode": "auto"
+            },
+            "particles": {
+              "count": 900,
+              "speed": 1,
+              "trail": 0.9,
+              "width": 1.5,
+              "color": "white"
+            },
+            "direction": "forward",
+            "labels": [
+              {
+                "text": "Uplink",
+                "at": 0.02,
+                "side": "left"
+              }
+            ],
+            "opacity": 0.86,
+            "multiSeries": "ignore",
+            "editPath": false,
+            "smoothing": 0
+          },
+          {
+            "id": "b",
+            "name": "Queue",
+            "path": [
+              {
+                "x": 0.03,
+                "y": 0.5
+              },
+              {
+                "x": 0.35,
+                "y": 0.5
+              },
+              {
+                "x": 0.65,
+                "y": 0.5
+              },
+              {
+                "x": 0.97,
+                "y": 0.5
+              }
+            ],
+            "speedSource": {
+              "mode": "series",
+              "series": ""
+            },
+            "widthSource": {
+              "mode": "fixed"
+            },
+            "widthPx": 48,
+            "colorScale": "warm",
+            "customStops": [],
+            "scaleDomain": {
+              "mode": "auto"
+            },
+            "particles": {
+              "count": 900,
+              "speed": 1,
+              "trail": 0.9,
+              "width": 1.5,
+              "color": "byValue"
+            },
+            "direction": "forward",
+            "labels": [
+              {
+                "text": "Queue",
+                "at": 0.02,
+                "side": "left"
+              }
+            ],
+            "opacity": 0.86,
+            "multiSeries": "ignore",
+            "editPath": false,
+            "smoothing": 0
+          },
+          {
+            "id": "c",
+            "name": "Balance",
+            "path": [
+              {
+                "x": 0.03,
+                "y": 0.75
+              },
+              {
+                "x": 0.35,
+                "y": 0.75
+              },
+              {
+                "x": 0.65,
+                "y": 0.75
+              },
+              {
+                "x": 0.97,
+                "y": 0.75
+              }
+            ],
+            "speedSource": {
+              "mode": "series",
+              "series": ""
+            },
+            "widthSource": {
+              "mode": "fixed"
+            },
+            "widthPx": 48,
+            "colorScale": "viridis",
+            "customStops": [],
+            "scaleDomain": {
+              "mode": "auto"
+            },
+            "particles": {
+              "count": 900,
+              "speed": 1,
+              "trail": 0.9,
+              "width": 1.5,
+              "color": "fixed",
+              "fixedColor": "#ffe08a"
+            },
+            "direction": "bySign",
+            "labels": [
+              {
+                "text": "Balance (flows backwards when negative)",
+                "at": 0.02,
+                "side": "left"
+              }
+            ],
+            "opacity": 0.86,
+            "multiSeries": "ignore",
+            "editPath": false,
+            "smoothing": 0
+          }
+        ]
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "decimals": 0
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 3,
+      "type": "sparkanswers-impact-river-panel",
+      "title": "Parallel lanes: three series in one river",
+      "description": "Single channel with multi-series mode set to parallel lanes.",
+      "gridPos": {
+        "x": 16,
+        "y": 14,
+        "w": 8,
+        "h": 12
+      },
+      "datasource": {
+        "type": "grafana-testdata-datasource",
+        "uid": "${DS_TESTDATA}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-testdata-datasource",
+            "uid": "${DS_TESTDATA}"
+          },
+          "scenarioId": "random_walk",
+          "seriesCount": 1,
+          "min": 0,
+          "max": 100,
+          "spread": 8.333333333333334,
+          "alias": "north"
+        },
+        {
+          "refId": "B",
+          "datasource": {
+            "type": "grafana-testdata-datasource",
+            "uid": "${DS_TESTDATA}"
+          },
+          "scenarioId": "random_walk",
+          "seriesCount": 1,
+          "min": 0,
+          "max": 100,
+          "spread": 8.333333333333334,
+          "alias": "east"
+        },
+        {
+          "refId": "C",
+          "datasource": {
+            "type": "grafana-testdata-datasource",
+            "uid": "${DS_TESTDATA}"
+          },
+          "scenarioId": "random_walk",
+          "seriesCount": 1,
+          "min": 0,
+          "max": 100,
+          "spread": 8.333333333333334,
+          "alias": "south"
+        }
+      ],
+      "options": {
+        "title": "Lanes",
+        "subtitle": "Each series is a lane coloured by its own value",
+        "showLegend": true,
+        "legendPosition": "bottom-left",
+        "captionValue": false,
+        "channels": [
+          {
+            "id": "lanes",
+            "name": "Lanes",
+            "path": [
+              {
+                "x": 0.05,
+                "y": 0.9
+              },
+              {
+                "x": 0.35,
+                "y": 0.65
+              },
+              {
+                "x": 0.65,
+                "y": 0.35
+              },
+              {
+                "x": 0.95,
+                "y": 0.1
+              }
+            ],
+            "speedSource": {
+              "mode": "series",
+              "series": ""
+            },
+            "widthSource": {
+              "mode": "fixed"
+            },
+            "widthPx": 120,
+            "colorScale": "inferno",
+            "customStops": [],
+            "scaleDomain": {
+              "mode": "auto"
+            },
+            "particles": {
+              "count": 2400,
+              "speed": 0.8,
+              "trail": 0.9,
+              "width": 1.5,
+              "color": "white"
+            },
+            "direction": "forward",
+            "labels": [],
+            "opacity": 0.86,
+            "multiSeries": "lanes",
+            "editPath": false,
+            "smoothing": 0
+          }
+        ]
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "min": 0,
+          "max": 100
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 4,
+      "type": "sparkanswers-impact-river-panel",
+      "title": "Transparent background, threshold colours",
+      "description": "Background set to none (image URL left empty), stepped colours from the standard thresholds.",
+      "gridPos": {
+        "x": 0,
+        "y": 26,
+        "w": 24,
+        "h": 10
+      },
+      "datasource": {
+        "type": "grafana-testdata-datasource",
+        "uid": "${DS_TESTDATA}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-testdata-datasource",
+            "uid": "${DS_TESTDATA}"
+          },
+          "scenarioId": "random_walk",
+          "seriesCount": 1,
+          "min": 0,
+          "max": 100,
+          "spread": 8.333333333333334,
+          "alias": "load"
+        }
+      ],
+      "options": {
+        "title": "Load by threshold",
+        "subtitle": "Colour scale: field thresholds; background: none",
+        "background": "none",
+        "backgroundUrl": "",
+        "showLegend": true,
+        "legendPosition": "top-right",
+        "caption": "{value}",
+        "captionBig": true,
+        "captionValue": false,
+        "channels": [
+          {
+            "id": "t",
+            "name": "Load",
+            "path": [
+              {
+                "x": 0.03,
+                "y": 0.6
+              },
+              {
+                "x": 0.3,
+                "y": 0.4
+              },
+              {
+                "x": 0.6,
+                "y": 0.65
+              },
+              {
+                "x": 0.97,
+                "y": 0.4
+              }
+            ],
+            "speedSource": {
+              "mode": "series",
+              "series": ""
+            },
+            "widthSource": {
+              "mode": "fixed"
+            },
+            "widthPx": 70,
+            "colorScale": "thresholds",
+            "customStops": [],
+            "scaleDomain": {
+              "mode": "auto"
+            },
+            "particles": {
+              "count": 1200,
+              "speed": 1.2,
+              "trail": 0.9,
+              "width": 1.5,
+              "color": "byValue"
+            },
+            "direction": "forward",
+            "labels": [],
+            "opacity": 0.86,
+            "multiSeries": "ignore",
+            "editPath": false,
+            "smoothing": 0
+          }
+        ]
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "min": 0,
+          "max": 100,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "value": null,
+                "color": "blue"
+              },
+              {
+                "value": 40,
+                "color": "green"
+              },
+              {
+                "value": 70,
+                "color": "orange"
+              },
+              {
+                "value": 90,
+                "color": "red"
+              }
+            ]
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 5,
+      "type": "sparkanswers-impact-river-panel",
+      "title": "Transparent over dashboard",
+      "description": "Grafana's built-in Transparent background switch; Background mode Transparent and Channel halo off, so only the channel is painted.",
+      "gridPos": {
+        "x": 0,
+        "y": 36,
+        "w": 24,
+        "h": 9
+      },
+      "datasource": {
+        "type": "grafana-testdata-datasource",
+        "uid": "${DS_TESTDATA}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-testdata-datasource",
+            "uid": "${DS_TESTDATA}"
+          },
+          "scenarioId": "random_walk",
+          "seriesCount": 1,
+          "min": 0,
+          "max": 100,
+          "spread": 8.333333333333334,
+          "alias": "load"
+        }
+      ],
+      "options": {
+        "title": "Transparent",
+        "subtitle": "Nothing opaque is painted: the dashboard shows through",
+        "background": "none",
+        "backgroundUrl": "",
+        "showLegend": true,
+        "legendPosition": "top-right",
+        "caption": "{value}",
+        "captionBig": true,
+        "captionValue": false,
+        "channels": [
+          {
+            "id": "tr",
+            "name": "Load",
+            "path": [
+              {
+                "x": 0.03,
+                "y": 0.6
+              },
+              {
+                "x": 0.3,
+                "y": 0.4
+              },
+              {
+                "x": 0.6,
+                "y": 0.65
+              },
+              {
+                "x": 0.97,
+                "y": 0.4
+              }
+            ],
+            "speedSource": {
+              "mode": "series",
+              "series": ""
+            },
+            "widthSource": {
+              "mode": "fixed"
+            },
+            "widthPx": 70,
+            "colorScale": "turbo",
+            "customStops": [],
+            "scaleDomain": {
+              "mode": "auto"
+            },
+            "particles": {
+              "count": 1200,
+              "speed": 1.2,
+              "trail": 0.9,
+              "width": 1.5,
+              "color": "byValue"
+            },
+            "direction": "forward",
+            "labels": [],
+            "opacity": 0.86,
+            "multiSeries": "ignore",
+            "editPath": false,
+            "smoothing": 0
+          }
+        ],
+        "channelHalo": false
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "min": 0,
+          "max": 100
+        },
+        "overrides": []
+      },
+      "transparent": true
+    }
+  ]
+}

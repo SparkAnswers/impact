@@ -45,6 +45,35 @@ mockups/                the approved static HTML mockups each panel was built fr
 The `Dockerfile` `build` stage runs typecheck, lint and tests before bundling, so `make image` and
 `make dist-export` are also a full CI run.
 
+## Bundled demo dashboards and the Gallery installer
+
+The Gallery page (`src/app/Gallery.tsx`) can install the demo dashboards on any Grafana, so users without the
+`provisioning/` mount (Kubernetes, managed instances) still get working panels with data.
+
+- `src/demo/dashboards/*.json` are generated copies of `provisioning/dashboards/impact/*.json` with the
+  datasource uid `impact-testdata` rewritten to the placeholder `${DS_TESTDATA}` (type
+  `grafana-testdata-datasource`) and no top-level `id`. Regenerate after editing a demo dashboard:
+
+  ```bash
+  node scripts/sync-demo-dashboards.mjs          # or --check to only report drift
+  ```
+
+  `src/shared/__tests__/demoDashboards.test.ts` fails when the two folders drift. The JSON is loaded lazily
+  (`src/demo/index.ts`) so the Gallery chunk stays small; webpack also copies it to `dist/demo/dashboards/`.
+- `src/app/installDemos.ts` holds the install logic as pure functions over a two-method `ApiClient`
+  (`get`/`post`), unit-tested with an in-memory fake Grafana: find-or-create the TestData source
+  (`GET/POST /api/datasources`), find-or-create the "Impact" folder (`GET/POST /api/folders`),
+  `POST /api/dashboards/db` with `overwrite: true` and the placeholder bound to the real uid, and
+  `GET /api/dashboards/uid/<uid>` (404 = not installed) for the card state. `401/403` responses are turned
+  into an `InstallError` naming the permission (`datasources:create` needs Admin, `dashboards:create` and
+  `folders:create` need Editor). The Gallery adapts `getBackendSrv().fetch` with `showErrorAlert: false`.
+- `src/app/dataShapes.ts` is the "Data shape" guidance per panel (generic metric names only).
+- `src/shared/demo/` has deterministic frame generators (seeded PRNG, `createDataFrame`) for a future
+  per-panel "Demo data" option; see its README.
+
+Note for the Docker stack: Grafana records a plugin's file list when it loads it, so a rebuild that adds new
+chunk files (new lazy imports) returns 404 for them until the container restarts.
+
 ## Rendering approaches
 
 | Panel | Technique |
