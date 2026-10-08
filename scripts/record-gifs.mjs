@@ -18,7 +18,7 @@ async function record(name, url, size, readySelector, action) {
   await page.locator(readySelector).first().waitFor({ timeout: 30000 });
   await page.waitForTimeout(1500);
   const offset = (Date.now() - t0) / 1000;
-  if (action) await action(page);
+  if (action) {await action(page);}
   await page.waitForTimeout(5000);
   const video = page.video();
   await ctx.close();
@@ -30,7 +30,7 @@ async function record(name, url, size, readySelector, action) {
 await record('river', `${base}/d/impact-river?kiosk&viewPanel=panel-1`, { width: 1100, height: 560 }, 'canvas');
 await record('flow-design-mode', `${base}/d/impact-flow?kiosk&viewPanel=panel-5`, { width: 1100, height: 620 }, 'text=DESIGN MODE', async (page) => {
   const box = await page.getByText('Generator', { exact: true }).first().boundingBox();
-  if (!box) return;
+  if (!box) {return;}
   const sx = box.x + box.width / 2;
   const sy = box.y + box.height / 2;
   await page.mouse.move(sx, sy);
