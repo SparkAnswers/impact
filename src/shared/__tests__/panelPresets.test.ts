@@ -61,15 +61,16 @@ describe('flow presets', () => {
   it('look-only presets keep data-driven settings, data presets override them', () => {
     const current = {
       ...FLOW_PRESETS.defaults,
-      data: { ...FLOW_PRESETS.defaults.data, source: 'data' as const, layout: 'radial' as const, valueMap: 'width' as const, topN: 5 },
+      data: { ...FLOW_PRESETS.defaults.data, source: 'data' as const, layout: 'radial' as const, valueMap: 'width' as const, topN: 5, wrap: 8 },
     };
     const minimal = FLOW_PRESETS.presets.find((p) => p.id === 'minimal')!;
     const out = applyPreset(FLOW_PRESETS, minimal, current, { preset: minimal.id, token: 1 });
-    expect(out.data).toMatchObject({ source: 'data', layout: 'radial', valueMap: 'width', topN: 5 });
+    expect(out.data).toMatchObject({ source: 'data', layout: 'radial', valueMap: 'width', topN: 5, wrap: 8 });
     expect(out.appearance.nodeStyle).toBe('minimal');
     const graph = FLOW_PRESETS.presets.find((p) => p.id === 'service-graph')!;
     const next = applyPreset(FLOW_PRESETS, graph, current, { preset: graph.id, token: 2 });
-    expect(next.data).toMatchObject({ source: 'data', layout: 'lr', valueMap: 'speed', topN: 5 });
+    // Data presets do not set wrap, so the user's choice survives them too.
+    expect(next.data).toMatchObject({ source: 'data', layout: 'lr', valueMap: 'speed', topN: 5, wrap: 8 });
   });
 });
 

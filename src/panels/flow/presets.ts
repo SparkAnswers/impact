@@ -19,7 +19,7 @@ const DATA_FIELD_PATHS = [
 ].map((f) => `data.${f}`);
 
 /** Data-driven settings that survive a look-only preset (data presets set theirs explicitly). */
-const DATA_SETTING_PATHS = ['source', 'layout', 'valueMap', 'value2Map', 'showEdgeValues', 'topN', 'groupBoxes', 'layerGap', 'nodeGap'].map(
+const DATA_SETTING_PATHS = ['source', 'layout', 'valueMap', 'value2Map', 'showEdgeValues', 'topN', 'groupBoxes', 'layerGap', 'nodeGap', 'wrap'].map(
   (f) => `data.${f}`
 );
 

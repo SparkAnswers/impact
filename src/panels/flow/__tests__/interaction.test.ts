@@ -1,4 +1,4 @@
-import { layeredLayout, type LayoutNode } from '../lib/layout';
+import { layeredLayout, radialLayout, type LayoutNode } from '../lib/layout';
 import { MAX_ZOOM, MIN_ZOOM, zoomAt } from '../lib/geometry';
 import { groupSegments, segmentsOverlap } from '../lib/groups';
 import { fillLinkTemplate, resolveNodeLink, safeHref } from '../lib/links';
@@ -136,6 +136,47 @@ describe('group boxes', () => {
     // Every node of the group is inside one of its segments.
     for (const x of placed.filter((p) => p.group)) {
       expect(segs.some((s) => s.group === x.group && x.x >= s.x && x.y >= s.y && x.x + x.w <= s.x + s.w && x.y + x.h <= s.y + s.h)).toBe(true);
+    }
+  });
+
+  it('radial boxes follow the arcs of a ring and never cover nodes of another group', () => {
+    const groups = ['ns-a', 'ns-b', 'ns-c', 'ns-d'];
+    // A hub with two rings (18 + 18 nodes) whose groups interleave by id, plus an unrelated component.
+    const ring1 = Array.from({ length: 18 }, (_, i) => n(`pod-${i}`, groups[i % 4]));
+    const ring2 = Array.from({ length: 18 }, (_, i) => n(`pvc-${i}`, groups[(i + 1) % 4]));
+    const other = [n('other'), n('other-1', 'ns-a'), n('other-2', 'ns-a')];
+    const all = [n('hub'), ...ring1, ...ring2, ...other];
+    const edges = [
+      ...ring1.map((x) => ({ source: 'hub', target: x.id })),
+      ...ring2.map((x, i) => ({ source: ring1[i].id, target: x.id })),
+      ...other.slice(1).map((x) => ({ source: 'other', target: x.id })),
+    ];
+    const res = radialLayout(all, edges, { direction: 'radial', layerGap: 120, nodeGap: 24, aspect: 1.5 });
+    const placed = all.map<FlowNode>((x) => ({ id: x.id, label: x.id, group: x.group, ...res.positions.get(x.id)!, w: x.w, h: x.h, shape: 'card' }));
+    const inside = (x: FlowNode, s: { x: number; y: number; w: number; h: number }) => x.x >= s.x && x.y >= s.y && x.x + x.w <= s.x + s.w && x.y + x.h <= s.y + s.h;
+    const covers = (s: { x: number; y: number; w: number; h: number }, x: FlowNode) => x.x < s.x + s.w && s.x < x.x + x.w && x.y < s.y + s.h && s.y < x.y + x.h;
+    for (const hints of [{ ranks: res.ranks, centres: res.centres }, undefined]) {
+      const segs = groupSegments(placed, 'radial', 10, 16, hints);
+      // Several compact boxes per group instead of one rectangle across the panel.
+      const span = Math.max(...placed.map((x) => x.x + x.w)) - Math.min(...placed.map((x) => x.x));
+      for (const s of segs) {
+        expect(s.w).toBeLessThan(span / 2);
+        for (const x of placed) {
+          if (x.group !== s.group) {
+            expect(covers(s, x)).toBe(false);
+          }
+        }
+      }
+      for (const x of placed.filter((p) => p.group)) {
+        expect(segs.some((s) => s.group === x.group && inside(x, s))).toBe(true);
+      }
+      expect(segs.filter((s) => s.first).map((s) => s.group).sort()).toEqual(groups);
+    }
+    // With the ring index known, nodes of one group on different rings never share a box.
+    const exact = groupSegments(placed, 'radial', 10, 16, { ranks: res.ranks, centres: res.centres });
+    for (const s of exact) {
+      const members = placed.filter((x) => x.group === s.group && inside(x, s));
+      expect(new Set(members.map((x) => res.ranks.get(x.id))).size).toBe(1);
     }
   });
 

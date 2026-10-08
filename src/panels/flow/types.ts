@@ -150,6 +150,8 @@ export interface DataOptions {
   layout: LayoutDirection;
   layerGap: number;
   nodeGap: number;
+  /** Layered layouts: fold a layer with more than this many nodes into side-by-side bands (0 = never) */
+  wrap: number;
   groupBoxes: boolean;
   overrides: Record<string, NodeOverride>;
 }
@@ -265,6 +267,7 @@ export const DEFAULT_DATA_OPTIONS: DataOptions = {
   layout: 'lr',
   layerGap: 120,
   nodeGap: 24,
+  wrap: 0,
   groupBoxes: true,
   overrides: {},
 };

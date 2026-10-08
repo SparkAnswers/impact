@@ -17,7 +17,8 @@ import { createExampleDiagram } from './lib/example';
 import { extractGraph } from './lib/frames';
 import { fitViewport, zoomAt } from './lib/geometry';
 import { openLink, resolveNodeLink } from './lib/links';
-import { layoutGraph, nodeSetKey, type LayoutOptions } from './lib/layout';
+import type { GroupHints } from './lib/groups';
+import { layoutGraph, nodeSetKey, type LayoutOptions, type LayoutResult } from './lib/layout';
 import { diffFade, emptyFade, fadeFrame, type FadeState } from './lib/transitions';
 import { emptyUndo, pushUndo, redo, undo, type UndoState } from './lib/undo';
 import { normalizeDiagram } from './lib/validate';
@@ -218,24 +219,28 @@ export const FlowPanel: React.FC<PanelProps<FlowOptions>> = ({
       // Room between groups in a layer for the group boxes and their label.
       groupGap: dataOpts.groupBoxes ? fontSize + 10 : 0,
       aspect,
+      wrap: Math.max(0, dataOpts.wrap ?? 0),
     }),
-    [dataOpts.layout, dataOpts.layerGap, dataOpts.nodeGap, dataOpts.groupBoxes, fontSize, aspect]
+    [dataOpts.layout, dataOpts.layerGap, dataOpts.nodeGap, dataOpts.wrap, dataOpts.groupBoxes, fontSize, aspect]
   );
   // Positions are only recomputed when the node set (or the layout options) change, so refreshes do not reshuffle.
   const layoutKey = graph ? nodeSetKey(graph.nodes, layoutOpts) : '';
-  const fresh = useMemo(() => {
+  const fresh = useMemo<LayoutResult>(() => {
     if (!graph) {
-      return new Map<string, Point>();
+      return { positions: new Map<string, Point>(), ranks: new Map() };
     }
     const sized = graph.nodes.map((n) => ({ id: n.id, group: n.group, ...nodeSize(shortLabel(n.label ?? n.id), fontSize, n.value !== undefined) }));
-    return layoutGraph(sized, graph.edges, layoutOpts).positions;
+    return layoutGraph(sized, graph.edges, layoutOpts);
   }, [graph, layoutOpts, fontSize]);
-  const [layoutCache, setLayoutCache] = useState<{ key: string; positions: Map<string, Point> }>({ key: '', positions: new Map() });
-  let positions = layoutCache.positions;
+  const [layoutCache, setLayoutCache] = useState<{ key: string; layout: LayoutResult }>({ key: '', layout: { positions: new Map(), ranks: new Map() } });
+  let layout = layoutCache.layout;
   if (layoutCache.key !== layoutKey) {
-    positions = fresh;
-    setLayoutCache({ key: layoutKey, positions: fresh });
+    layout = fresh;
+    setLayoutCache({ key: layoutKey, layout: fresh });
   }
+  const positions = layout.positions;
+  // Ring index and ring centre per node let the group boxes follow the arcs of a radial layout.
+  const groupHints = useMemo<GroupHints>(() => ({ ranks: layout.ranks, centres: layout.centres }), [layout]);
   const built = useMemo(() => (graph ? buildDataDiagram(graph, positions, dataOpts, theme, fontSize) : undefined), [graph, positions, dataOpts, theme, fontSize]);
   const derived = useMemo(() => {
     if (!built) {
@@ -527,6 +532,7 @@ export const FlowPanel: React.FC<PanelProps<FlowOptions>> = ({
         uid={uid}
         opacity={fadeOpacity}
         groupBoxes={isData && dataOpts.groupBoxes}
+        groupHints={isData ? groupHints : undefined}
         zoomEnabled={zoomEnabled}
         linkFor={linkFor}
         linkTrigger={links.trigger}

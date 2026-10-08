@@ -82,7 +82,7 @@ Draws a diagram you design inside the panel, or builds one from query results. N
 
 | Option                 | Description                                                                                 |
 | ---------------------- | ------------------------------------------------------------------------------------------- |
-| Diagram source         | `Manual`, `Data` or `Data + manual overrides`; with field pickers for source, target, value, label, group, node id and status, layout direction, gaps, group boxes, edge labels and Top N |
+| Diagram source         | `Manual`, `Data` or `Data + manual overrides`; with field pickers for source, target, value, label, group, node id and status, layout direction, gaps, wrap layers after (fold a huge layer into side-by-side bands), group boxes, edge labels and Top N |
 | Demo data              | `Off`, `When no data` (default) or `Always`: a generated graph until a query is wired       |
 | Background             | `Panel`, `Transparent`, `Dot grid` or `Line grid`                                           |
 | Node style             | `Cards` (filled, status accent) or `Minimal` (outlined)                                     |

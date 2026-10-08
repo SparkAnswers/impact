@@ -70,9 +70,18 @@ configured name.
 - **Layout direction**: `Left to right` or `Top to bottom` layered layout (rank = longest path
   from the sources, cycles are broken, nodes inside a layer are ordered by the barycenter of their
   neighbours over a few sweeps, groups stay adjacent) or `Radial` (the node with the most edges in
-  the middle, the rest on rings by hop distance).
+  the middle, the rest on rings by hop distance; nodes on a ring are ordered by the angle of their
+  parent so spokes do not cross, and members of a group sit next to each other on one arc).
+- A disconnected graph in `Radial` gets one hub and ring system **per connected component**. The
+  components are packed row by row (largest first, isolated nodes last) into a block that roughly
+  follows the panel aspect, so many small islands (for example `service -> process` pairs) form a
+  grid instead of one cluster with long spokes to the edge of the canvas.
 - **Layer gap** / **Node gap** control spacing. The layer gap stretches (up to 4x) so the diagram
   roughly matches the panel's aspect ratio, which keeps big fan-outs readable.
+- **Wrap layers after** folds a layer with more nodes than this (say one parent with 60 children)
+  into several side-by-side bands of near-equal size, separated by the node gap, so fit-to-panel
+  does not end up at 20% zoom on one very long column; alternate bands are offset by half a node
+  step so edges pass between nodes rather than through them. 0 (default) never wraps.
 - Positions are only recomputed when the **set of node ids** (or a layout option) changes, so
   refreshes never reshuffle the diagram. Nodes that appear fade in, nodes that disappear fade out
   and edges re-route.
@@ -97,6 +106,12 @@ Nodes of the same group are kept contiguous inside every layer, in one global gr
 little extra room between groups. A group box is drawn **per layer segment** (one rounded rectangle
 for the group's nodes in each layer, same colour, labelled once on the first segment), so a group
 that spans pods and claims gets two boxes and never covers nodes of other groups in between.
+
+In `Radial` the boxes follow the rings instead: a group's nodes on one ring form one or more
+**arcs** (split where the angular gap between neighbours is clearly larger than the usual step), and
+each arc gets a box. A long arc whose box would still reach a node of another group is halved until
+it does not, so boxes stay compact rather than spanning the whole ring. The label sits on the first
+arc with free room above it.
 
 ### Overrides
 
@@ -277,6 +292,7 @@ result is the same wherever you start from; what survives is the drawn diagram, 
 | Data → Demo data | Built-in generated service graph (12 nodes, edge rows `source` / `target` / `value`). *When no data* (default): used in the data modes when the query yields no edges, and in Manual mode while the diagram is empty (and not being designed). *Always*: ignores the query in the data modes. *Off*: never; the empty state says "Needs edge rows with source, target and value, or draw a diagram". A "Demo data" pill marks generated data. |
 | Data → Layout direction | `Left to right`, `Top to bottom` (layered) or `Radial`. |
 | Data → Layer gap / Node gap | Spacing between layers and between nodes in a layer, in canvas pixels. |
+| Data → Wrap layers after | Layered layouts only: a layer with more nodes than this is folded into side-by-side bands (ceil(n / wrap), near-equal size, node gap between them). 0 = never wrap. |
 | Data → Value drives | What the edge value controls: particle speed, colour (thresholds / colour scheme of the value field), width, or nothing. |
 | Data → Secondary value drives | Same for the secondary value field (shown when one is configured). |
 | Data → Show edge values | Draw the formatted value on every edge (a label field wins). |

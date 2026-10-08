@@ -1,4 +1,4 @@
-import { breakCycles, layeredLayout, layoutGraph, nodeSetKey, radialLayout, rankNodes, type LayoutEdge, type LayoutNode } from '../lib/layout';
+import { breakCycles, layeredLayout, layoutGraph, nodeSetKey, radialLayout, rankNodes, wrapLayer, type LayoutEdge, type LayoutNode } from '../lib/layout';
 
 const n = (id: string, group?: string): LayoutNode => ({ id, w: 140, h: 52, group });
 const e = (source: string, target: string): LayoutEdge => ({ source, target });
@@ -107,6 +107,91 @@ describe('layout', () => {
     expect(layoutGraph(nodes, edges, { ...opts, direction: 'radial' }).positions.get('hub')).toEqual({ x: -70, y: -26 });
   });
 
+  it('radial layout keeps members of a group contiguous on their ring', () => {
+    const groups = ['ns-a', 'ns-b', 'ns-c'];
+    // Ids interleave the groups so a plain id order would scatter them around the ring.
+    const leaves = Array.from({ length: 12 }, (_, i) => n(`leaf${i}`, groups[i % 3]));
+    const nodes = [n('hub'), ...leaves];
+    const edges = leaves.map((l) => e('hub', l.id));
+    const { positions, ranks } = radialLayout(nodes, edges, { ...opts, direction: 'radial' });
+    expect(overlaps(nodes, positions)).toBe(false);
+    const angleOf = (id: string) => Math.atan2(positions.get(id)!.y + 26, positions.get(id)!.x + 70);
+    const order = leaves
+      .filter((l) => ranks.get(l.id) === 1)
+      .sort((a, b) => angleOf(a.id) - angleOf(b.id))
+      .map((l) => l.group!);
+    // Each group is one uninterrupted arc (allowing one wrap-around at the start/end of the circle).
+    const runs = order.filter((g, i) => i === 0 || g !== order[i - 1]);
+    if (runs.length > 1 && runs[0] === runs[runs.length - 1]) {
+      runs.pop();
+    }
+    expect(new Set(runs).size).toBe(runs.length);
+    expect(runs.sort()).toEqual(groups);
+  });
+
+  it('radial layout gives each connected component its own hub and packs them without overlaps', () => {
+    const a = [n('a'), ...Array.from({ length: 6 }, (_, i) => n(`a${i}`))];
+    const b = [n('b'), ...Array.from({ length: 3 }, (_, i) => n(`b${i}`))];
+    const nodes = [...b, ...a];
+    const edges = [...a.slice(1).map((x) => e('a', x.id)), ...b.slice(1).map((x) => e('b', x.id)), e('b0', 'b1')];
+    const { positions, ranks, centres } = radialLayout(nodes, edges, { ...opts, direction: 'radial' });
+    expect(positions.size).toBe(nodes.length);
+    expect(overlaps(nodes, positions)).toBe(false);
+    expect(ranks.get('a')).toBe(0);
+    expect(ranks.get('b')).toBe(0);
+    expect(ranks.get('a3')).toBe(1);
+    expect(ranks.get('b2')).toBe(1);
+    // The bigger component comes first (row-major: top row, left), both have their own ring centre.
+    expect(centres!.get('a')).not.toEqual(centres!.get('b'));
+    expect(centres!.get('a0')).toEqual(centres!.get('a'));
+    const top = (ids: LayoutNode[]) => Math.min(...ids.map((x) => positions.get(x.id)!.y));
+    expect(top(a)).toBeLessThanOrEqual(top(b));
+    // Each component's nodes sit around their hub, not around the other one.
+    const dist = (id: string, hub: string) => Math.hypot(positions.get(id)!.x - positions.get(hub)!.x, positions.get(id)!.y - positions.get(hub)!.y);
+    for (const x of a.slice(1)) {
+      expect(dist(x.id, 'a')).toBeLessThan(dist(x.id, 'b'));
+    }
+    // Deterministic regardless of input order.
+    const again = radialLayout(nodes.slice().reverse(), edges.slice().reverse(), { ...opts, direction: 'radial' }).positions;
+    expect(Array.from(again.entries()).sort()).toEqual(Array.from(positions.entries()).sort());
+  });
+
+  it('radial layout places isolated nodes last and keeps many small components compact', () => {
+    const hub = [n('hub'), ...Array.from({ length: 5 }, (_, i) => n(`leaf${i}`))];
+    const singles = [n('lonely-a'), n('lonely-b'), n('lonely-c')];
+    const nodes = [...singles, ...hub];
+    const edges = hub.slice(1).map((x) => e('hub', x.id));
+    const { positions, ranks } = radialLayout(nodes, edges, { ...opts, direction: 'radial' });
+    expect(positions.size).toBe(nodes.length);
+    expect(overlaps(nodes, positions)).toBe(false);
+    for (const s of singles) {
+      expect(ranks.get(s.id)).toBe(0);
+      // Packed after the connected component: to its right or below it.
+      const p = positions.get(s.id)!;
+      const hx = Math.max(...hub.map((x) => positions.get(x.id)!.x + x.w));
+      const hy = Math.max(...hub.map((x) => positions.get(x.id)!.y + x.h));
+      expect(p.x >= hx || p.y >= hy).toBe(true);
+    }
+    // 150 service → process pairs: a grid that follows the panel aspect instead of one ring with long spokes.
+    const pairs = Array.from({ length: 150 }, (_, i) => [n(`svc${i}`), n(`proc${i}`)]).flat();
+    const pairEdges = Array.from({ length: 150 }, (_, i) => e(`svc${i}`, `proc${i}`));
+    const grid = radialLayout(pairs, pairEdges, { ...opts, direction: 'radial', aspect: 2 });
+    expect(overlaps(pairs, grid.positions)).toBe(false);
+    const xs = Array.from(grid.positions.values()).map((p) => p.x);
+    const ys = Array.from(grid.positions.values()).map((p) => p.y);
+    const w = Math.max(...xs) - Math.min(...xs) + 140;
+    const h = Math.max(...ys) - Math.min(...ys) + 52;
+    expect(w / h).toBeGreaterThan(1.3);
+    expect(w / h).toBeLessThan(3);
+    for (let i = 0; i < 150; i++) {
+      expect(grid.ranks.get(`svc${i}`)! + grid.ranks.get(`proc${i}`)!).toBe(1);
+      // Partners stay next to each other.
+      const s = grid.positions.get(`svc${i}`)!;
+      const p = grid.positions.get(`proc${i}`)!;
+      expect(Math.hypot(s.x - p.x, s.y - p.y)).toBeLessThan(140 + 24 + 52);
+    }
+  });
+
   it('handles empty input and isolated nodes', () => {
     expect(layeredLayout([], [], opts).positions.size).toBe(0);
     expect(radialLayout([], [], opts).positions.size).toBe(0);
@@ -131,5 +216,77 @@ describe('layout', () => {
   it('nodeSetKey ignores order and edges but not layout options', () => {
     expect(nodeSetKey([n('b'), n('a')], opts)).toBe(nodeSetKey([n('a'), n('b')], opts));
     expect(nodeSetKey([n('a')], opts)).not.toBe(nodeSetKey([n('a')], { ...opts, direction: 'tb' }));
+    expect(nodeSetKey([n('a')], opts)).not.toBe(nodeSetKey([n('a')], { ...opts, wrap: 5 }));
+  });
+
+  describe('wrap', () => {
+    const kids = Array.from({ length: 12 }, (_, i) => n(`t${i}`));
+    const nodes = [n('src'), ...kids, n('sink')];
+    const edges = [...kids.map((k) => e('src', k.id)), ...kids.map((k) => e(k.id, 'sink'))];
+
+    it('splits an ordered layer into near-equal bands', () => {
+      expect(wrapLayer(['a', 'b', 'c'], 0)).toEqual([['a', 'b', 'c']]);
+      expect(wrapLayer(['a', 'b', 'c'], undefined)).toEqual([['a', 'b', 'c']]);
+      expect(wrapLayer(['a', 'b', 'c'], 3)).toEqual([['a', 'b', 'c']]);
+      expect(wrapLayer(['a', 'b', 'c', 'd', 'e'], 2)).toEqual([['a', 'b'], ['c', 'd'], ['e']]);
+      expect(wrapLayer(['a', 'b', 'c', 'd', 'e', 'f', 'g'], 3)).toEqual([['a', 'b', 'c'], ['d', 'e'], ['f', 'g']]);
+    });
+
+    it('folds a 12-node layer into 3 bands with wrap 5, keeping ranks and the following layer after the last band', () => {
+      const { positions, ranks } = layeredLayout(nodes, edges, { ...opts, wrap: 5 });
+      expect(overlaps(nodes, positions)).toBe(false);
+      const xs = Array.from(new Set(kids.map((k) => positions.get(k.id)!.x))).sort((a, b) => a - b);
+      expect(xs).toHaveLength(3);
+      // Bands are sub-columns separated by the node gap, not the layer gap.
+      expect(xs[1] - xs[0]).toBe(140 + 24);
+      expect(xs[2] - xs[1]).toBe(140 + 24);
+      expect(xs[0]).toBe(140 + 120);
+      // Four nodes per band.
+      for (const x of xs) {
+        expect(kids.filter((k) => positions.get(k.id)!.x === x)).toHaveLength(4);
+      }
+      // Ranks stay the logical layer index.
+      for (const k of kids) {
+        expect(ranks.get(k.id)).toBe(1);
+      }
+      expect(ranks.get('sink')).toBe(2);
+      // The next real layer starts a layer gap after the last band.
+      expect(positions.get('sink')!.x).toBe(xs[2] + 140 + 120);
+      // Edges still point right.
+      for (const ed of edges) {
+        expect(positions.get(ed.target)!.x).toBeGreaterThan(positions.get(ed.source)!.x);
+      }
+      // The middle band is staggered by half a node step.
+      const minY = (x: number) => Math.min(...kids.filter((k) => positions.get(k.id)!.x === x).map((k) => positions.get(k.id)!.y));
+      expect(minY(xs[1]) - minY(xs[0])).toBe((52 + 24) / 2);
+      expect(minY(xs[2])).toBe(minY(xs[0]));
+    });
+
+    it('wraps top to bottom along the y axis', () => {
+      const { positions } = layeredLayout(nodes, edges, { ...opts, direction: 'tb', wrap: 5 });
+      expect(overlaps(nodes, positions)).toBe(false);
+      const ys = Array.from(new Set(kids.map((k) => positions.get(k.id)!.y))).sort((a, b) => a - b);
+      expect(ys).toHaveLength(3);
+      expect(ys[1] - ys[0]).toBe(52 + 24);
+      expect(positions.get('sink')!.y).toBe(ys[2] + 52 + 120);
+    });
+
+    it('wrap 0 (or a wrap wider than the layer) gives the same positions as no wrap option', () => {
+      const plain = layeredLayout(nodes, edges, opts).positions;
+      expect(layeredLayout(nodes, edges, { ...opts, wrap: 0 }).positions).toEqual(plain);
+      expect(layeredLayout(nodes, edges, { ...opts, wrap: 12 }).positions).toEqual(plain);
+      expect(layoutGraph(nodes, edges, { ...opts, wrap: 0, aspect: 2 }).positions).toEqual(layoutGraph(nodes, edges, { ...opts, aspect: 2 }).positions);
+    });
+
+    it('wrapping makes a huge fan-out much shorter', () => {
+      const many = Array.from({ length: 60 }, (_, i) => n(`c${i}`));
+      const all = [n('root'), ...many];
+      const ed = many.map((k) => e('root', k.id));
+      const height = (pos: Map<string, { y: number }>) => Math.max(...all.map((k) => pos.get(k.id)!.y + 52)) - Math.min(...all.map((k) => pos.get(k.id)!.y));
+      const tall = layeredLayout(all, ed, opts).positions;
+      const wrapped = layeredLayout(all, ed, { ...opts, wrap: 10 }).positions;
+      expect(overlaps(all, wrapped)).toBe(false);
+      expect(height(wrapped)).toBeLessThan(height(tall) / 4);
+    });
   });
 });

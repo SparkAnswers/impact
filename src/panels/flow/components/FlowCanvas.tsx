@@ -4,7 +4,7 @@ import { Input } from '@grafana/ui';
 import { applyBinding, formatValue, type FieldValue } from '../lib/data';
 import { groupPalette } from '../lib/datadriven';
 import { edgeGeometry, hitNode, nearestSide, portOffsets, snap, uniqueId, zoomAt } from '../lib/geometry';
-import { groupSegments } from '../lib/groups';
+import { groupSegments, type GroupHints } from '../lib/groups';
 import {
   DEFAULT_EDGE,
   DEFAULT_NODE,
@@ -41,6 +41,8 @@ export interface FlowCanvasProps {
   opacity?: Map<string, number>;
   /** Draw a faint container around every node group */
   groupBoxes?: boolean;
+  /** Ring index / ring centre per node from the auto layout; makes radial group boxes follow the arcs */
+  groupHints?: GroupHints;
   /** View mode: Ctrl/⌘ + wheel (plain wheel in view-panel mode) zooms, drag pans, double-click on the canvas fits */
   zoomEnabled?: boolean;
   /** Link for a node (view mode only); undefined = no link */
@@ -92,6 +94,7 @@ export const FlowCanvas: React.FC<FlowCanvasProps> = (props) => {
     uid,
     opacity,
     groupBoxes,
+    groupHints,
     zoomEnabled,
     linkFor,
     linkTrigger = 'off',
@@ -162,8 +165,11 @@ export const FlowCanvas: React.FC<FlowCanvasProps> = (props) => {
     const nodeGap = options.data?.nodeGap ?? 24;
     const groupGap = options.data?.groupBoxes === false ? 0 : fontSize + 10;
     const pad = Math.min(14, Math.max(4, Math.floor((nodeGap + groupGap - labelH) / 2)));
-    return groupSegments(diagram.nodes, options.data?.layout ?? 'lr', pad, labelH).map((seg) => ({ ...seg, color: colorOf(theme, colors.get(seg.group), 'blue') }));
-  }, [groupBoxes, diagram.nodes, theme, fontSize, options.data?.nodeGap, options.data?.groupBoxes, options.data?.layout]);
+    return groupSegments(diagram.nodes, options.data?.layout ?? 'lr', pad, labelH, groupHints).map((seg) => ({
+      ...seg,
+      color: colorOf(theme, colors.get(seg.group), 'blue'),
+    }));
+  }, [groupBoxes, groupHints, diagram.nodes, theme, fontSize, options.data?.nodeGap, options.data?.groupBoxes, options.data?.layout]);
 
   const nodeOpacity = (id: string) => opacity?.get(`node:${id}`);
   const edgeOpacity = (e: FlowEdge) => {

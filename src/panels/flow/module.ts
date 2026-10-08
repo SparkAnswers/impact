@@ -205,6 +205,16 @@ export const plugin = new PanelPlugin<FlowOptions>(FlowPanel)
         settings: { min: 4, max: 120, step: 2 },
         showIf: isData,
       })
+      .addSliderInput({
+        path: 'data.wrap',
+        name: 'Wrap layers after',
+        description:
+          'Layered layouts: a layer with more nodes than this is folded into several side-by-side bands so one big fan-out does not become a single very long column. 0 = never wrap',
+        category: DATA,
+        defaultValue: D.wrap,
+        settings: { min: 0, max: 40, step: 1 },
+        showIf: (o) => isData(o) && o.data?.layout !== 'radial',
+      })
       .addSelect({
         path: 'data.valueMap',
         name: 'Value drives',
