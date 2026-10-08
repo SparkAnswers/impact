@@ -6,13 +6,15 @@ export interface HistoryPoint {
   /** Horizontal position 0..1 (0 = oldest edge, 1 = newest edge). */
   x: number;
   value: number;
+  /** Epoch ms of the sample when the frame has a time field. */
+  t?: number;
 }
 
 export interface GaugeSeries {
   field: Field;
   frame: DataFrame;
   /** Last non-null numeric value, or null when the window is empty. */
-  current: number | null;
+  latest: number | null;
   /** Points inside the visible window, ordered oldest to newest. */
   history: HistoryPoint[];
   /** Raw values of the visible window (nulls dropped), used by the reducers. */
@@ -20,6 +22,14 @@ export interface GaugeSeries {
   /** Data min/max of the visible window (for auto range). */
   dataMin: number | null;
   dataMax: number | null;
+  /** Timestamps (epoch ms) of the visible window, same order as `windowValues`; null without a time field. */
+  windowTimes: Array<number | null>;
+  /** Epoch ms of the newest sample in the window, null without a time field. */
+  newestTime: number | null;
+  /** End of the data window: the panel range end when known, else the newest sample. */
+  dataTo: number | null;
+  /** Length (ms) of the data window when known. */
+  span: number | null;
 }
 
 /** Picks the numeric field: by display name when requested, else the first numeric field of the first frame with one. */
@@ -93,19 +103,32 @@ export function extractSeries(frames: DataFrame[], opts: ExtractOptions): GaugeS
   }
 
   const windowValues = window.map((p) => p.value);
+  const windowTimes = window.map((p) => p.t);
+  const withT = (p: { t: number | null }) => (p.t === null ? {} : { t: p.t });
   let history: HistoryPoint[];
+  let span: number | null = null;
+  let dataTo: number | null = null;
   if (from !== null && to !== null) {
-    const span = to - from;
-    history = window.map((p) => ({ x: (p.t! - from!) / span, value: p.value }));
+    span = to - from;
+    dataTo = to;
+    history = window.map((p) => ({ x: (p.t! - from!) / span!, value: p.value, ...withT(p) }));
   } else if (opts.source === 'timeRange' && timeField && window.length > 1 && window.every((p) => p.t !== null)) {
     const t0 = window[0].t!;
     const t1 = window[window.length - 1].t!;
-    const span = t1 - t0 || 1;
-    history = window.map((p) => ({ x: (p.t! - t0) / span, value: p.value }));
+    span = t1 - t0 || 1;
+    dataTo = t1;
+    history = window.map((p) => ({ x: (p.t! - t0) / span!, value: p.value, ...withT(p) }));
   } else {
     const count = opts.source === 'lastN' ? Math.max(2, Math.floor(opts.points) || 2) : Math.max(2, window.length);
     const offset = count - window.length;
-    history = window.map((p, idx) => ({ x: (idx + offset) / (count - 1), value: p.value }));
+    history = window.map((p, idx) => ({ x: (idx + offset) / (count - 1), value: p.value, ...withT(p) }));
+  }
+  let newestTime: number | null = null;
+  for (let i = window.length - 1; i >= 0; i--) {
+    if (window[i].t !== null) {
+      newestTime = window[i].t;
+      break;
+    }
   }
 
   let dataMin: number | null = null;
@@ -118,10 +141,14 @@ export function extractSeries(frames: DataFrame[], opts: ExtractOptions): GaugeS
   return {
     field,
     frame,
-    current: windowValues.length ? windowValues[windowValues.length - 1] : null,
+    latest: windowValues.length ? windowValues[windowValues.length - 1] : null,
     history,
     windowValues,
     dataMin,
     dataMax,
+    windowTimes,
+    newestTime,
+    dataTo: dataTo ?? newestTime,
+    span,
   };
 }

@@ -6,6 +6,7 @@ import { DEFAULT_OPTIONS, type GaugeOptions } from '../types';
 
 jest.mock('@grafana/runtime', () => ({
   PanelDataErrorView: ({ message }: { message?: string }) => <div data-testid="error-view">{message ?? 'no data'}</div>,
+  locationService: { getSearchObject: () => ({ refresh: '10s' }) },
 }));
 
 /** A canvas 2D context stub that records every call so the draw code can run under jsdom. */
@@ -41,13 +42,14 @@ function randomWalkFrame(n = 120) {
   let v = 20;
   const values: number[] = [];
   const times: number[] = [];
+  const t0 = Date.now() - (n - 1) * 1000;
   for (let i = 0; i < n; i++) {
     v += (Math.random() - 0.5) * 30;
     if (i === n - 1) {
       v = -12.5;
     }
     values.push(v);
-    times.push(i * 1000);
+    times.push(t0 + i * 1000);
   }
   return toDataFrame({
     fields: [
@@ -59,7 +61,7 @@ function randomWalkFrame(n = 120) {
 
 function makeProps(options: Partial<GaugeOptions>, width = 400, height = 400): PanelProps<GaugeOptions> {
   const frame = randomWalkFrame();
-  const timeRange = { from: dateTime(0), to: dateTime(120000), raw: { from: '', to: '' } };
+  const timeRange = { from: dateTime(Date.now() - 120000), to: dateTime(Date.now()), raw: { from: 'now-2m', to: 'now' } };
   return {
     id: 1,
     width,
@@ -96,7 +98,7 @@ describe('GaugePanel', () => {
     expect(calls.arc).toBeGreaterThan(2);
     expect(calls.fillText).toBeGreaterThan(3);
     expect(calls.createLinearGradient ?? 0).toBeGreaterThanOrEqual(0);
-    expect(calls.clip).toBe(2);
+    expect(calls.clip).toBe(3);
   });
 
   it('renders with thresholds, custom ticks and no animation', () => {
@@ -125,5 +127,34 @@ describe('GaugePanel', () => {
     props.data.series = [toDataFrame({ fields: [{ name: 's', type: FieldType.string, values: ['a'] }] })];
     render(<GaugePanel {...props} />);
     expect(screen.getByTestId('error-view')).toBeInTheDocument();
+  });
+
+  it('runs the shared frame loop in live mode and redraws the live layer per frame', () => {
+    let frameCb: ((t: number) => void) | null = null;
+    const raf = jest.spyOn(window, 'requestAnimationFrame').mockImplementation((cb) => {
+      frameCb = cb;
+      return 1;
+    });
+    const caf = jest.spyOn(window, 'cancelAnimationFrame').mockImplementation(() => undefined);
+    const { unmount } = render(<GaugePanel {...makeProps({ animate: true })} />);
+    expect(raf).toHaveBeenCalled();
+    const before = calls.arc ?? 0;
+    expect(frameCb).not.toBeNull();
+    frameCb!(16);
+    frameCb!(32);
+    expect(calls.arc).toBeGreaterThan(before);
+    // The big number is drawn from the real sample, never eased.
+    expect(screen.getByTestId('impact-gauge-canvas').getAttribute('aria-label')).toMatch(/-12\.5/);
+    unmount();
+    expect(caf).toHaveBeenCalled();
+    raf.mockRestore();
+    caf.mockRestore();
+  });
+
+  it('does not subscribe to frames when live motion is off', () => {
+    const raf = jest.spyOn(window, 'requestAnimationFrame').mockImplementation(() => 1);
+    render(<GaugePanel {...makeProps({ animate: true, liveScroll: false, liveDrift: false, liveTrail: false, liveStale: false })} />);
+    expect(raf).not.toHaveBeenCalled();
+    raf.mockRestore();
   });
 });

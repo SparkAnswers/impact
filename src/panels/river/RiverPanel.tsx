@@ -11,65 +11,71 @@ import { pointAt } from './lib/path';
 import { ParticleSystem, allocateParticles, buildChannelGeometry, paintRibbon, trailKeep } from './lib/render';
 import { DEFAULT_OPTIONS, MAX_TOTAL_PARTICLES, type RiverOptions, type Waypoint } from './types';
 
-const getStyles = (theme: GrafanaTheme2) => ({
-  root: css({ position: 'relative', overflow: 'hidden', fontFamily: theme.typography.fontFamily }),
-  canvas: css({ position: 'absolute', left: 0, top: 0, display: 'block' }),
-  overlay: css({ position: 'absolute', pointerEvents: 'none' }),
-  title: css({
-    left: 20,
-    top: 14,
-    h1: {
-      margin: 0,
-      fontSize: 19,
-      fontWeight: 700,
-      letterSpacing: -0.2,
-      color: '#f3f4f5',
-      textShadow: '0 1px 6px rgba(0,0,0,.8)',
-    },
-    p: { margin: '2px 0 0', fontSize: 11, color: '#b9bcc2', textShadow: '0 1px 4px rgba(0,0,0,.8)' },
-  }),
-  shade: css({
-    position: 'absolute',
-    left: 0,
-    bottom: 0,
-    width: 520,
-    height: 220,
-    maxWidth: '100%',
-    background:
-      'radial-gradient(ellipse at 20% 100%,rgba(10,12,16,.92) 0%,rgba(10,12,16,.7) 40%,rgba(10,12,16,0) 72%)',
-    pointerEvents: 'none',
-  }),
-  caption: css({ left: 20, bottom: 16 }),
-  big: css({
-    fontSize: 28,
-    fontWeight: 800,
-    letterSpacing: -0.5,
-    color: '#fff',
-    textShadow: '0 2px 10px rgba(0,0,0,.9)',
-    lineHeight: 1.05,
-  }),
-  small: css({ fontSize: 14, color: '#d5d8dc', textShadow: '0 1px 6px rgba(0,0,0,.9)' }),
-  sub: css({ fontSize: 14, color: '#d5d8dc', marginTop: 4, textShadow: '0 1px 6px rgba(0,0,0,.9)', b: { color: '#ffcf5a', fontWeight: 600 } }),
-  anchor: css({
-    position: 'absolute',
-    pointerEvents: 'none',
-    fontSize: 10.5,
-    color: '#f1f2f3',
-    textShadow: '0 1px 3px #000,0 0 6px rgba(0,0,0,.8)',
-    whiteSpace: 'nowrap',
-    transform: 'translateY(-50%)',
-  }),
-  dot: css({
-    position: 'absolute',
-    width: 5,
-    height: 5,
-    borderRadius: '50%',
-    background: '#fff',
-    boxShadow: '0 0 4px #000',
-    transform: 'translate(-50%,-50%)',
-    pointerEvents: 'none',
-  }),
-});
+/**
+ * Overlay styles. `onImage` = a picture is behind the text, so use light text with strong shadows;
+ * otherwise use theme text colours with a subtle shadow so the panel stays legible on light themes
+ * and when the panel background is transparent.
+ */
+const getStyles = (theme: GrafanaTheme2, onImage: boolean) => {
+  const strong = onImage ? '#f3f4f5' : theme.colors.text.primary;
+  const soft = onImage ? '#b9bcc2' : theme.colors.text.secondary;
+  // Off-image text gets a glow in the theme background colour: legible over the channel, no fill.
+  const bg = theme.colors.background.primary;
+  const shadow = onImage ? '0 1px 6px rgba(0,0,0,.85)' : `0 0 2px ${bg}, 0 1px 4px ${bg}, 0 0 10px ${bg}`;
+  const bigShadow = onImage ? '0 2px 10px rgba(0,0,0,.9)' : `0 0 2px ${bg}, 0 0 8px ${bg}, 0 0 18px ${bg}`;
+  return {
+    root: css({ position: 'relative', overflow: 'hidden', fontFamily: theme.typography.fontFamily }),
+    canvas: css({ position: 'absolute', left: 0, top: 0, display: 'block' }),
+    overlay: css({ position: 'absolute', pointerEvents: 'none' }),
+    title: css({
+      left: 20,
+      top: 14,
+      h1: { margin: 0, fontSize: 19, fontWeight: 700, letterSpacing: -0.2, color: strong, textShadow: shadow },
+      p: { margin: '2px 0 0', fontSize: 11, color: soft, textShadow: shadow },
+    }),
+    shade: css({
+      position: 'absolute',
+      left: 0,
+      bottom: 0,
+      width: 520,
+      height: 220,
+      maxWidth: '100%',
+      background: onImage
+        ? 'radial-gradient(ellipse at 20% 100%,rgba(10,12,16,.92) 0%,rgba(10,12,16,.7) 40%,rgba(10,12,16,0) 72%)'
+        : 'none',
+      pointerEvents: 'none',
+    }),
+    caption: css({ left: 20, bottom: 16 }),
+    big: css({ fontSize: 28, fontWeight: 800, letterSpacing: -0.5, color: strong, textShadow: bigShadow, lineHeight: 1.05 }),
+    small: css({ fontSize: 14, color: soft, textShadow: shadow }),
+    sub: css({
+      fontSize: 14,
+      color: soft,
+      marginTop: 4,
+      textShadow: shadow,
+      b: { color: onImage || theme.isDark ? '#ffcf5a' : theme.colors.warning.text, fontWeight: 600 },
+    }),
+    anchor: css({
+      position: 'absolute',
+      pointerEvents: 'none',
+      fontSize: 10.5,
+      color: strong,
+      textShadow: onImage ? '0 1px 3px #000,0 0 6px rgba(0,0,0,.8)' : shadow,
+      whiteSpace: 'nowrap',
+      transform: 'translateY(-50%)',
+    }),
+    dot: css({
+      position: 'absolute',
+      width: 5,
+      height: 5,
+      borderRadius: '50%',
+      background: strong,
+      boxShadow: onImage ? '0 0 4px #000' : `0 0 0 1px ${theme.colors.background.primary}`,
+      transform: 'translate(-50%,-50%)',
+      pointerEvents: 'none',
+    }),
+  };
+};
 
 function prefersReducedMotion(): boolean {
   return typeof window !== 'undefined' && typeof window.matchMedia === 'function'
@@ -81,7 +87,8 @@ export const RiverPanel: React.FC<PanelProps<RiverOptions>> = (props) => {
   const { data, width, height, fieldConfig, replaceVariables, onOptionsChange, timeZone, id } = props;
   const options = useMemo(() => ({ ...DEFAULT_OPTIONS, ...props.options }), [props.options]);
   const theme = useTheme2();
-  const styles = useStyles2(getStyles);
+  const onImage = options.background === 'image' && isSafeImageUrl(options.backgroundUrl);
+  const styles = useStyles2(getStyles, onImage);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [loadedBg, setLoadedBg] = useState<{ url: string; img: HTMLImageElement } | null>(null);
 
@@ -151,10 +158,9 @@ export const RiverPanel: React.FC<PanelProps<RiverOptions>> = (props) => {
 
     // --- static layer: background + ribbons
     sx.scale(dpr, dpr);
-    if (options.background === 'panel') {
-      sx.fillStyle = theme.isDark ? '#141619' : theme.colors.background.secondary;
-      sx.fillRect(0, 0, width, height);
-    } else if (options.background === 'image' && bgImage) {
+    // 'panel' and 'none' paint nothing: the panel background (or the dashboard, when the panel is
+    // transparent) shows through. Only 'image' fills the canvas.
+    if (options.background === 'image' && bgImage) {
       const iw = bgImage.naturalWidth || 1;
       const ih = bgImage.naturalHeight || 1;
       const scale = options.backgroundFit === 'contain' ? Math.min(width / iw, height / ih) : Math.max(width / iw, height / ih);
@@ -168,7 +174,7 @@ export const RiverPanel: React.FC<PanelProps<RiverOptions>> = (props) => {
     }
     for (const g of geometries) {
       for (const r of g.ribbons) {
-        paintRibbon(sx, r);
+        paintRibbon(sx, r, options.channelHalo === false ? 0 : theme.isDark ? 1 : 0.45);
       }
     }
 
@@ -284,6 +290,7 @@ export const RiverPanel: React.FC<PanelProps<RiverOptions>> = (props) => {
           format={legend.format}
           unit={legend.unit}
           position={options.legendPosition}
+          onImage={onImage}
           panelWidth={width}
           panelHeight={height}
           offsetTop={options.legendPosition === 'top-left' ? titleHeight + 6 : 0}

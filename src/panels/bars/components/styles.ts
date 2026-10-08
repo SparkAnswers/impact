@@ -1,5 +1,5 @@
 import { css, keyframes } from '@emotion/css';
-import type { GrafanaTheme2 } from '@grafana/data';
+import { colorManipulator, type GrafanaTheme2 } from '@grafana/data';
 
 const sweep = keyframes`
   0% { left: -40%; }
@@ -16,11 +16,16 @@ const blink = keyframes`
 
 /**
  * Static styles. Per-option sizes come through CSS custom properties set on the panel root:
- * --pb-h (track height), --pb-r (radius), --pb-w (track width), --pb-speed (animation seconds).
+ * --pb-h (track height), --pb-r (radius), --pb-w (track width), --pb-speed (animation seconds),
+ * --pb-bg (header/table fill colour in the Panel and Solid colour background modes).
  */
 export const getStyles = (theme: GrafanaTheme2) => {
   const track = theme.isDark ? theme.colors.background.secondary : theme.colors.border.weak;
+  const tint = colorManipulator.alpha(theme.colors.text.primary, theme.isDark ? 0.06 : 0.04);
+  const tintSelected = colorManipulator.alpha(theme.colors.text.primary, theme.isDark ? 0.1 : 0.08);
   return {
+    // The root never paints its own fill unless the Solid colour mode is on, so the panel's
+    // "Transparent background" option shows the dashboard through the table.
     root: css({
       position: 'relative',
       display: 'flex',
@@ -29,6 +34,22 @@ export const getStyles = (theme: GrafanaTheme2) => {
       lineHeight: 1.3,
       color: theme.colors.text.primary,
       overflow: 'hidden',
+    }),
+    rootSolid: css({ background: 'var(--pb-bg)' }),
+    /** Sticky header fill: opaque (Panel / Solid colour) or frosted (Transparent). */
+    headerSolid: css({
+      '& th': { background: 'var(--pb-bg)' },
+    }),
+    headerGlass: css({
+      '& th': {
+        background: colorManipulator.alpha(theme.colors.background.primary, theme.isDark ? 0.55 : 0.6),
+        backdropFilter: 'blur(6px)',
+        WebkitBackdropFilter: 'blur(6px)',
+      },
+      '& tbody tr:hover td': { background: tint },
+    }),
+    selectedGlass: css({
+      '& td, &:hover td': { background: `${tintSelected} !important` },
     }),
     scroller: css({
       flex: 1,
@@ -55,7 +76,6 @@ export const getStyles = (theme: GrafanaTheme2) => {
         fontSize: theme.typography.bodySmall.fontSize,
         fontWeight: theme.typography.fontWeightMedium,
         color: theme.colors.text.secondary,
-        background: theme.colors.background.primary,
         boxShadow: `inset 0 -1px 0 ${theme.colors.border.medium}`,
         userSelect: 'none',
       },

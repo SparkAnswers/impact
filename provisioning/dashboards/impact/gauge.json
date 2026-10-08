@@ -1,25 +1,42 @@
 {
   "uid": "impact-gauge",
   "title": "Impact Gauge demo",
-  "tags": ["impact", "demo"],
+  "tags": [
+    "impact",
+    "demo"
+  ],
   "editable": true,
   "schemaVersion": 41,
   "version": 1,
-  "refresh": "5s",
-  "time": { "from": "now-15m", "to": "now" },
+  "refresh": "10s",
+  "time": {
+    "from": "now-15m",
+    "to": "now"
+  },
   "timezone": "browser",
   "panels": [
     {
       "id": 1,
       "type": "sparkanswers-impact-gauge-panel",
       "title": "Signed power (default)",
-      "description": "Default options: -50..200 kW range from the field min/max, square-root scale, positive values fill clockwise in orange from the zero mark, negative values fill the other way in green. The in-ring chart shows the panel time range.",
-      "gridPos": { "x": 0, "y": 0, "w": 8, "h": 14 },
-      "datasource": { "type": "grafana-testdata-datasource", "uid": "impact-testdata" },
+      "description": "Default options: -50..200 kW range from the field min/max, square-root scale, positive values fill clockwise in orange from the zero mark, negative values fill the other way in green. The in-ring chart shows the panel time range. Live motion is on: between the 10 s refreshes the history keeps scrolling at the sample cadence, the marker drifts with a breathing glow and leaves a short trail.",
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 8,
+        "h": 14
+      },
+      "datasource": {
+        "type": "grafana-testdata-datasource",
+        "uid": "impact-testdata"
+      },
       "targets": [
         {
           "refId": "A",
-          "datasource": { "type": "grafana-testdata-datasource", "uid": "impact-testdata" },
+          "datasource": {
+            "type": "grafana-testdata-datasource",
+            "uid": "impact-testdata"
+          },
           "scenarioId": "random_walk",
           "alias": "power",
           "startValue": 40,
@@ -30,7 +47,16 @@
         }
       ],
       "fieldConfig": {
-        "defaults": { "unit": "kwatt", "decimals": 1, "min": -50, "max": 200, "color": { "mode": "fixed", "fixedColor": "orange" } },
+        "defaults": {
+          "unit": "kwatt",
+          "decimals": 1,
+          "min": -50,
+          "max": 200,
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "orange"
+          }
+        },
         "overrides": []
       },
       "options": {
@@ -44,12 +70,23 @@
       "type": "sparkanswers-impact-gauge-panel",
       "title": "Semicircle, custom palette",
       "description": "180 degree sweep, clockwise, linear scale, -5..10 kW import/export with a blue/purple palette, custom ticks and a computed sum in a different unit.",
-      "gridPos": { "x": 8, "y": 0, "w": 8, "h": 14 },
-      "datasource": { "type": "grafana-testdata-datasource", "uid": "impact-testdata" },
+      "gridPos": {
+        "x": 8,
+        "y": 0,
+        "w": 8,
+        "h": 14
+      },
+      "datasource": {
+        "type": "grafana-testdata-datasource",
+        "uid": "impact-testdata"
+      },
       "targets": [
         {
           "refId": "A",
-          "datasource": { "type": "grafana-testdata-datasource", "uid": "impact-testdata" },
+          "datasource": {
+            "type": "grafana-testdata-datasource",
+            "uid": "impact-testdata"
+          },
           "scenarioId": "random_walk",
           "alias": "grid",
           "startValue": 3,
@@ -60,7 +97,12 @@
         }
       ],
       "fieldConfig": {
-        "defaults": { "unit": "kwatt", "decimals": 2, "min": -5, "max": 10 },
+        "defaults": {
+          "unit": "kwatt",
+          "decimals": 2,
+          "min": -5,
+          "max": 10
+        },
         "overrides": []
       },
       "options": {
@@ -88,12 +130,23 @@
       "type": "sparkanswers-impact-gauge-panel",
       "title": "300 degree arc with thresholds",
       "description": "Colour mode Thresholds: the ring is painted in bands from the standard field thresholds, the fill and the history line take the colour of the current value. Unit percent, no fade.",
-      "gridPos": { "x": 16, "y": 0, "w": 8, "h": 14 },
-      "datasource": { "type": "grafana-testdata-datasource", "uid": "impact-testdata" },
+      "gridPos": {
+        "x": 16,
+        "y": 0,
+        "w": 8,
+        "h": 14
+      },
+      "datasource": {
+        "type": "grafana-testdata-datasource",
+        "uid": "impact-testdata"
+      },
       "targets": [
         {
           "refId": "A",
-          "datasource": { "type": "grafana-testdata-datasource", "uid": "impact-testdata" },
+          "datasource": {
+            "type": "grafana-testdata-datasource",
+            "uid": "impact-testdata"
+          },
           "scenarioId": "random_walk",
           "alias": "load",
           "startValue": 55,
@@ -112,9 +165,18 @@
           "thresholds": {
             "mode": "absolute",
             "steps": [
-              { "value": null, "color": "green" },
-              { "value": 55, "color": "orange" },
-              { "value": 80, "color": "red" }
+              {
+                "value": null,
+                "color": "green"
+              },
+              {
+                "value": 55,
+                "color": "orange"
+              },
+              {
+                "value": 80,
+                "color": "red"
+              }
             ]
           }
         },
@@ -138,16 +200,81 @@
       }
     },
     {
+      "id": 7,
+      "type": "sparkanswers-impact-gauge-panel",
+      "title": "Live motion off",
+      "description": "Same query and options as the default panel with every Live motion switch off: the gauge only changes when a refresh brings new data.",
+      "gridPos": {
+        "x": 0,
+        "y": 14,
+        "w": 8,
+        "h": 14
+      },
+      "datasource": {
+        "type": "grafana-testdata-datasource",
+        "uid": "impact-testdata"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-testdata-datasource",
+            "uid": "impact-testdata"
+          },
+          "scenarioId": "random_walk",
+          "alias": "power",
+          "startValue": 40,
+          "spread": 25,
+          "noise": 4,
+          "min": -50,
+          "max": 200
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "kwatt",
+          "decimals": 1,
+          "min": -50,
+          "max": 200,
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "orange"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "secondaryText": "Avg. {value}",
+        "secondaryReducer": "mean",
+        "subtitleText": "Past 15 min",
+        "liveScroll": false,
+        "liveDrift": false,
+        "liveTrail": false,
+        "liveStale": false
+      }
+    },
+    {
       "id": 4,
       "type": "sparkanswers-impact-gauge-panel",
       "title": "Tiny (about 200 x 200)",
       "description": "Small panel: tick labels and secondary text are hidden automatically as space runs out.",
-      "gridPos": { "x": 0, "y": 14, "w": 4, "h": 7 },
-      "datasource": { "type": "grafana-testdata-datasource", "uid": "impact-testdata" },
+      "gridPos": {
+        "x": 8,
+        "y": 14,
+        "w": 4,
+        "h": 7
+      },
+      "datasource": {
+        "type": "grafana-testdata-datasource",
+        "uid": "impact-testdata"
+      },
       "targets": [
         {
           "refId": "A",
-          "datasource": { "type": "grafana-testdata-datasource", "uid": "impact-testdata" },
+          "datasource": {
+            "type": "grafana-testdata-datasource",
+            "uid": "impact-testdata"
+          },
           "scenarioId": "random_walk",
           "alias": "power",
           "startValue": 30,
@@ -158,7 +285,12 @@
         }
       ],
       "fieldConfig": {
-        "defaults": { "unit": "kwatt", "decimals": 0, "min": -50, "max": 200 },
+        "defaults": {
+          "unit": "kwatt",
+          "decimals": 0,
+          "min": -50,
+          "max": 200
+        },
         "overrides": []
       },
       "options": {
@@ -171,12 +303,23 @@
       "type": "sparkanswers-impact-gauge-panel",
       "title": "Last 60 samples, log compression, field colour",
       "description": "History window = last N samples, log scale, fill uses the standard field colour, free-text secondary line with a template variable.",
-      "gridPos": { "x": 4, "y": 14, "w": 10, "h": 12 },
-      "datasource": { "type": "grafana-testdata-datasource", "uid": "impact-testdata" },
+      "gridPos": {
+        "x": 12,
+        "y": 14,
+        "w": 12,
+        "h": 14
+      },
+      "datasource": {
+        "type": "grafana-testdata-datasource",
+        "uid": "impact-testdata"
+      },
       "targets": [
         {
           "refId": "A",
-          "datasource": { "type": "grafana-testdata-datasource", "uid": "impact-testdata" },
+          "datasource": {
+            "type": "grafana-testdata-datasource",
+            "uid": "impact-testdata"
+          },
           "scenarioId": "random_walk",
           "alias": "flow",
           "startValue": 120,
@@ -187,7 +330,16 @@
         }
       ],
       "fieldConfig": {
-        "defaults": { "unit": "litreh", "decimals": 0, "min": -200, "max": 1000, "color": { "mode": "fixed", "fixedColor": "dark-blue" } },
+        "defaults": {
+          "unit": "litreh",
+          "decimals": 0,
+          "min": -200,
+          "max": 1000,
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "dark-blue"
+          }
+        },
         "overrides": []
       },
       "options": {
@@ -208,12 +360,23 @@
       "type": "sparkanswers-impact-gauge-panel",
       "title": "Static, no history, no animation",
       "description": "Wide panel with history and animation off, small arc (120 degrees) and a fixed value font size.",
-      "gridPos": { "x": 14, "y": 14, "w": 10, "h": 12 },
-      "datasource": { "type": "grafana-testdata-datasource", "uid": "impact-testdata" },
+      "gridPos": {
+        "x": 8,
+        "y": 21,
+        "w": 4,
+        "h": 7
+      },
+      "datasource": {
+        "type": "grafana-testdata-datasource",
+        "uid": "impact-testdata"
+      },
       "targets": [
         {
           "refId": "A",
-          "datasource": { "type": "grafana-testdata-datasource", "uid": "impact-testdata" },
+          "datasource": {
+            "type": "grafana-testdata-datasource",
+            "uid": "impact-testdata"
+          },
           "scenarioId": "random_walk",
           "alias": "temp",
           "startValue": 21,
@@ -224,7 +387,12 @@
         }
       ],
       "fieldConfig": {
-        "defaults": { "unit": "celsius", "decimals": 1, "min": -10, "max": 40 },
+        "defaults": {
+          "unit": "celsius",
+          "decimals": 1,
+          "min": -10,
+          "max": 40
+        },
         "overrides": []
       },
       "options": {
@@ -242,6 +410,98 @@
         "subtitleText": "Over the visible range",
         "titleText": "Temperature",
         "titlePosition": "hidden"
+      }
+    },
+    {
+      "id": 8,
+      "type": "sparkanswers-impact-gauge-panel",
+      "title": "Transparent background",
+      "description": "Grafana's panel option Transparent background is on: the gauge paints no background of its own, so the dashboard shows through.",
+      "transparent": true,
+      "gridPos": {
+        "x": 0,
+        "y": 28,
+        "w": 8,
+        "h": 12
+      },
+      "datasource": {
+        "type": "grafana-testdata-datasource",
+        "uid": "impact-testdata"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-testdata-datasource",
+            "uid": "impact-testdata"
+          },
+          "scenarioId": "random_walk",
+          "alias": "power",
+          "startValue": 60,
+          "spread": 20,
+          "noise": 3,
+          "min": -50,
+          "max": 200
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "kwatt",
+          "decimals": 1,
+          "min": -50,
+          "max": 200
+        },
+        "overrides": []
+      },
+      "options": {
+        "subtitleText": "Past 15 min"
+      }
+    },
+    {
+      "id": 9,
+      "type": "sparkanswers-impact-gauge-panel",
+      "title": "Solid colour background",
+      "description": "Appearance > Background = Solid colour with a custom fill.",
+      "transparent": false,
+      "gridPos": {
+        "x": 8,
+        "y": 28,
+        "w": 8,
+        "h": 12
+      },
+      "datasource": {
+        "type": "grafana-testdata-datasource",
+        "uid": "impact-testdata"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-testdata-datasource",
+            "uid": "impact-testdata"
+          },
+          "scenarioId": "random_walk",
+          "alias": "power",
+          "startValue": 60,
+          "spread": 20,
+          "noise": 3,
+          "min": -50,
+          "max": 200
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "kwatt",
+          "decimals": 1,
+          "min": -50,
+          "max": 200
+        },
+        "overrides": []
+      },
+      "options": {
+        "subtitleText": "Past 15 min",
+        "background": "solid",
+        "backgroundColor": "#1f2a44"
       }
     }
   ]

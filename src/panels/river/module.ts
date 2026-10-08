@@ -118,14 +118,14 @@ export const plugin = new PanelPlugin<RiverOptions>(RiverPanel)
       .addSelect({
         path: 'background',
         name: 'Background',
-        description: 'Panel: a dark fill. Image: a picture behind the river. None: transparent.',
+        description: 'Panel: inherits the panel background (works with the built-in "Transparent background" switch). Image: a picture behind the river. Transparent: paints nothing behind the channels.',
         category: ['Background'],
         defaultValue: DEFAULT_OPTIONS.background,
         settings: {
           options: [
             { value: 'panel', label: 'Panel' },
             { value: 'image', label: 'Image URL' },
-            { value: 'none', label: 'None' },
+            { value: 'none', label: 'Transparent' },
           ],
         },
       })
@@ -159,6 +159,13 @@ export const plugin = new PanelPlugin<RiverOptions>(RiverPanel)
         defaultValue: DEFAULT_OPTIONS.backgroundDim,
         settings: { min: 0, max: 1, step: 0.05 },
         showIf: (o) => o.background === 'image',
+      })
+      .addBooleanSwitch({
+        path: 'channelHalo',
+        name: 'Channel halo',
+        description: 'Soft dark halo around each channel. Switch off for a flat look on light or transparent backgrounds.',
+        category: ['Background'],
+        defaultValue: DEFAULT_OPTIONS.channelHalo,
       })
       .addBooleanSwitch({
         path: 'animate',

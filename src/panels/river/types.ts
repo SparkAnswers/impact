@@ -96,6 +96,8 @@ export interface RiverOptions {
   backgroundUrl: string;
   backgroundFit: BackgroundFit;
   backgroundDim: number;
+  /** Soft dark halo around each channel. */
+  channelHalo: boolean;
   animate: boolean;
   animationSpeed: number;
 }
@@ -153,6 +155,7 @@ export const DEFAULT_OPTIONS: RiverOptions = {
   backgroundUrl: '',
   backgroundFit: 'cover',
   backgroundDim: 0.4,
+  channelHalo: true,
   animate: true,
   animationSpeed: 1,
 };

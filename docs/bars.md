@@ -74,5 +74,7 @@ value mappings (text, colour and icon for statuses) and data links.
 - For the bidirectional style set symmetric min/max (for example -8 and 8) so zero sits in the centre.
 - Thresholds in _percentage_ mode are evaluated against the position between min and max, which is handy
   when rows have different ranges.
+- To float the table over the dashboard, turn on the panel's "Transparent background" option and set
+  _Table > Background_ to `Transparent`; rows scrolling under the header stay readable thanks to the blur.
 - Light theme: tracks use the theme's secondary background and borders, so the panel reads well without
   any colour changes; flat fills (Gradient fill off) look cleanest there.

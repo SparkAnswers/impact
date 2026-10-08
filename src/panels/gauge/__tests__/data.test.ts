@@ -14,14 +14,14 @@ describe('extractSeries', () => {
   it('uses the first numeric field and the last non-null value', () => {
     const s = extractSeries([frame], { source: 'lastN', points: 3 });
     expect(s?.field.name).toBe('power');
-    expect(s?.current).toBe(5);
+    expect(s?.latest).toBe(5);
     expect(s?.windowValues).toEqual([-2, 4, 5]);
     expect(s?.history.map((p) => p.x)).toEqual([0, 0.5, 1]);
     expect(s?.dataMin).toBe(-2);
     expect(s?.dataMax).toBe(5);
   });
   it('selects a field by name', () => {
-    expect(extractSeries([frame], { source: 'lastN', points: 10, fieldName: 'other' })?.current).toBe(50);
+    expect(extractSeries([frame], { source: 'lastN', points: 10, fieldName: 'other' })?.latest).toBe(50);
   });
   it('positions samples by time inside the panel range', () => {
     const timeRange = { from: dateTime(0), to: dateTime(5000), raw: { from: 'now-5s', to: 'now' } };
