@@ -52,3 +52,4 @@ out/
 *.zip
 mockups/node_modules/
 mockups/**/*-video/
+provisioning/datasources/local-*.yaml
