@@ -2,6 +2,8 @@ import React, { useCallback, useEffect, useId, useMemo, useRef, useState } from 
 import { css } from '@emotion/css';
 import type { GrafanaTheme2, PanelProps } from '@grafana/data';
 import { Button, usePanelContext, useStyles2, useTheme2 } from '@grafana/ui';
+import { useMotionAllowed } from '../../shared/motion';
+import { ReducedMotionHint } from '../../shared/ReducedMotionHint';
 import { FlowCanvas } from './components/FlowCanvas';
 import { Toolbar, type Tool } from './components/Toolbar';
 import { indexFields } from './lib/data';
@@ -252,7 +254,8 @@ export const FlowPanel: React.FC<PanelProps<FlowOptions>> = ({ options, onOption
     }
   };
 
-  const animate = options.animation?.enabled !== false;
+  const animationEnabled = options.animation?.enabled !== false;
+  const animate = useMotionAllowed(animationEnabled, options.animation?.reducedMotion);
   const empty = diagram.nodes.length === 0;
 
   return (
@@ -299,6 +302,7 @@ export const FlowPanel: React.FC<PanelProps<FlowOptions>> = ({ options, onOption
           </span>
         </>
       )}
+      <ReducedMotionHint animationEnabled={animationEnabled} preference={options.animation?.reducedMotion} width={width} />
       {empty && (
         <div className={styles.empty}>
           <div>{editing ? 'Click "Add node" in the toolbar to start, or load the example diagram.' : 'No diagram yet. Turn on "Edit layout" in the Layout options to design one.'}</div>

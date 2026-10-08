@@ -1,3 +1,4 @@
+import type { MotionPreference } from '../../shared/motion';
 import type { HistorySource } from './lib/data';
 import type { SecondaryReducer } from './lib/reducers';
 import type { ScaleKind } from './lib/scale';
@@ -71,6 +72,7 @@ export interface GaugeOptions {
   // Animation
   animate: boolean;
   animationDuration: number;
+  reducedMotion: MotionPreference;
 
   // Live motion (between refreshes; all derived from samples already received)
   liveScroll: boolean;
@@ -129,6 +131,7 @@ export const DEFAULT_OPTIONS: GaugeOptions = {
 
   animate: true,
   animationDuration: 400,
+  reducedMotion: 'system',
 
   liveScroll: true,
   liveDrift: true,

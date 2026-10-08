@@ -1,4 +1,5 @@
 import { FieldConfigProperty, FieldType, PanelPlugin, ReducerID, ThresholdsMode } from '@grafana/data';
+import { MOTION_PREFERENCE_CHOICES, MOTION_PREFERENCE_DESCRIPTION } from '../../shared/motion';
 import { BarsPanel } from './BarsPanel';
 import { ListEditor } from './editors/ListEditor';
 import { BAR_STYLES, DEFAULT_OPTIONS, type BarsFieldConfig, type BarsOptions } from './types';
@@ -368,7 +369,7 @@ export const plugin = new PanelPlugin<BarsOptions, BarsFieldConfig>(BarsPanel)
         path: 'animate',
         name: 'Animation',
         description:
-          'Animate sweep, stripes and blinking pills. Automatically off for reduced-motion users and hidden tabs.',
+          'Animate sweep, stripes and blinking pills. Pauses in hidden tabs; see Reduced motion for the system preference.',
         category: ANIM,
         defaultValue: DEFAULT_OPTIONS.animate,
       })
@@ -379,5 +380,14 @@ export const plugin = new PanelPlugin<BarsOptions, BarsFieldConfig>(BarsPanel)
         category: ANIM,
         defaultValue: DEFAULT_OPTIONS.animationSpeed,
         settings: { min: 0.4, max: 6, step: 0.1 },
+      })
+      .addSelect({
+        path: 'reducedMotion',
+        name: 'Reduced motion',
+        description: MOTION_PREFERENCE_DESCRIPTION,
+        category: ANIM,
+        defaultValue: DEFAULT_OPTIONS.reducedMotion,
+        settings: { options: MOTION_PREFERENCE_CHOICES },
+        showIf: (o) => o.animate,
       });
   });

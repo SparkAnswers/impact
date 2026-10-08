@@ -34,7 +34,8 @@ every bit of motion is derived from samples that were already received.
   The value's colours never change.
 
 All of this falls back to the plain static render when *Animation* is off, when the system prefers
-reduced motion, when the tab is hidden or when the panel is scrolled out of view. All gauges on a page
+reduced motion (unless *Reduced motion* is set to *Always animate*), when the tab is hidden or when the
+panel is scrolled out of view. All gauges on a page
 share one animation frame loop, frames are capped at 60 per second and skipped when nothing changed,
 and only the moving layer (history, fill, marker) is redrawn; the ring, ticks and text are drawn once
 per data update.
@@ -134,7 +135,8 @@ Standard field options used: Unit, Decimals, Min, Max, Thresholds, Color, Displa
 
 | Option | Description |
 | --- | --- |
-| Animate | Ease the fill and marker to new values. Automatically off when the system prefers reduced motion or the tab is hidden. |
+| Animate | Ease the fill and marker to new values. Automatically off when the tab is hidden. |
+| Reduced motion | `Follow system setting` (default) pauses easing and live motion when the operating system asks for reduced motion and shows a small pause icon in the panel corner; `Always animate` ignores that setting; `Never animate` keeps the gauge static. |
 | Duration | Easing duration in milliseconds. |
 
 ### Live motion

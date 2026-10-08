@@ -1,3 +1,4 @@
+import { MOTION_PREFERENCE_CHOICES, MOTION_PREFERENCE_DESCRIPTION } from '../../shared/motion';
 import { FieldColorModeId, FieldConfigProperty, FieldType, PanelPlugin } from '@grafana/data';
 import { GaugePanel } from './GaugePanel';
 import { REDUCER_OPTIONS } from './lib/reducers';
@@ -413,7 +414,7 @@ export const plugin = new PanelPlugin<GaugeOptions>(GaugePanel)
       .addBooleanSwitch({
         path: 'animate',
         name: 'Animate',
-        description: 'Ease the fill and marker to new values. Disabled automatically when the system prefers reduced motion.',
+        description: 'Ease the fill and marker to new values and enable live motion. See Reduced motion for the system preference.',
         category: CAT_ANIM,
         defaultValue: DEFAULT_OPTIONS.animate,
       })
@@ -424,6 +425,15 @@ export const plugin = new PanelPlugin<GaugeOptions>(GaugePanel)
         category: CAT_ANIM,
         defaultValue: DEFAULT_OPTIONS.animationDuration,
         settings: { min: 50, max: 3000, step: 50 },
+        showIf: (o) => o.animate,
+      })
+      .addSelect({
+        path: 'reducedMotion',
+        name: 'Reduced motion',
+        description: MOTION_PREFERENCE_DESCRIPTION,
+        category: CAT_ANIM,
+        defaultValue: DEFAULT_OPTIONS.reducedMotion,
+        settings: { options: MOTION_PREFERENCE_CHOICES },
         showIf: (o) => o.animate,
       })
 

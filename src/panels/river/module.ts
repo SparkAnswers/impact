@@ -1,3 +1,4 @@
+import { MOTION_PREFERENCE_CHOICES, MOTION_PREFERENCE_DESCRIPTION } from '../../shared/motion';
 import { FieldConfigProperty, PanelPlugin, ThresholdsMode } from '@grafana/data';
 import { RiverPanel } from './RiverPanel';
 import { ChannelsEditor } from './editors/ChannelsEditor';
@@ -170,7 +171,7 @@ export const plugin = new PanelPlugin<RiverOptions>(RiverPanel)
       .addBooleanSwitch({
         path: 'animate',
         name: 'Animate',
-        description: 'Animate particles. Off (or reduced motion) renders static streaks.',
+        description: 'Animate particles. Off renders static streaks; see Reduced motion for the system preference.',
         category: ['Animation'],
         defaultValue: DEFAULT_OPTIONS.animate,
       })
@@ -181,6 +182,15 @@ export const plugin = new PanelPlugin<RiverOptions>(RiverPanel)
         category: ['Animation'],
         defaultValue: DEFAULT_OPTIONS.animationSpeed,
         settings: { min: 0.1, max: 4, step: 0.1 },
+        showIf: (o) => o.animate,
+      })
+      .addSelect({
+        path: 'reducedMotion',
+        name: 'Reduced motion',
+        description: MOTION_PREFERENCE_DESCRIPTION,
+        category: ['Animation'],
+        defaultValue: DEFAULT_OPTIONS.reducedMotion,
+        settings: { options: MOTION_PREFERENCE_CHOICES },
         showIf: (o) => o.animate,
       });
   });

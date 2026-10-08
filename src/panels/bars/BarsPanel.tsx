@@ -2,6 +2,7 @@ import React, { useMemo } from 'react';
 import type { PanelProps } from '@grafana/data';
 import { PanelDataErrorView } from '@grafana/runtime';
 import { useTheme2 } from '@grafana/ui';
+import { ReducedMotionHint } from '../../shared/ReducedMotionHint';
 import { BarsTable } from './components/BarsTable';
 import { useMotionEnabled } from './components/useMotion';
 import { buildModel } from './lib/rows';
@@ -17,7 +18,7 @@ export const BarsPanel: React.FC<PanelProps<BarsOptions>> = ({
   id,
 }) => {
   const theme = useTheme2();
-  const animate = useMotionEnabled(options.animate);
+  const animate = useMotionEnabled(options.animate, options.reducedMotion);
   const model = useMemo(() => buildModel(data.series, options, theme), [data.series, options, theme]);
 
   if (model.rows.length === 0) {
@@ -25,14 +26,17 @@ export const BarsPanel: React.FC<PanelProps<BarsOptions>> = ({
   }
 
   return (
-    <BarsTable
-      model={model}
-      options={options}
-      width={width}
-      height={height}
-      animate={animate}
-      timeZone={timeZone}
-      refreshedAt={data.request?.endTime}
-    />
+    <div style={{ position: 'relative', width, height }}>
+      <BarsTable
+        model={model}
+        options={options}
+        width={width}
+        height={height}
+        animate={animate}
+        timeZone={timeZone}
+        refreshedAt={data.request?.endTime}
+      />
+      <ReducedMotionHint animationEnabled={options.animate} preference={options.reducedMotion} width={width} />
+    </div>
   );
 };
