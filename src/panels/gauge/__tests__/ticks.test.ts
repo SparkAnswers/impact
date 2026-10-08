@@ -49,3 +49,19 @@ describe('decimalsNeeded', () => {
     expect(decimalsNeeded([])).toBe(0);
   });
 });
+
+describe('autoRange', () => {
+  const { autoRange } = jest.requireActual('../lib/ticks');
+  it('includes the zero mark and rounds outwards to nice numbers', () => {
+    expect(autoRange(-13.2, 17.8, 0)).toEqual({ min: -15, max: 20 });
+    expect(autoRange(12, 93, 0)).toEqual({ min: 0, max: 100 });
+    expect(autoRange(-8, -2, 0)).toEqual({ min: -10, max: 0 });
+  });
+  it('never hard-codes a range and copes with empty data', () => {
+    expect(autoRange(null, null, 0)).toEqual({ min: 0, max: 1 });
+    const r = autoRange(0.2, 0.7, 0);
+    expect(r.min).toBe(0);
+    expect(r.max).toBeGreaterThanOrEqual(0.7);
+    expect(r.max).toBeLessThanOrEqual(1);
+  });
+});

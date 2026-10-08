@@ -135,9 +135,10 @@ describe('useDemoFrames', () => {
     const { result } = run(panelData([]), 'always');
     const field = result.current.frames[0].fields[1];
     expect(typeof field.display).toBe('function');
-    // The generator's own config (unit, min, max) survives, like datasource-provided config does.
-    expect(field.config.unit).toBe('kwatt');
-    expect(field.config.min).toBe(-20);
+    // Generated fields carry no config of their own, so the panel's fieldConfig.defaults (unit, min, max,
+    // decimals) are what applyFieldOverrides applies; a field-level unit would silently win over them.
+    expect(field.config.unit).toBeUndefined();
+    expect(field.config.min).toBeUndefined();
     expect(field.state?.displayName ?? field.name).toBeTruthy();
   });
 
@@ -216,7 +217,7 @@ describe('rolling generators', () => {
     const time = f.fields[0].values as number[];
     expect(time[time.length - 1]).toBe(NOW + 1000);
     expect(time).toHaveLength(61);
-    expect(f.fields[1].config).toEqual({ unit: 'kwatt', min: -20, max: 20 });
+    expect(f.fields[1].config).toEqual({});
   });
 
   it('rollingMultiSeries returns n distinct bounded frames with shared timestamps', () => {

@@ -39,12 +39,18 @@ function round(v: number, decimals = 2): number {
   return Math.round(v * f) / f;
 }
 
-function series(name: string, time: number[], values: number[], unit?: string, min?: number, max?: number): DataFrame {
+/**
+ * Builds a time/value frame. Generated fields deliberately carry NO field config (unit, min, max,
+ * decimals, display name): in `applyFieldOverrides` a field's own config wins over the panel's
+ * `fieldConfig.defaults`, which would silently override what the user sets in Standard options.
+ * The `unit`/`min`/`max` arguments only document the intended range of the generator.
+ */
+function series(name: string, time: number[], values: number[], _unit?: string, _min?: number, _max?: number): DataFrame {
   return createDataFrame({
     name,
     fields: [
       { name: 'time', type: FieldType.time, values: time },
-      { name, type: FieldType.number, values, config: { unit, min, max } },
+      { name, type: FieldType.number, values, config: {} },
     ],
   });
 }
@@ -188,7 +194,7 @@ export function deviceTable(n: number, opts: SeriesOptions & { now?: number } = 
         name: 'progress',
         type: FieldType.number,
         values: progress,
-        config: { unit: opts.unit ?? 'percent', min: 0, max: 100 },
+        config: {},
       },
       { name: 'status', type: FieldType.string, values: status },
       { name: 'style', type: FieldType.string, values: style },
@@ -250,7 +256,7 @@ export function edgeTable(opts: SeriesOptions = {}): DataFrame {
     fields: [
       { name: 'source', type: FieldType.string, values: source },
       { name: 'target', type: FieldType.string, values: target },
-      { name: 'value', type: FieldType.number, values: value, config: { unit: opts.unit ?? 'reqps', min: 0 } },
+      { name: 'value', type: FieldType.number, values: value, config: {} },
     ],
   });
 }

@@ -134,10 +134,12 @@ describe('GaugePanel', () => {
   it('renders generated demo data with the badge when the query is empty (default: when no data)', () => {
     const props = makeProps({});
     props.data.series = [];
+    // Units come from the panel's standard options, also for generated data.
+    props.fieldConfig = { defaults: { unit: 'kwatt', decimals: 1 }, overrides: [] };
     render(<GaugePanel {...props} />);
     expect(screen.queryByTestId('error-view')).not.toBeInTheDocument();
     expect(screen.getByTestId('impact-demo-badge')).toBeInTheDocument();
-    expect(screen.getByTestId('impact-gauge-canvas').getAttribute('aria-label')).toMatch(/kW/);
+    expect(screen.getByTestId('impact-gauge-canvas').getAttribute('aria-label')).toMatch(/^Gauge -?\d/);
     expect(calls.arc).toBeGreaterThan(0);
   });
 

@@ -4,6 +4,7 @@ import {
   breathing,
   canScroll,
   interpolateAt,
+  trailFreshness,
   underrunDelay,
   easeTowards,
   inferSampleInterval,
@@ -112,6 +113,12 @@ describe('easing helpers', () => {
     expect(trailAlpha(4000, 4000)).toBe(0);
     expect(trailAlpha(2000, 4000)).toBeCloseTo(0.25);
     expect(trailAlpha(-500, 4000)).toBe(0);
+  });
+  it('trailFreshness is gone about 8 s after the last arrival', () => {
+    expect(trailFreshness(100000, 100000)).toBe(1);
+    expect(trailFreshness(104000, 100000)).toBeCloseTo(0.25);
+    expect(trailFreshness(108000, 100000)).toBe(0);
+    expect(trailFreshness(200000, 100000)).toBe(0);
   });
 });
 

@@ -44,13 +44,14 @@ import {
   sampleAge,
   staleThreshold,
   trailAlpha,
+  trailFreshness,
   tween,
   underrunDelay,
 } from './lib/live';
 import { reduceValues } from './lib/reducers';
 import { normalizeScale, valueToAngle } from './lib/scale';
 import { subscribeFrames } from './lib/scheduler';
-import { decimalsNeeded, generateTicks, parseTickList } from './lib/ticks';
+import { autoRange, decimalsNeeded, generateTicks, parseTickList } from './lib/ticks';
 import { DEFAULT_OPTIONS, type GaugeOptions } from './types';
 import { useAnimatedValue } from './useAnimatedValue';
 
@@ -241,11 +242,11 @@ export const GaugePanel: React.FC<PanelProps<GaugeOptions>> = ({
     const display =
       field.display ?? getDisplayProcessor({ field: { ...field, type: FieldType.number }, theme, timeZone });
     const cfg = field.config;
-    const dataMin = series.dataMin ?? 0;
-    const dataMax = series.dataMax ?? 1;
+    // Range: the field's min/max after overrides (what the user set); otherwise a nice range of the data.
+    const auto = autoRange(series.dataMin, series.dataMax, options.zeroValue);
     const scale = normalizeScale({
-      min: typeof cfg.min === 'number' ? cfg.min : Math.min(dataMin, 0),
-      max: typeof cfg.max === 'number' ? cfg.max : Math.max(dataMax, 0),
+      min: typeof cfg.min === 'number' && Number.isFinite(cfg.min) ? cfg.min : auto.min,
+      max: typeof cfg.max === 'number' && Number.isFinite(cfg.max) ? cfg.max : auto.max,
       zero: options.zeroValue,
       zeroPosition: typeof options.zeroPosition === 'number' ? options.zeroPosition : undefined,
       kind: options.scale,
@@ -715,11 +716,13 @@ export const GaugePanel: React.FC<PanelProps<GaugeOptions>> = ({
         st.glowAlpha = stale ? 0.35 : 1;
       }
 
-      // Trail opacities.
-      if (ld.trailCount > 1) {
+      // Trail opacities: per-sample age along the playback, times a wall-clock freshness that is gone
+      // about 8 s after the last data arrival, and nothing at all while stale.
+      const freshness = stale ? 0 : trailFreshness(wall, ld.arrivedAt);
+      if (ld.trailCount > 1 && freshness > 0) {
         let any = false;
         for (let i = 0; i < ld.trailCount; i++) {
-          const a = trailAlpha((playhead ?? wall) - ld.trailT[i], ld.trailWindow);
+          const a = freshness * trailAlpha((playhead ?? wall) - ld.trailT[i], ld.trailWindow);
           st.trailAlphas[i] = a;
           if (a > 0.01) {
             any = true;

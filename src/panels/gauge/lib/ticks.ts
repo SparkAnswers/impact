@@ -94,3 +94,25 @@ export function decimalsNeeded(values: number[], max = 6): number {
   }
   return needed;
 }
+
+/**
+ * Range used when the field has no min/max: the data range of the visible window, always including the
+ * zero mark, padded a little and rounded outwards to a nice step so the ends land on round numbers.
+ */
+export function autoRange(dataMin: number | null, dataMax: number | null, zero: number): { min: number; max: number } {
+  if (dataMin === null || dataMax === null) {
+    return { min: zero, max: zero + 1 };
+  }
+  let lo = Math.min(zero, dataMin);
+  let hi = Math.max(zero, dataMax);
+  if (hi - lo <= 0) {
+    hi = lo + 1;
+  }
+  const pad = (hi - lo) * 0.05;
+  lo = lo === zero ? zero : lo - pad;
+  hi = hi === zero ? zero : hi + pad;
+  const step = niceStep((hi - lo) / 8);
+  const min = Math.floor(lo / step + 1e-9) * step;
+  const max = Math.ceil(hi / step - 1e-9) * step;
+  return { min: roundTo(min, step), max: roundTo(max, step) };
+}

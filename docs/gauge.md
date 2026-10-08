@@ -39,7 +39,8 @@ every bit of motion is derived from samples that were already received.
 - **Marker drift**: the fill and marker ease to the latest value over a slightly longer time and the
   glow breathes gently. The number itself never changes without data.
 - **Trail**: a short fading trail along the ring shows where the marker came from, built from the
-  last few samples and their timestamps; it fades out as those samples age.
+  last few samples and their timestamps; it fades out as those samples age and is gone about 8 s
+  after the last data arrival (and never shown while stale).
 - **Stale indicator**: when the newest sample is older than max(3 x sample interval, 2 x refresh
   interval, 60 s) the marker glow is dimmed and a small "stale · 42 s" caption appears under the subtitle.
   The value's colours never change.
@@ -171,8 +172,9 @@ Standard field options used: Unit, Decimals, Min, Max, Thresholds, Color, Displa
 
 ## Tips
 
-- Set **Min/Max** in the standard options to fix the range; otherwise the panel uses the data range of
-  the visible window, which makes the arc jump between refreshes.
+- Set **Min/Max** in the standard options to fix the range; otherwise the panel uses a nice-rounded
+  range of the visible window that always includes the zero mark, which can change between refreshes.
+  There is no built-in default range; the demo dashboard sets min/max per panel.
 - For a classic "regen" style power gauge use min -50, max 200, square-root scale and the default
   195 degree arc. The zero mark lands at 20% of the arc, so most of the ring is available for
   positive values.

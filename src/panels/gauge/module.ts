@@ -19,8 +19,6 @@ export const plugin = new PanelPlugin<GaugeOptions>(GaugePanel)
   .useFieldConfig({
     disableStandardOptions: [FieldConfigProperty.NoValue, FieldConfigProperty.Filterable],
     standardOptions: {
-      [FieldConfigProperty.Min]: { defaultValue: -50 },
-      [FieldConfigProperty.Max]: { defaultValue: 200 },
       [FieldConfigProperty.Decimals]: { defaultValue: 1 },
       [FieldConfigProperty.Color]: {
         settings: { byValueSupport: true, preferThresholdsMode: false },

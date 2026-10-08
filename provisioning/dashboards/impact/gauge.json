@@ -568,7 +568,7 @@
       "id": 11,
       "type": "sparkanswers-impact-gauge-panel",
       "title": "No query · demo data",
-      "description": "This panel's query returns no data (TestData 'No data points'; an empty target list would be replaced by a default random walk). Data → Demo data = When no data (the default) renders a generated signed power series through the normal field pipeline, with a 'Demo data' badge. Add a query and the real result takes over; set Demo data to Off to see the empty state instead.",
+      "description": "This panel's query returns no data (TestData 'No data points'; an empty target list would be replaced by a default random walk). Data → Demo data = When no data (the default) renders a generated signed power series through the normal field pipeline, with a 'Demo data' badge. Add a query and the real result takes over; set Demo data to Off to see the empty state instead. Min/max are left empty, so the ring range follows the data (nice-rounded, always including the zero mark); set them in Standard options to fix the range. Unit, decimals and min/max all come from Standard options, also for demo data.",
       "gridPos": {
         "x": 0,
         "y": 40,
@@ -591,11 +591,8 @@
       ],
       "fieldConfig": {
         "defaults": {
-          "decimals": 1,
-          "color": {
-            "mode": "fixed",
-            "fixedColor": "orange"
-          }
+          "unit": "kwatt",
+          "decimals": 1
         },
         "overrides": []
       },

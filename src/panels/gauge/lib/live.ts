@@ -216,3 +216,11 @@ export function trailAlpha(age: number, window: number): number {
   const t = 1 - age / window;
   return t <= 0 ? 0 : t >= 1 ? 1 : t * t;
 }
+
+/** Fade-out window of the marker trail after the last data arrival (ms). */
+export const TRAIL_FADE_MS = 8_000;
+
+/** Wall-clock freshness of the trail: 1 right after data arrived, 0 once `fade` ms passed without new data. */
+export function trailFreshness(wall: number, arrivedAt: number, fade = TRAIL_FADE_MS): number {
+  return trailAlpha(wall - arrivedAt, fade);
+}
