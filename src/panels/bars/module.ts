@@ -354,6 +354,20 @@ export const plugin = new PanelPlugin<BarsOptions, BarsFieldConfig>(BarsPanel)
         defaultValue: DEFAULT_OPTIONS.rowHeight,
         settings: { min: 0, max: 80, step: 2 },
       })
+      .addRadio({
+        path: 'rowClick',
+        name: 'Row click',
+        description:
+          'Off: only cells whose field has data links are clickable. Name link: clicking anywhere in a row follows the first data link of the name field; cells with their own links still win.',
+        category: TABLE,
+        defaultValue: DEFAULT_OPTIONS.rowClick,
+        settings: {
+          options: [
+            { value: 'off', label: 'Off' },
+            { value: 'name', label: 'Name link' },
+          ],
+        },
+      })
       .addBooleanSwitch({
         path: 'showFooter',
         name: 'Footer',

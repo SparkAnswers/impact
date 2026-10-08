@@ -162,3 +162,109 @@ describe('BarsPanel', () => {
     expect(screen.getByTestId('impact-demo-badge')).toBeInTheDocument();
   });
 });
+
+describe('BarsPanel data links', () => {
+  /** A copy of the CSV frame whose name, progress and version fields carry data links (like the panel pipeline attaches). */
+  function linkedFrame(nameOnClick?: jest.Mock) {
+    const frame = toDataFrame({ ...csvFrame, fields: csvFrame.fields.map((f) => ({ ...f })) });
+    const by = (name: string) => frame.fields.find((f) => f.name === name)!;
+    by('name').getLinks = ({ valueRowIndex = 0 }) => [
+      {
+        href: `/d/device?row=${valueRowIndex}`,
+        title: 'Open device',
+        target: undefined,
+        origin: by('name'),
+        onClick: nameOnClick,
+      },
+      {
+        href: `https://example.org/device/${valueRowIndex}`,
+        title: 'Vendor page',
+        target: '_blank',
+        origin: by('name'),
+      },
+    ];
+    by('progress').getLinks = ({ valueRowIndex = 0 }) =>
+      valueRowIndex === 0
+        ? [{ href: 'javascript:alert(1)', title: 'Nope', target: undefined, origin: by('progress') }]
+        : [{ href: `/explore?row=${valueRowIndex}`, title: 'Explore', target: undefined, origin: by('progress') }];
+    by('version').getLinks = ({ valueRowIndex = 0 }) => [
+      { href: `/changelog/${valueRowIndex}`, title: 'Changelog', target: undefined, origin: by('version') },
+    ];
+    return frame;
+  }
+  const cellAnchor = (rowIdx: number, col: number) =>
+    screen
+      .getByTestId('impact-bars')
+      .querySelector<HTMLAnchorElement>(`tbody tr:nth-child(${rowIdx + 1}) td:nth-child(${col}) a`);
+
+  it('renders a link in every cell whose field has data links, ignoring unsafe schemes', () => {
+    renderPanel({}, [linkedFrame()]);
+    // columns: dot, name, bar, version, updated
+    expect(cellAnchor(0, 2)).toHaveAttribute('href', '/d/device?row=0');
+    expect(cellAnchor(0, 2)).toHaveAttribute('title', 'Open device');
+    expect(cellAnchor(0, 2)).toHaveTextContent('Edge Gateway');
+    // first row's value link uses an unsafe scheme: plain cell; second row links around the bar
+    expect(cellAnchor(0, 3)).toBeNull();
+    expect(cellAnchor(1, 3)).toHaveAttribute('href', '/explore?row=1');
+    expect(cellAnchor(1, 3)?.querySelector('[data-style="segmented"]')).not.toBeNull();
+    // extra column
+    expect(cellAnchor(2, 4)).toHaveAttribute('href', '/changelog/2');
+    expect(cellAnchor(2, 4)).toHaveTextContent('6.6.77');
+    // time column has no links; status dot has none either
+    expect(cellAnchor(0, 5)).toBeNull();
+    expect(cellAnchor(0, 1)).toBeNull();
+  });
+
+  it('offers the further links of a field through a chevron menu', () => {
+    renderPanel({}, [linkedFrame()]);
+    const more = screen.getAllByRole('button', { name: 'More links for Edge Gateway' });
+    expect(more).toHaveLength(1);
+    fireEvent.click(more[0]);
+    const items = screen.getAllByRole('menuitem');
+    expect(items.map((i) => i.textContent)).toEqual(['Open device', 'Vendor page']);
+    expect(items[1].closest('a')).toHaveAttribute('href', 'https://example.org/device/0');
+    expect(items[1].closest('a')).toHaveAttribute('target', '_blank');
+  });
+
+  it('links the whole row through the name link in the "name" row-click mode, own links and checkboxes win', () => {
+    const onClick = jest.fn();
+    renderPanel({ rowClick: 'name', showCheckbox: true, showStatusDot: false }, [linkedFrame(onClick)]);
+    // columns: check, name, bar, version, updated
+    const row = (i: number) => screen.getByTestId('impact-bars').querySelectorAll('tbody tr')[i];
+    fireEvent.click(row(0).querySelector('td:nth-child(5)')!); // plain time cell -> name link
+    expect(onClick).toHaveBeenCalledTimes(1);
+    fireEvent.click(row(1).querySelector('td:nth-child(4) a')!); // extra column's own link
+    expect(onClick).toHaveBeenCalledTimes(1);
+    fireEvent.click(row(1).querySelector('input[type="checkbox"]')!);
+    expect(onClick).toHaveBeenCalledTimes(1);
+    expect(screen.getByText(/1 selected/)).toBeInTheDocument();
+    // sorting still works with links in place
+    fireEvent.click(screen.getByText('Name'));
+    expect(cellAnchor(0, 2)).toHaveTextContent('Access Point 1');
+  });
+
+  it('keeps rows inert in the default row-click mode', () => {
+    const onClick = jest.fn();
+    renderPanel({}, [linkedFrame(onClick)]);
+    const row = screen.getByTestId('impact-bars').querySelector('tbody tr')!;
+    fireEvent.click(row.querySelector('td:nth-child(5)')!);
+    expect(onClick).not.toHaveBeenCalled();
+    fireEvent.click(cellAnchor(0, 2)!);
+    expect(onClick).toHaveBeenCalledTimes(1);
+  });
+
+  it('links time-series rows from the series field', () => {
+    const frame = toDataFrame({
+      name: 'cpu',
+      fields: [
+        { name: 'time', type: FieldType.time, values: [1, 2, 3] },
+        { name: 'Value', type: FieldType.number, values: [1, 2, 3] },
+      ],
+    });
+    frame.fields[1].getLinks = () => [{ href: '/d/cpu', title: 'Series', target: undefined, origin: frame.fields[1] }];
+    renderPanel({ barStyle: 'sparkline' }, [frame]);
+    expect(cellAnchor(0, 2)).toHaveAttribute('href', '/d/cpu');
+    expect(cellAnchor(0, 3)?.querySelector('[data-testid="impact-sparkline"]')).not.toBeNull();
+    expect(cellAnchor(0, 4)).toHaveAttribute('href', '/d/cpu');
+  });
+});

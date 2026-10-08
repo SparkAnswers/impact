@@ -134,6 +134,41 @@ export const getStyles = (theme: GrafanaTheme2) => {
       '& a': { color: theme.colors.text.link, textDecoration: 'none', '&:hover': { textDecoration: 'underline' } },
     }),
     statusCell: css({ display: 'flex', alignItems: 'center', gap: 6, height: '100%' }),
+    /** Anchor around a cell's content when its field has data links; inherits the cell colour (the name cell sets its own). */
+    cellLink: css({
+      color: 'inherit',
+      textDecoration: 'none',
+      '&:hover': { textDecoration: 'underline' },
+    }),
+    cellLinkBlock: css({ display: 'block', flex: '1 1 auto', minWidth: 0 }),
+    linkRow: css({ display: 'flex', alignItems: 'center', gap: 2, minWidth: 0 }),
+    /** Chevron that opens the menu of a cell with several data links. */
+    more: css({
+      display: 'inline-flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      flex: '0 0 auto',
+      width: 18,
+      height: 18,
+      marginLeft: 2,
+      padding: 0,
+      border: 0,
+      borderRadius: theme.shape.radius.default,
+      background: 'transparent',
+      color: theme.colors.text.secondary,
+      cursor: 'pointer',
+      verticalAlign: 'middle',
+      '&:hover': { background: theme.colors.action.hover, color: theme.colors.text.primary },
+    }),
+    menuHeader: css({
+      display: 'block',
+      padding: theme.spacing(0.5, 1),
+      fontSize: theme.typography.bodySmall.fontSize,
+      fontWeight: theme.typography.fontWeightMedium,
+      color: theme.colors.text.secondary,
+    }),
+    /** Rows in the "Name link" row-click mode. */
+    rowLink: css({ cursor: 'pointer' }),
     dot: css({
       width: 7,
       height: 7,

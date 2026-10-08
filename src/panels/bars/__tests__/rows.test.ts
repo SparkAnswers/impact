@@ -1,5 +1,5 @@
-import { createTheme, FieldType, MappingType, ReducerID, toDataFrame } from '@grafana/data';
-import { buildModel, isTimeSeriesFrame, normaliseRange } from '../lib/rows';
+import { createTheme, FieldType, MappingType, ReducerID, toDataFrame, type Field } from '@grafana/data';
+import { buildModel, isSafeHref, isTimeSeriesFrame, normaliseRange } from '../lib/rows';
 import { DEFAULT_OPTIONS, type BarsOptions } from '../types';
 
 const theme = createTheme();
@@ -228,5 +228,121 @@ describe('buildModel – table input', () => {
 
   it('returns an empty model for no data', () => {
     expect(buildModel([], opts(), theme).rows).toHaveLength(0);
+  });
+});
+
+describe('buildModel – data links', () => {
+  /** Attaches a `getLinks` supplier like the panel pipeline does (one link per row, built from the row index). */
+  const withLinks = (field: Field, hrefs: Array<string | string[]>) => {
+    field.getLinks = ({ valueRowIndex = 0 }) =>
+      ([] as string[]).concat(hrefs[valueRowIndex] ?? []).map((href, i) => ({
+        href,
+        title: `link ${i}`,
+        target: i === 0 ? undefined : '_blank',
+        origin: field,
+      }));
+    return field;
+  };
+
+  it('resolves links of every column at the row index, keeping only safe schemes', () => {
+    const frame = toDataFrame({
+      fields: [
+        { name: 'name', type: FieldType.string, values: ['a', 'b', 'c'] },
+        { name: 'value', type: FieldType.number, values: [1, 2, 3] },
+        { name: 'status', type: FieldType.string, values: ['ok', 'ok', 'ok'] },
+        { name: 'updated', type: FieldType.time, values: [1, 2, 3] },
+        { name: 'version', type: FieldType.string, values: ['1', '2', '3'] },
+      ],
+    });
+    withLinks(frame.fields[0], ['/d/a', ['/d/b', 'https://example.org/b'], 'javascript:alert(1)']);
+    withLinks(frame.fields[1], ['/explore?a', '', 'mailto:ops@example.org']);
+    withLinks(frame.fields[2], [[], 'data:text/html,x', './status']);
+    withLinks(frame.fields[3], ['#t', '#t', '#t']);
+    withLinks(frame.fields[4], ['/v/1', 'vbscript:x', 'https://example.org/v/3']);
+
+    const m = buildModel([frame], opts(), theme);
+    expect(m.rows[0].links.name).toEqual([{ href: '/d/a', title: 'link 0', target: undefined, onClick: undefined }]);
+    expect(m.rows[1].links.name?.map((l) => l.href)).toEqual(['/d/b', 'https://example.org/b']);
+    expect(m.rows[1].links.name?.[1].target).toBe('_blank');
+    // unsafe schemes and empty hrefs are dropped entirely
+    expect(m.rows[2].links.name).toBeUndefined();
+    expect(m.rows[1].links.value).toBeUndefined();
+    expect(m.rows[1].links.status).toBeUndefined();
+    expect(m.rows[1].links.extras[0]).toBeUndefined();
+    // value, status, time and extra columns carry their own links
+    expect(m.rows[0].links.value?.[0].href).toBe('/explore?a');
+    expect(m.rows[2].links.value?.[0].href).toBe('mailto:ops@example.org');
+    expect(m.rows[0].links.status).toBeUndefined();
+    expect(m.rows[2].links.status?.[0].href).toBe('./status');
+    expect(m.rows[1].links.time?.[0].href).toBe('#t');
+    expect(m.rows[0].links.extras[0]?.[0].href).toBe('/v/1');
+    expect(m.rows[2].links.extras[0]?.[0].href).toBe('https://example.org/v/3');
+    // fields without a link supplier yield plain cells
+    expect(m.rows[0].links.subtitle).toBeUndefined();
+    expect(m.rows[0].links.sparkline).toBeUndefined();
+  });
+
+  it('takes the links of a time series from its value field at the last index and applies them to the row', () => {
+    const frame = toDataFrame({
+      name: 'cpu',
+      fields: [
+        { name: 'time', type: FieldType.time, values: [1, 2, 3] },
+        { name: 'Value', type: FieldType.number, values: [1, 2, 3] },
+      ],
+    });
+    const getLinks = jest.fn(({ valueRowIndex }: { valueRowIndex?: number }) => [
+      { href: `/d/cpu?row=${valueRowIndex}`, title: 'Series', target: undefined, origin: frame.fields[1] },
+    ]);
+    frame.fields[1].getLinks = getLinks;
+    const m = buildModel([frame], opts(), theme);
+    expect(getLinks).toHaveBeenCalledWith({ valueRowIndex: 2 });
+    const expected = [{ href: '/d/cpu?row=2', title: 'Series', target: undefined, onClick: undefined }];
+    expect(m.rows[0].links.name).toEqual(expected);
+    expect(m.rows[0].links.value).toEqual(expected);
+    expect(m.rows[0].links.time).toEqual(expected);
+  });
+
+  it('keeps Grafana link handlers and falls back to the href as title', () => {
+    const onClick = jest.fn();
+    const frame = toDataFrame({
+      fields: [
+        { name: 'name', type: FieldType.string, values: ['a'] },
+        { name: 'value', type: FieldType.number, values: [1] },
+      ],
+    });
+    frame.fields[0].getLinks = () => [
+      { href: '/explore', title: '', target: undefined, origin: frame.fields[0], onClick },
+    ];
+    const link = buildModel([frame], opts(), theme).rows[0].links.name?.[0];
+    expect(link?.title).toBe('/explore');
+    expect(link?.onClick).toBe(onClick);
+  });
+});
+
+describe('isSafeHref', () => {
+  it('allows http(s), mailto and relative URLs only', () => {
+    for (const ok of [
+      'https://example.org',
+      'HTTP://example.org',
+      'mailto:a@b.c',
+      '/d/x',
+      './x',
+      '../x',
+      '?a=1',
+      '#x',
+      'd/x',
+    ]) {
+      expect(isSafeHref(ok)).toBe(true);
+    }
+    for (const bad of ['javascript:alert(1)', 'JavaScript:x', 'data:text/html,x', 'vbscript:x', 'ftp://x', '', '  ']) {
+      expect(isSafeHref(bad)).toBe(false);
+    }
+  });
+
+  it('sees through control characters, tabs and newlines that browsers strip before parsing', () => {
+    for (const bad of ['java\tscript:alert(1)', 'java\nscript:x', '\u0001javascript:x', ' \u0000data:text/html,x', 'jav\u000Dascript:x']) {
+      expect(isSafeHref(bad)).toBe(false);
+    }
+    expect(isSafeHref('\u0001https://example.org')).toBe(true);
   });
 });

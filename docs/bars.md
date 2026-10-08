@@ -20,7 +20,7 @@ SQL or logs-to-table result. Column roles are auto-detected and can be fixed in 
 
 | Role          | Auto-detection                                                                                                           | Used for                                                                                                                                                                              |
 | ------------- | ------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Name          | first string field                                                                                                       | row label; data links on this field make it clickable                                                                                                                                 |
+| Name          | first string field                                                                                                       | row label; data links on this field make it clickable (so do links on any other field, see below)                                                                                   |
 | Subtitle      | field named `subtitle`, `description`, `detail`, `model` or `note`                                                       | small text under the name                                                                                                                                                             |
 | Value         | first number field                                                                                                       | the bar; formatted with the field's unit/decimals; min/max from field config or data                                                                                                  |
 | Status        | field named `status`, `state`, `health` or `severity`                                                                    | status dot colour/icon, pill text, sweep label (via value mappings)                                                                                                                   |
@@ -37,6 +37,13 @@ Each numeric series becomes one row: the name is the series display name, the va
 
 Standard field config applies: unit, decimals, min, max, no-value text, display name, colour, thresholds,
 value mappings (text, colour and icon for statuses) and data links.
+
+**Data links** on any field make its cells clickable: name, subtitle, the bar (the value field; the status
+field for pills, the sparkline field for sparklines), the status dot, the "Updated" time and every extra
+column. For time series input the links of each series apply to its row. The first link is the click action;
+when a field has several, a chevron next to the cell and a right-click open a menu with all of them. Links are
+interpolated by Grafana (`${__data.fields...}`, `${__value...}`, dashboard variables); only `http(s)`, `mailto`
+and relative URLs are followed. *Table > Row click* can additionally make the whole row follow the name link.
 
 ## Quick start
 
@@ -79,6 +86,7 @@ result is the same wherever you start from; what survives is every column choice
 | Table > Default sort / Sort descending                                      | Initial sort: `name`, `value`, `status`, `updated` or an extra column title.                                                                                         |
 | Table > Density / Row height                                                | Compact (28 px) or comfortable (36 px) rows, or an explicit height. Rows with subtitles are at least 44 px.                                                          |
 | Table > Footer                                                              | Row count, sort state, selection count and "Refreshed ... ago".                                                                                                      |
+| Table > Row click                                                           | `Off` (default): only cells whose field has data links are clickable. `Name link`: clicking anywhere in a row follows the first data link of the name field; cells with their own links and the checkbox still win. |
 | Animation > Animation                                                       | Run the sweep, stripe and blinking-pill animations. Automatically paused in hidden tabs.                                                                              |
 | Animation > Reduced motion                                                  | `Follow system setting` (default) pauses the animations when the operating system asks for reduced motion and shows a small pause icon in the panel corner; `Always animate` ignores that setting; `Never animate` keeps the bars static. |
 | Animation > Animation speed                                                 | Seconds per sweep cycle; stripes run at twice the rate.                                                                                                              |

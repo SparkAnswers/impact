@@ -107,7 +107,12 @@ describe('sparkline parsing', () => {
     expect(parseSparkline('1;2;3')).toEqual([1, 2, 3]);
     expect(parseSparkline('1 2 3')).toEqual([1, 2, 3]);
     // Nested frame cell from the Time series to table transformation: first non-time field wins.
-    const nested = toDataFrame({ fields: [{ name: 'Time', type: FieldType.time, values: [1, 2, 3] }, { name: 'cpu', type: FieldType.number, values: [4, 5, 6] }] });
+    const nested = toDataFrame({
+      fields: [
+        { name: 'Time', type: FieldType.time, values: [1, 2, 3] },
+        { name: 'cpu', type: FieldType.number, values: [4, 5, 6] },
+      ],
+    });
     expect(parseSparkline(nested)).toEqual([4, 5, 6]);
     expect(parseSparkline({ fields: [] })).toBeUndefined();
     expect(parseSparkline('x')).toBeUndefined();
@@ -133,6 +138,7 @@ describe('sortRows', () => {
     color: '',
     style: 'percent',
     extras: extra ? [{ text: extra }] : [],
+    links: { extras: [] },
   });
   const rows = [row('b', 2, 'x'), row('a', undefined, 'z'), row('c', 1, 'y'), row('a10', 3), row('a2', 3)];
 

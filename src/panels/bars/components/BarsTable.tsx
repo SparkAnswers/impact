@@ -2,12 +2,12 @@ import React, { useCallback, useMemo, useState } from 'react';
 import { cx } from '@emotion/css';
 import { dateTimeFormatTimeAgo, isIconName } from '@grafana/data';
 import type { TimeZone } from '@grafana/schema';
-import { Checkbox, Icon, useStyles2, useTheme2 } from '@grafana/ui';
-import type { BarRow, BarsModel } from '../lib/rows';
+import { Checkbox, ContextMenu, Icon, MenuItem, useStyles2, useTheme2 } from '@grafana/ui';
+import type { BarRow, BarsModel, RowLink } from '../lib/rows';
 import { sortRows, type SortKey, type SortState } from '../lib/sort';
 import { DENSITY_ROW_HEIGHT, VIRTUALISE_THRESHOLD, type BarsOptions } from '../types';
 import { RowBar } from './RowBar';
-import { getStyles } from './styles';
+import { getStyles, type BarsStyles } from './styles';
 import { useTick } from './useMotion';
 
 interface Props {
@@ -30,7 +30,114 @@ interface Column {
 
 const HEADER_H = 30;
 const FOOTER_H = 24;
-const SAFE_HREF = /^(https?:\/\/|\/|\.\/|#)/i;
+
+/** Links shown in the context menu (several data links on one field), anchored at a screen position. */
+interface LinkMenu {
+  x: number;
+  y: number;
+  label: string;
+  links: RowLink[];
+}
+
+/** Click handler of an anchor whose link Grafana navigates itself (internal links); modifier clicks keep the browser behaviour. */
+function linkOnClick(link: RowLink): React.MouseEventHandler | undefined {
+  if (!link.onClick) {
+    return undefined;
+  }
+  return (e) => {
+    if (!(e.ctrlKey || e.metaKey || e.shiftKey)) {
+      e.preventDefault();
+      link.onClick?.(e);
+    }
+  };
+}
+
+interface CellLinkProps {
+  /** Safe data links of the cell; without any the children render as they are. */
+  links?: RowLink[];
+  /** Row name, for the accessible label of the chevron. */
+  label: string;
+  /** Marks the name cell's anchor so the row-click mode can delegate to it. */
+  role?: 'name';
+  /** Block layout for cells whose content is a flex box (bar, status dot) instead of inline text. */
+  block?: boolean;
+  styles: BarsStyles;
+  onMenu: (menu: LinkMenu) => void;
+  children: React.ReactNode;
+}
+
+/** Wraps a cell's content in its first data link; further links open a menu on right-click or through a chevron. */
+const CellLink: React.FC<CellLinkProps> = ({ links, label, role, block, styles, onMenu, children }) => {
+  if (!links || links.length === 0) {
+    return <>{children}</>;
+  }
+  const first = links[0];
+  const more = links.length > 1;
+  const open = (x: number, y: number) => onMenu({ x, y, label, links });
+  const anchor = (
+    <a
+      href={first.href}
+      target={first.target}
+      rel="noreferrer"
+      title={first.title}
+      className={cx(styles.cellLink, block && styles.cellLinkBlock)}
+      data-link={role}
+      onClick={linkOnClick(first)}
+      onContextMenu={
+        more
+          ? (e) => {
+              e.preventDefault();
+              open(e.clientX, e.clientY);
+            }
+          : undefined
+      }
+    >
+      {children}
+    </a>
+  );
+  if (!more) {
+    return anchor;
+  }
+  const chevron = (
+    <button
+      type="button"
+      className={styles.more}
+      aria-label={`More links for ${label}`}
+      aria-haspopup="menu"
+      title={`${links.length} links`}
+      onClick={(e) => {
+        const r = e.currentTarget.getBoundingClientRect();
+        open(r.left, r.bottom);
+      }}
+    >
+      <Icon name="angle-down" size="sm" />
+    </button>
+  );
+  return block ? (
+    <span className={styles.linkRow}>
+      {anchor}
+      {chevron}
+    </span>
+  ) : (
+    <>
+      {anchor}
+      {chevron}
+    </>
+  );
+};
+
+/** Links of the bar cell: the field the cell shows wins (status for pills, sparkline for sparklines), then the value field. */
+function barLinks(row: BarRow): RowLink[] | undefined {
+  const { links } = row;
+  switch (row.style) {
+    case 'pill':
+      return links.status ?? links.value;
+    case 'sparkline':
+      return links.sparkline ?? links.value;
+    default:
+      return links.value ?? links.status;
+  }
+}
 
 /** Resolves the option's default sort column into a sort key for this model. */
 export function defaultSortFor(model: BarsModel, options: BarsOptions): SortState | undefined {
@@ -63,6 +170,8 @@ export const BarsTable: React.FC<Props> = ({ model, options, width, height, anim
   const [userSort, setUserSort] = useState<SortState | undefined>();
   const [selected, setSelected] = useState<ReadonlySet<string>>(() => new Set());
   const [scrollTop, setScrollTop] = useState(0);
+  const [menu, setMenu] = useState<LinkMenu | undefined>();
+  const closeMenu = useCallback(() => setMenu(undefined), []);
 
   const sort = userSort ?? defaultSortFor(model, options);
   const rows = useMemo(() => sortRows(model.rows, sort), [model.rows, sort]);
@@ -105,6 +214,16 @@ export const BarsTable: React.FC<Props> = ({ model, options, width, height, anim
       }
       return next;
     });
+  }, []);
+
+  // Row click mode: a click on the plain area of a row acts like a click on the name link, so Grafana's own link
+  // handling (and the link's handler) applies; clicks on links, buttons and checkboxes inside the row keep their job.
+  const rowClick = options.rowClick === 'name';
+  const onRowClick = useCallback((e: React.MouseEvent<HTMLTableRowElement>) => {
+    if ((e.target as HTMLElement).closest('a, button, input, label')) {
+      return;
+    }
+    e.currentTarget.querySelector<HTMLAnchorElement>('a[data-link="name"]')?.click();
   }, []);
 
   const allSelected = rows.length > 0 && rows.every((r) => selected.has(r.id));
@@ -189,15 +308,22 @@ export const BarsTable: React.FC<Props> = ({ model, options, width, height, anim
                 <td colSpan={columns.length} style={{ height: start * rowH, padding: 0, border: 0 }} />
               </tr>
             )}
-            {visible.map((row) => (
-              <tr
-                key={row.id}
-                className={cx(selected.has(row.id) && (glass ? styles.selectedGlass : styles.selected))}
-                style={{ height: rowH }}
-              >
-                {columns.map((c) => renderCell(c, row))}
-              </tr>
-            ))}
+            {visible.map((row) => {
+              const clickable = rowClick && !!row.links.name;
+              return (
+                <tr
+                  key={row.id}
+                  className={cx(
+                    selected.has(row.id) && (glass ? styles.selectedGlass : styles.selected),
+                    clickable && styles.rowLink
+                  )}
+                  style={{ height: rowH }}
+                  onClick={clickable ? onRowClick : undefined}
+                >
+                  {columns.map((c) => renderCell(c, row))}
+                </tr>
+              );
+            })}
             {virtual && end < rows.length && (
               <tr aria-hidden="true">
                 <td colSpan={columns.length} style={{ height: (rows.length - end) * rowH, padding: 0, border: 0 }} />
@@ -206,6 +332,19 @@ export const BarsTable: React.FC<Props> = ({ model, options, width, height, anim
           </tbody>
         </table>
       </div>
+      {menu && (
+        <ContextMenu
+          x={menu.x}
+          y={menu.y}
+          onClose={closeMenu}
+          renderHeader={() => <span className={styles.menuHeader}>{menu.label}</span>}
+          renderMenuItems={() =>
+            menu.links.map((l, i) => (
+              <MenuItem key={i} label={l.title} url={l.href} target={l.target} onClick={linkOnClick(l)} />
+            ))
+          }
+        />
+      )}
       {options.showFooter && (
         <div className={styles.footer}>
           <span>
@@ -220,6 +359,11 @@ export const BarsTable: React.FC<Props> = ({ model, options, width, height, anim
   );
 
   function renderCell(c: Column, row: BarRow): React.ReactNode {
+    const linked = (links: RowLink[] | undefined, children: React.ReactNode, extra?: Partial<CellLinkProps>) => (
+      <CellLink links={links} label={row.name} styles={styles} onMenu={setMenu} {...extra}>
+        {children}
+      </CellLink>
+    );
     switch (c.key) {
       case 'check':
         return (
@@ -236,40 +380,40 @@ export const BarsTable: React.FC<Props> = ({ model, options, width, height, anim
         const icon = row.status?.icon && isIconName(row.status.icon) ? row.status.icon : undefined;
         return (
           <td key={c.key}>
-            <span className={styles.statusCell} title={row.status?.text || undefined}>
-              <span
-                className={styles.dot}
-                style={{ background: color, boxShadow: `0 0 6px ${color}66` }}
-                data-testid="impact-dot"
-              />
-              {icon && <Icon name={icon} size="sm" />}
-            </span>
+            {linked(
+              row.links.status,
+              <span className={styles.statusCell} title={row.status?.text || undefined}>
+                <span
+                  className={styles.dot}
+                  style={{ background: color, boxShadow: `0 0 6px ${color}66` }}
+                  data-testid="impact-dot"
+                />
+                {icon && <Icon name={icon} size="sm" />}
+              </span>,
+              { block: true }
+            )}
           </td>
         );
       }
       case 'name':
         return (
           <td key={c.key} className={styles.name}>
-            {row.link && SAFE_HREF.test(row.link.href) ? (
-              <a href={row.link.href} target={row.link.target} rel="noreferrer" title={row.link.title}>
-                {row.name}
-              </a>
-            ) : (
-              row.name
-            )}
-            {row.subtitle && <small>{row.subtitle}</small>}
+            {linked(row.links.name, row.name, { role: 'name' })}
+            {row.subtitle && <small>{linked(row.links.subtitle, row.subtitle)}</small>}
           </td>
         );
       case 'bar':
         return (
           <td key={c.key}>
-            <RowBar row={row} options={options} animate={animate} styles={styles} />
+            {linked(barLinks(row), <RowBar row={row} options={options} animate={animate} styles={styles} />, {
+              block: true,
+            })}
           </td>
         );
       case 'time':
         return (
           <td key={c.key} className={styles.dim}>
-            {row.time !== undefined ? dateTimeFormatTimeAgo(row.time, { timeZone }) : ''}
+            {row.time !== undefined ? linked(row.links.time, dateTimeFormatTimeAgo(row.time, { timeZone })) : ''}
           </td>
         );
       default: {
@@ -281,7 +425,7 @@ export const BarsTable: React.FC<Props> = ({ model, options, width, height, anim
             className={cx(c.numeric ? styles.num : styles.dim)}
             style={cell?.color && c.numeric ? { color: cell.color } : undefined}
           >
-            {cell?.text ?? ''}
+            {cell ? linked(row.links.extras[idx], cell.text) : ''}
           </td>
         );
       }

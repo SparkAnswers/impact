@@ -33,6 +33,9 @@ export type Density = 'compact' | 'comfortable';
  */
 export type TableBackground = 'panel' | 'transparent' | 'solid';
 
+/** What a click on a row's plain (non-link) area does. */
+export type RowClick = 'off' | 'name';
+
 /** Per-field custom config (available through field overrides). */
 export interface BarsFieldConfig {
   /** Overrides the panel-level bar style for rows produced by this field ('default' = use panel option). */
@@ -86,6 +89,8 @@ export interface BarsOptions {
   showFooter: boolean;
   background: TableBackground;
   backgroundColor: string;
+  /** `name`: clicking anywhere in a row follows the name field's first data link; cells with their own links still win. */
+  rowClick: RowClick;
 
   // Animation
   animate: boolean;
@@ -122,6 +127,7 @@ export const DEFAULT_OPTIONS: BarsOptions = {
   showFooter: true,
   background: 'panel',
   backgroundColor: 'dark-blue',
+  rowClick: 'off',
 
   animate: true,
   reducedMotion: 'system',

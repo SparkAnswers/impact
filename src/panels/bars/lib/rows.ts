@@ -11,6 +11,7 @@ import {
   type DisplayProcessor,
   type Field,
   type GrafanaTheme2,
+  type LinkTarget,
 } from '@grafana/data';
 import type { BarsOptions, BarStyle } from '../types';
 import { colorByName, resolveBarColor, statusKeywordColor } from './color';
@@ -40,17 +41,33 @@ export interface ExtraCell {
   color?: string;
 }
 
+/** One resolved, scheme-checked data link of a cell. */
 export interface RowLink {
   href: string;
+  /** Link title (tooltip); falls back to the href when the link has none. */
   title: string;
-  target?: string;
+  target?: LinkTarget;
+  /** Handler supplied by Grafana for links it navigates itself (internal links); replaces the browser navigation. */
+  onClick?: (e: unknown) => void;
+}
+
+/** Data links per cell of a row; `undefined` means the cell is plain text. */
+export interface RowLinks {
+  name?: RowLink[];
+  subtitle?: RowLink[];
+  value?: RowLink[];
+  status?: RowLink[];
+  sparkline?: RowLink[];
+  time?: RowLink[];
+  /** One entry per extra column. */
+  extras: Array<RowLink[] | undefined>;
 }
 
 export interface BarRow {
   id: string;
   name: string;
   subtitle?: string;
-  link?: RowLink;
+  links: RowLinks;
   value?: number;
   valueText: string;
   /** 0..1 position of the value between min and max (NaN when no value). */
@@ -99,6 +116,35 @@ export function isTimeSeriesFrame(frame: DataFrame): boolean {
     }
   }
   return hasTime && hasNumber && frame.length > 1;
+}
+
+const SAFE_SCHEME = /^(https?:\/\/|mailto:)/i;
+const ANY_SCHEME = /^[a-z][a-z0-9+.-]*:/i;
+const CONTROL_CHARS = /[\u0000-\u0020\u007f]+/g;
+
+/**
+ * True for http(s) and mailto URLs and for relative URLs (no scheme at all); blocks javascript:, data: and the like.
+ * Browsers drop ASCII control characters, tabs and newlines inside a URL before parsing it (so `java\tscript:` runs),
+ * therefore the scheme is detected on the href with those characters removed.
+ */
+export function isSafeHref(href: string): boolean {
+  const h = href.trim();
+  const bare = h.replace(CONTROL_CHARS, '');
+  return bare.length > 0 && (SAFE_SCHEME.test(bare) || !ANY_SCHEME.test(bare));
+}
+
+/** The safe data links of a field at a row index, in Grafana's order; `undefined` when there are none. */
+export function linksAt(field: Field | undefined, rowIndex: number): RowLink[] | undefined {
+  if (!field?.getLinks || rowIndex < 0) {
+    return undefined;
+  }
+  const out: RowLink[] = [];
+  for (const l of field.getLinks({ valueRowIndex: rowIndex })) {
+    if (typeof l?.href === 'string' && isSafeHref(l.href)) {
+      out.push({ href: l.href, title: l.title || l.href, target: l.target, onClick: l.onClick });
+    }
+  }
+  return out.length > 0 ? out : undefined;
 }
 
 /** Display processor for a field, falling back to a fresh one when the panel pipeline has not attached one. */
@@ -295,9 +341,12 @@ function buildFromTimeSeries(frames: DataFrame[], options: BarsOptions, theme: G
       p.value === undefined ? undefined : (statusFromMapping(p.field, p.value, theme, color) ?? { text: '', color });
     const spark = p.field.values.map((v) => (v == null ? NaN : Number(v)));
     const customStyle = (cfg.custom as { barStyle?: unknown } | undefined)?.barStyle;
+    // The series' links (resolved at its last sample) apply to the whole row.
+    const links = linksAt(p.field, p.field.values.length - 1);
     return {
       id: p.id,
       name: p.name,
+      links: { name: links, value: links, time: links, extras: [] },
       value: p.value,
       valueText: formattedValueToString(dv),
       percent,
@@ -337,7 +386,9 @@ function buildFromTable(frame: DataFrame, frames: DataFrame[], options: BarsOpti
     findByName(frame, /^(time|timestamp|updated|last[_ ]?seen|last[_ ]?updated)$/i, FieldType.string);
   const sparkField =
     byName(options.sparklineField) ??
-    fields.find((f) => (f.type === FieldType.other || f.type === FieldType.frame) && parseSparkline(f.values[0]) !== undefined) ??
+    fields.find(
+      (f) => (f.type === FieldType.other || f.type === FieldType.frame) && parseSparkline(f.values[0]) !== undefined
+    ) ??
     findByName(frame, /(spark|trend|history|series)/i, FieldType.string);
   const subtitleField =
     byName(options.subtitleField) ??
@@ -406,15 +457,6 @@ function buildFromTable(frame: DataFrame, frames: DataFrame[], options: BarsOpti
       status = { text: '', color };
     }
 
-    let link: RowLink | undefined;
-    if (nameField?.getLinks) {
-      const links = nameField.getLinks({ valueRowIndex: i });
-      if (links.length > 0) {
-        const l = links[0];
-        link = { href: l.href, title: l.title, target: l.target };
-      }
-    }
-
     let stack: StackSegment[] | undefined;
     if (autoStack.length > 0) {
       const vals = autoStack.map((f) => toNumber(f.values[i]) ?? 0);
@@ -445,7 +487,15 @@ function buildFromTable(frame: DataFrame, frames: DataFrame[], options: BarsOpti
       id: `${i}`,
       name,
       subtitle: subtitleField?.values[i] == null ? undefined : String(subtitleField.values[i]),
-      link,
+      links: {
+        name: linksAt(nameField, i),
+        subtitle: linksAt(subtitleField, i),
+        value: linksAt(valueField, i),
+        status: linksAt(statusField, i),
+        sparkline: linksAt(sparkField, i),
+        time: linksAt(timeField, i),
+        extras: extraFields.map((f) => linksAt(f, i)),
+      },
       value,
       valueText: dv ? formattedValueToString(dv) : '',
       percent,

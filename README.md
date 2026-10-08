@@ -155,6 +155,7 @@ A table where one column is a bar. Time-series input gives one row per series (w
 | Segments / Sweep width      | Blocks in the segmented style; width of the moving sweep                                          |
 | Header / Checkbox / Status dot / Footer | Table chrome. Headers sort on click; the status dot takes its colour and icon from value mappings |
 | Default sort / Density / Row height | Initial sort and row sizing                                                                |
+| Row click                   | Data links on any field make its cells clickable (several links: menu on right-click or chevron); `Name link` makes the whole row follow the name field's first link |
 | Animation / Speed           | Sweep, stripe and blinking-pill animations                                                        |
 
 Full option references with data expectations and tips: [docs/flow.md](https://github.com/SparkAnswers/impact/blob/main/docs/flow.md), [docs/gauge.md](https://github.com/SparkAnswers/impact/blob/main/docs/gauge.md), [docs/river.md](https://github.com/SparkAnswers/impact/blob/main/docs/river.md), [docs/bars.md](https://github.com/SparkAnswers/impact/blob/main/docs/bars.md).
