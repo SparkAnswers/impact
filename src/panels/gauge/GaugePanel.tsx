@@ -14,8 +14,18 @@ import {
 } from '@grafana/data';
 import { locationService, PanelDataErrorView } from '@grafana/runtime';
 import { useTheme2 } from '@grafana/ui';
-import { extractSeries, type GaugeSeries } from './lib/data';
-import { type BandModel, defaultLiveState, drawLiveLayer, drawStaticLayer, type GaugeModel, layoutFor, type TickModel } from './lib/draw';
+import { extractSeries } from './lib/data';
+import {
+  type BandModel,
+  defaultLiveState,
+  drawLiveLayer,
+  drawStaticLayer,
+  type GaugeModel,
+  layoutFor,
+  type LiveState,
+  type TickModel,
+} from './lib/draw';
+import type { Layout } from './lib/layout';
 import {
   breathing,
   canScroll,
@@ -115,10 +125,36 @@ interface LiveRuntime {
   tweenTarget: number | null;
   tweenStart: number;
   tweenActive: boolean;
+  tweenDuration: number;
+  /** Time-range scroll: displayed window end (ms). */
   winEnd: number | null;
+  /** Stream scroll: displayed latency offset (ms) between wall clock and window end, eased on arrival. */
+  offset: number | null;
+  offsetTarget: number;
   lastWall: number;
   trailVisible: boolean;
+  forceRedraw: boolean;
 }
+
+/** Everything the frame loop needs from the latest data arrival. Replaced per arrival, never per frame. */
+interface LiveData {
+  model: GaugeModel;
+  layout: Layout;
+  newestTime: number | null;
+  arrivedAt: number;
+  threshold: number | null;
+  scrolling: boolean;
+  stream: boolean;
+  span: number;
+  dataTo: number;
+  trailT: Float64Array;
+  trailCount: number;
+  trailWindow: number;
+  breathingAmp: number;
+  staleEnabled: boolean;
+}
+
+const MAX_TRAIL = 50;
 
 export const GaugePanel: React.FC<PanelProps<GaugeOptions>> = ({
   id,
@@ -145,9 +181,10 @@ export const GaugePanel: React.FC<PanelProps<GaugeOptions>> = ({
         fieldName: options.fieldName,
         source: options.historySource,
         points: options.historyPoints,
+        streamDuration: Math.max(1, options.streamDuration) * 1000,
         timeRange,
       }),
-    [data.series, options.fieldName, options.historySource, options.historyPoints, timeRange]
+    [data.series, options.fieldName, options.historySource, options.historyPoints, options.streamDuration, timeRange]
   );
 
   // Arrival bookkeeping: when did this data land, and how long since the previous one (observed refresh).
@@ -373,53 +410,71 @@ export const GaugePanel: React.FC<PanelProps<GaugeOptions>> = ({
     }
   }, [model, liveEnabled, width, height]);
 
-  // Live loop runtime (persists across data updates so easing continues).
+  // ---- Live loop ------------------------------------------------------------------------------
+  // Runtime easing state persists across data updates so motion continues through refreshes.
   const runtime = useRef<LiveRuntime>({
     value: null,
     tweenFrom: 0,
     tweenTarget: null,
     tweenStart: -1,
     tweenActive: false,
+    tweenDuration: 0,
     winEnd: null,
+    offset: null,
+    offsetTarget: 0,
     lastWall: 0,
     trailVisible: false,
+    forceRedraw: true,
   });
+  const liveData = useRef<LiveData | null>(null);
+  const liveState = useRef<LiveState>(defaultLiveState(null, MAX_TRAIL));
 
   const staleFormat = useMemo(
     () => getDisplayProcessor({ field: { type: FieldType.number, config: { unit: 's', decimals: 0 } }, theme, timeZone }),
     [theme, timeZone]
   );
 
+  // Retarget on every data arrival / option change: refresh the sample buffers and easing targets only.
+  // The frame loop below is not re-subscribed and the static layer is on its own canvas.
   useEffect(() => {
     if (!model || !series || !liveEnabled) {
+      liveData.current = null;
       return;
     }
-    const ctx = prepareCanvas(liveRef.current, width, height);
-    if (!ctx) {
-      return;
-    }
-    const L = layoutFor(model);
     const rt = runtime.current;
-    const s: GaugeSeries = series;
+    const st = liveState.current;
     const arrivedAt = arrival.current.at || Date.now();
     const observedRefresh = arrival.current.prevAt !== null ? arrivedAt - arrival.current.prevAt : null;
     const refreshInterval =
       observedRefresh !== null && observedRefresh > 500 && observedRefresh < 3_600_000 ? observedRefresh : urlRefreshInterval();
-    const sampleInterval = inferSampleInterval(s.windowTimes);
+    const sampleInterval = inferSampleInterval(series.windowTimes);
     const cadence = sampleInterval ?? refreshInterval;
     const threshold = staleThreshold(sampleInterval, refreshInterval);
 
-    // Scroll: wall-clock window anchored to the data end; requires a cadence and a "now"-ending range.
-    const span = s.span ?? (cadence !== null ? Math.max(1, s.windowValues.length - 1) * cadence : null);
-    const dataTo = s.dataTo;
+    const stream = options.historySource === 'stream' && series.newestTime !== null && series.span !== null;
+    const span = series.span ?? (cadence !== null ? Math.max(1, series.windowValues.length - 1) * cadence : null);
+    const dataTo = series.dataTo;
     const scrolling =
-      options.liveScroll && cadence !== null && span !== null && span > 0 && dataTo !== null && canScroll(dataTo, arrivedAt, refreshInterval);
-    if (!scrolling) {
+      options.liveScroll &&
+      span !== null &&
+      span > 0 &&
+      dataTo !== null &&
+      (stream || (cadence !== null && canScroll(dataTo, arrivedAt, refreshInterval)));
+    if (!scrolling || stream) {
       rt.winEnd = null;
+    }
+    if (stream && scrolling) {
+      // Newest sample sits at the right edge at arrival; the offset to the wall clock is eased on later arrivals.
+      rt.offsetTarget = Math.max(0, arrivedAt - series.newestTime!);
+      if (rt.offset === null) {
+        rt.offset = rt.offsetTarget;
+      }
+    } else {
+      rt.offset = null;
     }
 
     // Marker tween towards the real latest value.
-    const target = s.latest;
+    const target = series.latest;
     if (target !== null && rt.tweenTarget !== target) {
       rt.tweenFrom = rt.value ?? target;
       rt.tweenTarget = target;
@@ -429,98 +484,136 @@ export const GaugePanel: React.FC<PanelProps<GaugeOptions>> = ({
         rt.value = target;
       }
     }
-    const tweenDuration = options.liveDrift ? options.liveDriftDuration : options.animationDuration;
+    rt.tweenDuration = options.liveDrift ? options.liveDriftDuration : options.animationDuration;
 
-    // Trail: angles of the last K samples (allocated once per data update, not per frame).
-    const K = options.liveTrail ? Math.max(2, Math.min(50, Math.floor(options.liveTrailSamples) || 2)) : 0;
-    const state = defaultLiveState(rt.value, K);
+    // Trail: angles of the last K samples, written into the persistent state buffers.
+    const K = options.liveTrail ? Math.max(2, Math.min(MAX_TRAIL, Math.floor(options.liveTrailSamples) || 2)) : 0;
     const trailT = new Float64Array(K);
     let trailCount = 0;
-    if (K > 0) {
-      const n = s.windowValues.length;
-      for (let i = Math.max(0, n - K); i < n; i++) {
-        const t = s.windowTimes[i];
-        if (t === null) {
-          continue;
-        }
-        trailT[trailCount] = t;
-        state.trailAngles[trailCount] = valueToAngle(s.windowValues[i], model.scale, model.arc);
-        trailCount++;
+    const n = series.windowValues.length;
+    for (let i = Math.max(0, n - K); i < n && K > 0; i++) {
+      const t = series.windowTimes[i];
+      if (t === null) {
+        continue;
       }
+      trailT[trailCount] = t;
+      st.trailAngles[trailCount] = valueToAngle(series.windowValues[i], model.scale, model.arc);
+      trailCount++;
     }
-    const trailWindow = Math.max(4000, (cadence ?? 0) * K);
-    const breathingAmp = options.liveDrift ? options.liveBreathing : 0;
+
+    liveData.current = {
+      model,
+      layout: layoutFor(model),
+      newestTime: series.newestTime,
+      arrivedAt,
+      threshold,
+      scrolling,
+      stream,
+      span: span ?? 0,
+      dataTo: dataTo ?? 0,
+      trailT,
+      trailCount,
+      trailWindow: Math.max(4000, (cadence ?? 0) * K),
+      breathingAmp: options.liveDrift ? options.liveBreathing : 0,
+      staleEnabled: options.liveStale,
+    };
+    rt.forceRedraw = true;
+  }, [model, series, liveEnabled, options]);
+
+  // The frame loop: subscribed once while live motion is on (re-subscribed only on resize).
+  useEffect(() => {
+    if (!liveEnabled) {
+      return;
+    }
+    const ctx = prepareCanvas(liveRef.current, width, height);
+    if (!ctx) {
+      return;
+    }
+    const rt = runtime.current;
+    const st = liveState.current;
     const win = { from: 0, to: 0 };
     rt.lastWall = Date.now();
-    let lastStale: string | null = state.staleText;
-    let first = true;
+    rt.forceRedraw = true;
+    let lastStale: string | null = null;
 
-    const unsubscribe = subscribeFrames((frame, wall) => {
+    return subscribeFrames((frame, wall) => {
+      const ld = liveData.current;
+      if (!ld) {
+        return;
+      }
       const dt = wall - rt.lastWall;
       rt.lastWall = wall;
-      let changed = first;
-      first = false;
+      let changed = rt.forceRedraw;
+      rt.forceRedraw = false;
 
       // Eased marker value.
       if (rt.tweenActive && rt.tweenTarget !== null) {
         if (rt.tweenStart < 0) {
           rt.tweenStart = frame;
         }
-        const v = tween(rt.tweenFrom, rt.tweenTarget, frame - rt.tweenStart, tweenDuration);
+        const v = tween(rt.tweenFrom, rt.tweenTarget, frame - rt.tweenStart, rt.tweenDuration);
         rt.value = v;
         if (v === rt.tweenTarget) {
           rt.tweenActive = false;
         }
         changed = true;
       }
-      state.value = rt.value;
+      st.value = rt.value;
 
       // Sliding window.
-      if (scrolling) {
-        const targetEnd = liveWindow(dataTo!, span!, arrivedAt, wall).to;
+      if (ld.scrolling && ld.stream) {
+        // Constant speed: the window end follows the wall clock minus an eased latency offset.
+        rt.offset = easeTowards(rt.offset ?? rt.offsetTarget, rt.offsetTarget, dt, 300);
+        const end = wall - rt.offset;
+        win.to = end;
+        win.from = end - ld.span;
+        st.window = win;
+        changed = true;
+      } else if (ld.scrolling) {
+        const targetEnd = liveWindow(ld.dataTo, ld.span, ld.arrivedAt, wall).to;
         const next = rt.winEnd === null ? targetEnd : easeTowards(rt.winEnd, targetEnd, dt, 250);
         if (next !== rt.winEnd) {
           changed = true;
         }
         rt.winEnd = next;
         win.to = next;
-        win.from = next - span!;
-        state.window = win;
+        win.from = next - ld.span;
+        st.window = win;
       } else {
-        state.window = null;
+        st.window = null;
       }
 
       // Stale detection (wall clock vs newest sample).
-      const stale = options.liveStale && isStale(wall, s.newestTime, threshold);
+      const stale = ld.staleEnabled && isStale(wall, ld.newestTime, ld.threshold);
       let staleText: string | null = null;
-      if (stale && s.newestTime !== null) {
-        const d = staleFormat(Math.round(sampleAge(wall, s.newestTime) / 1000));
-        staleText = `stale · ${d.text}${d.suffix ?? ''}`;
+      if (stale && ld.newestTime !== null) {
+        const d = staleFormat(Math.round(sampleAge(wall, ld.newestTime) / 1000));
+        staleText = `stale \u00b7 ${d.text}${d.suffix ?? ''}`;
       }
       if (staleText !== lastStale) {
         lastStale = staleText;
         changed = true;
       }
-      state.staleText = staleText;
-      state.dimmed = stale;
+      st.staleText = staleText;
+      st.dimmed = stale;
 
       // Breathing glow (not while stale).
-      if (breathingAmp > 0 && !stale) {
-        const b = breathing(wall, 2400, breathingAmp);
-        state.glowScale = b;
-        state.glowAlpha = 0.55 + 0.45 * (b - 1 + breathingAmp / 2) / Math.max(breathingAmp, 1e-6);
+      if (ld.breathingAmp > 0 && !stale) {
+        const b = breathing(wall, 2400, ld.breathingAmp);
+        st.glowScale = b;
+        st.glowAlpha = 0.55 + (0.45 * (b - 1 + ld.breathingAmp / 2)) / Math.max(ld.breathingAmp, 1e-6);
         changed = true;
       } else {
-        state.glowScale = stale ? 0.3 : 1;
-        state.glowAlpha = stale ? 0.35 : 1;
+        st.glowScale = stale ? 0.3 : 1;
+        st.glowAlpha = stale ? 0.35 : 1;
       }
 
       // Trail opacities.
-      if (trailCount > 1) {
+      if (ld.trailCount > 1) {
         let any = false;
-        for (let i = 0; i < trailCount; i++) {
-          const a = trailAlpha(wall - trailT[i], trailWindow);
-          state.trailAlphas[i] = a;
+        for (let i = 0; i < ld.trailCount; i++) {
+          const a = trailAlpha(wall - ld.trailT[i], ld.trailWindow);
+          st.trailAlphas[i] = a;
           if (a > 0.01) {
             any = true;
           }
@@ -529,16 +622,17 @@ export const GaugePanel: React.FC<PanelProps<GaugeOptions>> = ({
           changed = true;
         }
         rt.trailVisible = any;
-        state.trailCount = any ? trailCount : 0;
+        st.trailCount = any ? ld.trailCount : 0;
+      } else {
+        st.trailCount = 0;
       }
 
       if (!changed) {
         return;
       }
-      drawLiveLayer(ctx, model, L, state);
+      drawLiveLayer(ctx, ld.model, ld.layout, st);
     });
-    return unsubscribe;
-  }, [model, series, liveEnabled, options, width, height, staleFormat]);
+  }, [liveEnabled, width, height, staleFormat]);
 
   if (!series) {
     return <PanelDataErrorView panelId={id} data={data} fieldConfig={fieldConfig} needsNumberField />;

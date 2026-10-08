@@ -47,6 +47,8 @@ export interface GaugeOptions {
   showHistory: boolean;
   historySource: HistorySource;
   historyPoints: number;
+  /** Seconds shown by the chart in stream mode. */
+  streamDuration: number;
   fadeHistory: boolean;
   historyLineWidth: number;
   historyArea: boolean;
@@ -106,6 +108,7 @@ export const DEFAULT_OPTIONS: GaugeOptions = {
   showHistory: true,
   historySource: 'timeRange',
   historyPoints: 120,
+  streamDuration: 60,
   fadeHistory: true,
   historyLineWidth: 1.6,
   historyArea: true,
