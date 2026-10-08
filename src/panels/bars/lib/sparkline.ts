@@ -1,4 +1,8 @@
-/** Parses a cell value into a numeric series for a sparkline. Accepts arrays, JSON arrays, or "1;2;3" / "1,2,3" / "1 2 3" strings. */
+/**
+ * Parses a cell value into a numeric series for a sparkline. Accepts arrays, JSON arrays, "1;2;3" / "1,2,3" / "1 2 3"
+ * strings, and nested data frames (the "Trend" cells produced by the Time series to table transformation): the first
+ * non-time field of the nested frame is used.
+ */
 export function parseSparkline(value: unknown): number[] | undefined {
   if (value == null) {
     return undefined;
@@ -6,6 +10,14 @@ export function parseSparkline(value: unknown): number[] | undefined {
   if (Array.isArray(value)) {
     const nums = value.map((v) => (typeof v === 'number' ? v : Number(v))).filter((v) => Number.isFinite(v));
     return nums.length > 1 ? nums : undefined;
+  }
+  if (typeof value === 'object' && value !== null && 'fields' in value) {
+    const fields = (value as { fields?: unknown }).fields;
+    if (Array.isArray(fields)) {
+      const f = fields.find((x) => x && typeof x === 'object' && (x as { type?: string }).type !== 'time') as { values?: unknown } | undefined;
+      return f ? parseSparkline(f.values) : undefined;
+    }
+    return undefined;
   }
   if (typeof value === 'object' && value !== null && 'values' in value) {
     // Vector-like (field) or nested-frame-like value

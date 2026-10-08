@@ -25,7 +25,7 @@ SQL or logs-to-table result. Column roles are auto-detected and can be fixed in 
 | Value         | first number field                                                                                                       | the bar; formatted with the field's unit/decimals; min/max from field config or data                                                                                                  |
 | Status        | field named `status`, `state`, `health` or `severity`                                                                    | status dot colour/icon, pill text, sweep label (via value mappings)                                                                                                                   |
 | Time          | first time field, or a string field named `updated`, `time`, `timestamp`, `last_seen`                                    | "Updated" relative-time column                                                                                                                                                        |
-| Sparkline     | field of arrays, or string field named like `trend`, `spark`, `history`, `series` (values `1;2;3`, `1,2,3` or `[1,2,3]`) | sparkline style                                                                                                                                                                       |
+| Sparkline     | field of arrays, a nested-frame field (the `Trend` column of the *Time series to table* transformation), or string field named like `trend`, `spark`, `history`, `series` (values `1;2;3`, `1,2,3` or `[1,2,3]`) | sparkline style                                                                                                                                                                       |
 | Style         | string field named `style`, `bar_style` or `bar`                                                                         | bar style per row (`sweep`, `percent`, `segmented`, `striped`, `bidirectional`, `stacked`, `sparkline`, `pill`; aliases like `indeterminate`, `badge`, `bi-directional` are accepted) |
 | Stack fields  | all number fields unless set                                                                                             | segments of the stacked style                                                                                                                                                         |
 | Extra columns | every field not used by another role                                                                                     | plain text / number columns after the bar                                                                                                                                             |
@@ -85,6 +85,12 @@ result is the same wherever you start from; what survives is every column choice
 | Field override > Bar style override                                         | Custom field option that forces a style for rows produced by that field (series or value column).                                                                    |
 
 ## Tips
+
+- **Sparkline plus extra columns from one data source**: query the history as a time series (refId `A`), the
+  columns you want next to it as instant table queries (`B`, `C`...), then add the transformations *Time series to
+  table* (turns `A` into one row per series with a `Trend #A` cell) and *Join by field* on the label that names the
+  row (for example `process`). Pick `Trend #A` as the sparkline field, a `Value #B` as the value and list the rest
+  under *Extra columns*; field overrides set each column's unit.
 
 - With the testdata _CSV content_ scenario, a `style` column lets you mix every bar style in one table; the
   demo dashboard `Impact Status Bars demo` shows this with twelve generic devices.

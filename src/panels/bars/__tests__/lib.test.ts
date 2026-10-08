@@ -106,6 +106,10 @@ describe('sparkline parsing', () => {
     expect(parseSparkline('[1,2,3]')).toEqual([1, 2, 3]);
     expect(parseSparkline('1;2;3')).toEqual([1, 2, 3]);
     expect(parseSparkline('1 2 3')).toEqual([1, 2, 3]);
+    // Nested frame cell from the Time series to table transformation: first non-time field wins.
+    const nested = toDataFrame({ fields: [{ name: 'Time', type: FieldType.time, values: [1, 2, 3] }, { name: 'cpu', type: FieldType.number, values: [4, 5, 6] }] });
+    expect(parseSparkline(nested)).toEqual([4, 5, 6]);
+    expect(parseSparkline({ fields: [] })).toBeUndefined();
     expect(parseSparkline('x')).toBeUndefined();
     expect(parseSparkline(5)).toBeUndefined();
   });

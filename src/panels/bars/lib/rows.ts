@@ -337,7 +337,7 @@ function buildFromTable(frame: DataFrame, frames: DataFrame[], options: BarsOpti
     findByName(frame, /^(time|timestamp|updated|last[_ ]?seen|last[_ ]?updated)$/i, FieldType.string);
   const sparkField =
     byName(options.sparklineField) ??
-    fields.find((f) => f.type === FieldType.other && parseSparkline(f.values[0]) !== undefined) ??
+    fields.find((f) => (f.type === FieldType.other || f.type === FieldType.frame) && parseSparkline(f.values[0]) !== undefined) ??
     findByName(frame, /(spark|trend|history|series)/i, FieldType.string);
   const subtitleField =
     byName(options.subtitleField) ??
