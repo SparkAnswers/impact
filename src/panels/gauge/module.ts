@@ -251,6 +251,39 @@ export const plugin = new PanelPlugin<GaugeOptions>(GaugePanel)
         settings: { min: 5, max: 3600, integer: true },
         showIf: (o) => o.showHistory && o.historySource === 'stream',
       })
+      .addRadio({
+        path: 'playbackDelay',
+        name: 'Playback delay',
+        description:
+          'Stream mode plays a little behind real time so it never runs out of samples between refreshes. Auto adapts the delay to the observed refresh cadence (1.25 x interval plus a latency margin, 2 s to 5 min; 15 s until two refreshes were seen). Fixed uses the seconds below.',
+        category: CAT_HISTORY,
+        defaultValue: DEFAULT_OPTIONS.playbackDelay,
+        settings: {
+          options: [
+            { value: 'auto', label: 'Auto' },
+            { value: 'fixed', label: 'Fixed' },
+          ],
+        },
+        showIf: (o) => o.showHistory && o.historySource === 'stream',
+      })
+      .addNumberInput({
+        path: 'playbackDelaySeconds',
+        name: 'Delay seconds',
+        description: 'Fixed playback delay in seconds. If data arrives later than this, the playhead slows down smoothly instead of jumping.',
+        category: CAT_HISTORY,
+        defaultValue: DEFAULT_OPTIONS.playbackDelaySeconds,
+        settings: { min: 1, max: 600, integer: true },
+        showIf: (o) => o.showHistory && o.historySource === 'stream' && o.playbackDelay === 'fixed',
+      })
+      .addBooleanSwitch({
+        path: 'liveFollow',
+        name: 'Value follows playback',
+        description:
+          'Stream mode: the marker, fill, glow and big number show the sample under the playhead (the right edge of the chart), interpolated between neighbouring samples, so the arc sweeps in step with the chart. Off: ease to the newest sample. The secondary line and the stale caption are unaffected.',
+        category: CAT_HISTORY,
+        defaultValue: DEFAULT_OPTIONS.liveFollow,
+        showIf: (o) => o.showHistory && o.historySource === 'stream',
+      })
       .addNumberInput({
         path: 'historyPoints',
         name: 'Samples',

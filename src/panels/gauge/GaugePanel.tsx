@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { css } from '@emotion/css';
 import {
   colorManipulator,
+  type DisplayProcessor,
   type Field,
   FieldType,
   getActiveThreshold,
@@ -29,10 +30,13 @@ import {
 } from './lib/draw';
 import type { Layout } from './lib/layout';
 import {
+  adaptiveDelay,
+  advancePlayhead,
   breathing,
   canScroll,
   easeTowards,
   inferSampleInterval,
+  interpolateAt,
   isStale,
   liveWindow,
   parseRefreshInterval,
@@ -40,6 +44,7 @@ import {
   staleThreshold,
   trailAlpha,
   tween,
+  underrunDelay,
 } from './lib/live';
 import { reduceValues } from './lib/reducers';
 import { normalizeScale, valueToAngle } from './lib/scale';
@@ -119,9 +124,15 @@ interface LiveRuntime {
   tweenDuration: number;
   /** Time-range scroll: displayed window end (ms). */
   winEnd: number | null;
-  /** Stream scroll: displayed latency offset (ms) between wall clock and window end, eased on arrival. */
-  offset: number | null;
-  offsetTarget: number;
+  /** Stream playback: playhead time (ms), the right edge of the chart. */
+  playhead: number | null;
+  /** Current (eased) and target jitter-buffer delay (ms). */
+  delay: number | null;
+  delayTarget: number;
+  /** Raised on underruns so they do not recur (auto mode). */
+  delayFloor: number;
+  /** Last value formatted for the live big number. */
+  lastFormatted: number | null;
   lastWall: number;
   trailVisible: boolean;
   forceRedraw: boolean;
@@ -143,6 +154,16 @@ interface LiveData {
   trailWindow: number;
   breathingAmp: number;
   staleEnabled: boolean;
+  /** Stream playback. */
+  follow: boolean;
+  latency: number;
+  fixedDelay: number | null;
+  observedRefresh: number | null;
+  fallbackRefresh: number | null;
+  /** Compact ascending timestamps/values of the window for interpolation. */
+  times: Float64Array;
+  values: Float64Array;
+  display: DisplayProcessor;
 }
 
 const MAX_TRAIL = 50;
@@ -218,6 +239,7 @@ export const GaugePanel: React.FC<PanelProps<GaugeOptions>> = ({
     const thresholdColor = (v: number) => resolveColor(theme, getActiveThreshold(v, steps).color, positive);
     const current = series.latest;
     const shown = liveEnabled ? current : displayed;
+    const follow = liveEnabled && options.historySource === 'stream' && options.liveFollow && series.newestTime !== null;
 
     let fillColor: string;
     let fillColorFor: ((v: number) => string) | undefined;
@@ -353,6 +375,7 @@ export const GaugePanel: React.FC<PanelProps<GaugeOptions>> = ({
       titlePosition: options.titlePosition,
       valueFontPx: options.valueFontSize > 0 ? options.valueFontSize : undefined,
       reserveStaleLine: liveWanted && options.liveStale,
+      valueOnLiveLayer: follow,
       fontFamily: theme.typography.fontFamily,
       colors: {
         text: palette.text,
@@ -412,13 +435,22 @@ export const GaugePanel: React.FC<PanelProps<GaugeOptions>> = ({
     tweenActive: false,
     tweenDuration: 0,
     winEnd: null,
-    offset: null,
-    offsetTarget: 0,
+    playhead: null,
+    delay: null,
+    delayTarget: 0,
+    delayFloor: 0,
+    lastFormatted: null,
     lastWall: 0,
     trailVisible: false,
     forceRedraw: true,
   });
   const liveData = useRef<LiveData | null>(null);
+  const fieldDisplay = useMemo<DisplayProcessor | null>(() => {
+    if (!series) {
+      return null;
+    }
+    return series.field.display ?? getDisplayProcessor({ field: { ...series.field, type: FieldType.number }, theme, timeZone });
+  }, [series, theme, timeZone]);
   const liveState = useRef<LiveState>(defaultLiveState(null, MAX_TRAIL));
 
   const staleFormat = useMemo(
@@ -455,14 +487,36 @@ export const GaugePanel: React.FC<PanelProps<GaugeOptions>> = ({
     if (!scrolling || stream) {
       rt.winEnd = null;
     }
+    const latency = stream ? Math.min(60_000, Math.max(0, arrivedAt - series.newestTime!)) : 0;
+    const fallbackRefresh = urlRefreshInterval();
+    const observed = observedRefresh !== null && observedRefresh > 500 && observedRefresh < 3_600_000 ? observedRefresh : null;
+    const fixedDelay = options.playbackDelay === 'fixed' ? Math.max(1, options.playbackDelaySeconds) * 1000 : null;
     if (stream && scrolling) {
-      // Newest sample sits at the right edge at arrival; the offset to the wall clock is eased on later arrivals.
-      rt.offsetTarget = Math.max(0, arrivedAt - series.newestTime!);
-      if (rt.offset === null) {
-        rt.offset = rt.offsetTarget;
+      // Jitter buffer: the playhead runs `delay` behind the wall clock; underruns raise the floor (auto mode).
+      rt.delayTarget = fixedDelay ?? Math.max(rt.delayFloor, adaptiveDelay(observed, fallbackRefresh, latency));
+      if (rt.delay === null) {
+        rt.delay = rt.delayTarget;
       }
     } else {
-      rt.offset = null;
+      rt.playhead = null;
+      rt.delay = null;
+    }
+    // Compact ascending arrays for interpolation under the playhead.
+    let count = 0;
+    for (const t of series.windowTimes) {
+      if (t !== null) {
+        count++;
+      }
+    }
+    const times = new Float64Array(count);
+    const values = new Float64Array(count);
+    for (let i = 0, j = 0; i < series.windowTimes.length; i++) {
+      const t = series.windowTimes[i];
+      if (t !== null) {
+        times[j] = t;
+        values[j] = series.windowValues[i];
+        j++;
+      }
     }
 
     // Marker tween towards the real latest value.
@@ -508,9 +562,17 @@ export const GaugePanel: React.FC<PanelProps<GaugeOptions>> = ({
       trailWindow: Math.max(4000, (cadence ?? 0) * K),
       breathingAmp: options.liveDrift ? options.liveBreathing : 0,
       staleEnabled: options.liveStale,
+      follow: stream && scrolling && options.liveFollow && !!fieldDisplay,
+      latency,
+      fixedDelay,
+      observedRefresh: observed,
+      fallbackRefresh,
+      times,
+      values,
+      display: fieldDisplay ?? ((v) => ({ text: String(v), numeric: Number(v) })),
     };
     rt.forceRedraw = true;
-  }, [model, series, liveEnabled, options]);
+  }, [model, series, liveEnabled, options, fieldDisplay]);
 
   // The frame loop: subscribed once while live motion is on (re-subscribed only on resize).
   useEffect(() => {
@@ -538,8 +600,43 @@ export const GaugePanel: React.FC<PanelProps<GaugeOptions>> = ({
       let changed = rt.forceRedraw;
       rt.forceRedraw = false;
 
-      // Eased marker value.
-      if (rt.tweenActive && rt.tweenTarget !== null) {
+      // Stream playback: advance the playhead (never past the newest sample, never backwards, never a jump).
+      let playhead: number | null = null;
+      if (ld.scrolling && ld.stream && ld.newestTime !== null) {
+        rt.delay = easeTowards(rt.delay ?? rt.delayTarget, rt.delayTarget, dt, 3000);
+        const prev = rt.playhead;
+        if (prev !== null && ld.fixedDelay === null && prev + dt > ld.newestTime && wall - rt.delay > ld.newestTime) {
+          // Underrun: data arrived later than the buffer covers. Grow the delay so it does not recur.
+          const grown = underrunDelay(wall, ld.newestTime, ld.latency);
+          if (grown > rt.delayFloor) {
+            rt.delayFloor = grown;
+            rt.delayTarget = Math.max(rt.delayTarget, grown);
+          }
+        }
+        playhead = advancePlayhead(prev, wall, rt.delay, ld.newestTime, dt);
+        rt.playhead = playhead;
+      }
+
+      // Eased marker value (or the interpolated sample under the playhead).
+      if (ld.follow && playhead !== null) {
+        const v = interpolateAt(ld.times, ld.values, playhead);
+        if (v !== null && v !== rt.value) {
+          rt.value = v;
+          rt.tweenActive = false;
+          rt.tweenTarget = v;
+          changed = true;
+        }
+        if (v !== null && (rt.lastFormatted === null || Math.abs(v - rt.lastFormatted) > 1e-9)) {
+          const d = ld.display(v);
+          st.valueText = { prefix: d.prefix, text: d.text, suffix: d.suffix };
+          rt.lastFormatted = v;
+          changed = true;
+        }
+      } else {
+        st.valueText = null;
+        rt.lastFormatted = null;
+      }
+      if (!ld.follow && rt.tweenActive && rt.tweenTarget !== null) {
         if (rt.tweenStart < 0) {
           rt.tweenStart = frame;
         }
@@ -553,14 +650,14 @@ export const GaugePanel: React.FC<PanelProps<GaugeOptions>> = ({
       st.value = rt.value;
 
       // Sliding window.
-      if (ld.scrolling && ld.stream) {
-        // Constant speed: the window end follows the wall clock minus an eased latency offset.
-        rt.offset = easeTowards(rt.offset ?? rt.offsetTarget, rt.offsetTarget, dt, 300);
-        const end = wall - rt.offset;
-        win.to = end;
-        win.from = end - ld.span;
+      if (ld.scrolling && ld.stream && playhead !== null) {
+        // The right edge of the chart is the playhead: constant speed, no gap, eased when the buffer runs dry.
+        if (playhead !== win.to) {
+          changed = true;
+        }
+        win.to = playhead;
+        win.from = playhead - ld.span;
         st.window = win;
-        changed = true;
       } else if (ld.scrolling) {
         const targetEnd = liveWindow(ld.dataTo, ld.span, ld.arrivedAt, wall).to;
         const next = rt.winEnd === null ? targetEnd : easeTowards(rt.winEnd, targetEnd, dt, 250);
@@ -604,7 +701,7 @@ export const GaugePanel: React.FC<PanelProps<GaugeOptions>> = ({
       if (ld.trailCount > 1) {
         let any = false;
         for (let i = 0; i < ld.trailCount; i++) {
-          const a = trailAlpha(wall - ld.trailT[i], ld.trailWindow);
+          const a = trailAlpha((playhead ?? wall) - ld.trailT[i], ld.trailWindow);
           st.trailAlphas[i] = a;
           if (a > 0.01) {
             any = true;

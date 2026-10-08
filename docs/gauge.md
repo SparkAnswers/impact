@@ -25,12 +25,23 @@ every bit of motion is derived from samples that were already received.
   and scrolls at a constant width / duration pixels per second with fractional positions (no pixel
   snapping); newly arrived samples slide in from the right edge with a short easing. With no
   timestamps, or with an absolute time range that does not end "now", nothing scrolls.
+- **Playback delay** (stream mode): to play smoothly the gauge shows data a little behind real time.
+  The playhead (the right edge of the chart) runs `delay` behind the wall clock, where *Auto* adapts the
+  delay to the observed refresh cadence (1.25 x the interval plus a latency margin, clamped to 2 s .. 5
+  min; 15 s or the dashboard refresh interval until two refreshes were seen) and *Fixed* uses the
+  configured seconds. If data arrives later than the buffer covers, the playhead slows smoothly towards
+  the newest sample and never passes it or jumps; in Auto mode the delay then grows so it does not recur.
+  The scroll speed stays width / duration px per second.
+- **Value follows playback** (stream mode, on by default): the marker, fill, glow and big number show
+  the sample under the playhead, interpolated linearly between the two neighbouring samples, so the
+  arc sweeps continuously in step with the chart. The secondary line keeps using the time-range reducer
+  and the stale caption keeps using real arrival times. Off: ease to the newest sample as below.
 - **Marker drift**: the fill and marker ease to the latest value over a slightly longer time and the
   glow breathes gently. The number itself never changes without data.
 - **Trail**: a short fading trail along the ring shows where the marker came from, built from the
   last few samples and their timestamps; it fades out as those samples age.
 - **Stale indicator**: when the newest sample is older than max(3 x sample interval, 2 x refresh
-  interval) the marker glow is dimmed and a small "stale · 42 s" caption appears under the subtitle.
+  interval, 60 s) the marker glow is dimmed and a small "stale · 42 s" caption appears under the subtitle.
   The value's colours never change.
 
 All of this falls back to the plain static render when *Animation* is off, when the system prefers
@@ -108,6 +119,9 @@ Standard field options used: Unit, Decimals, Min, Max, Thresholds, Color, Displa
 | Show history | Draw the series as a chart inside the ring. |
 | Window | Time range (panel time range), Last N samples, or Stream: only the last *Stream duration* of samples, newest at the right edge, scrolling continuously at a constant speed. The value, reducers and ring always use the time range. |
 | Stream duration | Seconds shown by the chart in stream mode (default 60; e.g. 30 to 600). The chart scrolls width / duration pixels per second. |
+| Playback delay | Stream mode jitter buffer: Auto (adapts to the observed refresh cadence) or Fixed. |
+| Delay seconds | Fixed playback delay in seconds. |
+| Value follows playback | Stream mode: marker, fill, glow and big number show the (interpolated) sample under the playhead. |
 | Samples | Number of most recent samples for the Last N window. |
 | Fade older samples | Older samples fade out towards the left. |
 | Line width | Stroke width of the history line. |
@@ -149,7 +163,7 @@ Standard field options used: Unit, Decimals, Min, Max, Thresholds, Color, Displa
 | Breathing | Amplitude 0..1 of the glow opacity/blur oscillation (period about 2.4 s). 0 disables. |
 | Trail | Fading trail along the ring from the last samples to the marker. |
 | Trail samples | Number of recent samples used for the trail. |
-| Stale indicator | Dim the marker glow and show a "stale · age" caption when the newest sample is older than max(3 x sample interval, 2 x refresh interval). |
+| Stale indicator | Dim the marker glow and show a "stale · age" caption when the newest sample is older than max(3 x sample interval, 2 x refresh interval, 60 s). |
 
 ## Tips
 

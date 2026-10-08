@@ -63,6 +63,8 @@ export interface GaugeModel {
   valueFontPx?: number;
   /** Reserve a line for the stale caption. */
   reserveStaleLine?: boolean;
+  /** The big number follows playback: drawn by the live layer from `LiveState.valueText` instead of here. */
+  valueOnLiveLayer?: boolean;
   fontFamily: string;
   colors: {
     text: string;
@@ -90,6 +92,8 @@ export interface LiveState {
   trailAngles: Float64Array;
   trailAlphas: Float64Array;
   staleText: string | null;
+  /** Big number under the playhead (only when `GaugeModel.valueOnLiveLayer`). */
+  valueText: TextPart | null;
 }
 
 export function defaultLiveState(value: number | null, trailCapacity = 0): LiveState {
@@ -103,6 +107,7 @@ export function defaultLiveState(value: number | null, trailCapacity = 0): LiveS
     trailAngles: new Float64Array(trailCapacity),
     trailAlphas: new Float64Array(trailCapacity),
     staleText: null,
+    valueText: null,
   };
 }
 
@@ -242,24 +247,9 @@ export function drawStaticLayer(ctx: CanvasRenderingContext2D, model: GaugeModel
   ctx.textAlign = 'center';
   ctx.textBaseline = 'alphabetic';
   if (L.showValue && model.valueText) {
-    const v = model.valueText;
-    const main = `${v.prefix ?? ''}${v.text}`;
-    const suffix = v.suffix ? ` ${v.suffix.trim()}` : '';
-    ctx.font = `300 ${L.valueFont}px ${font}`;
-    const tw = ctx.measureText(main).width;
-    ctx.font = `400 ${L.valueUnitFont}px ${font}`;
-    const uw = suffix ? ctx.measureText(suffix).width : 0;
-    const x0 = cx - (tw + uw) / 2;
-    ctx.textAlign = 'left';
-    ctx.fillStyle = model.colors.text;
-    ctx.font = `300 ${L.valueFont}px ${font}`;
-    ctx.fillText(main, x0, L.valueY);
-    if (suffix) {
-      ctx.font = `400 ${L.valueUnitFont}px ${font}`;
-      ctx.fillStyle = model.colors.textSecondary;
-      ctx.fillText(suffix, x0 + tw, L.valueY);
+    if (!model.valueOnLiveLayer) {
+      drawValueText(ctx, model, L, model.valueText);
     }
-    ctx.textAlign = 'center';
     if (model.valueLabel) {
       ctx.font = `500 ${L.subtitleFont}px ${font}`;
       ctx.fillStyle = model.colors.textSecondary;
@@ -383,6 +373,11 @@ export function drawLiveLayer(ctx: CanvasRenderingContext2D, model: GaugeModel, 
     ctx.restore();
   }
 
+  // Big number under the playhead.
+  if (model.valueOnLiveLayer && live.valueText && L.showValue) {
+    drawValueText(ctx, model, L, live.valueText);
+  }
+
   // Stale caption.
   if (live.staleText && L.showStale) {
     ctx.save();
@@ -393,6 +388,30 @@ export function drawLiveLayer(ctx: CanvasRenderingContext2D, model: GaugeModel, 
     ctx.fillText(live.staleText, cx, L.staleY);
     ctx.restore();
   }
+}
+
+/** Draws the big number with its unit suffix in a smaller, secondary-coloured font. */
+function drawValueText(ctx: CanvasRenderingContext2D, model: GaugeModel, L: Layout, v: TextPart) {
+  const font = model.fontFamily;
+  const main = `${v.prefix ?? ''}${v.text}`;
+  const suffix = v.suffix ? ` ${v.suffix.trim()}` : '';
+  ctx.save();
+  ctx.textBaseline = 'alphabetic';
+  ctx.font = `300 ${L.valueFont}px ${font}`;
+  const tw = ctx.measureText(main).width;
+  ctx.font = `400 ${L.valueUnitFont}px ${font}`;
+  const uw = suffix ? ctx.measureText(suffix).width : 0;
+  const x0 = L.cx - (tw + uw) / 2;
+  ctx.textAlign = 'left';
+  ctx.fillStyle = model.colors.text;
+  ctx.font = `300 ${L.valueFont}px ${font}`;
+  ctx.fillText(main, x0, L.valueY);
+  if (suffix) {
+    ctx.font = `400 ${L.valueUnitFont}px ${font}`;
+    ctx.fillStyle = model.colors.textSecondary;
+    ctx.fillText(suffix, x0 + tw, L.valueY);
+  }
+  ctx.restore();
 }
 
 /** Draws "Avg. 378 Wh/mi" with the first number in bold. */

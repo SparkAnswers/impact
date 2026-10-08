@@ -19,7 +19,7 @@
       "id": 1,
       "type": "sparkanswers-impact-gauge-panel",
       "title": "Live motion on (default) · watch between refreshes",
-      "description": "History window = Stream (60 s): the chart shows only the last minute of samples, newest at the right edge, and scrolls continuously at a constant width / 60 px per second between the 10 s refreshes. New samples slide in from the right with a short easing, the marker drifts to the latest value with a breathing glow and leaves a short trail. The big value, the average and the ring still use the dashboard time range. Nothing is invented: only samples already received move. This demo uses a deterministic TestData wave so refreshes append samples instead of regenerating the series.",
+      "description": "History window = Stream (60 s) with Playback delay = Auto and Value follows playback. The chart plays a little behind real time (a jitter buffer adapted to the observed 10 s refresh) so it scrolls continuously at width / 60 px per second with no gap at the right edge; the marker, fill, glow and big number show the sample under the playhead, interpolated between samples, so the arc sweeps in step with the chart. The average and the stale caption use the real time range and arrival times. Nothing is invented: only samples already received are played.",
       "gridPos": {
         "x": 0,
         "y": 0,
