@@ -1,0 +1,4 @@
+# Advisories accepted for this repository. Reviewed when dependencies are updated.
+[[IgnoredVulns]]
+id = "GHSA-vfj7-8cjw-p6xm"
+reason = "braces (via eslint-webpack-plugin > micromatch) is a build-time lint dependency only; it never ships in the plugin bundle and no fixed release exists yet. CVE-2026-93687"
