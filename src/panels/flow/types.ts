@@ -35,6 +35,8 @@ export interface FlowNode {
   shape: NodeShape;
   /** Icon name from the standard icon set */
   icon?: string;
+  /** Image URL (http(s) or data:image) drawn in place of the icon; falls back to the icon when it fails to load */
+  image?: string;
   /** Accent colour (hex or named theme colour). Falls back to the status colour. */
   color?: string;
   status?: NodeStatus;
@@ -120,6 +122,8 @@ export interface NodeOverride {
   label?: string;
   color?: string;
   icon?: string;
+  /** Image URL (http(s) or data:image) drawn in place of the icon */
+  image?: string;
   shape?: NodeShape;
   status?: NodeStatus;
 }
@@ -140,6 +144,8 @@ export interface DataOptions {
   nodeGroupField: string;
   nodeStatusField: string;
   nodeValueField: string;
+  /** Node frames: optional field (or label) with an image URL (http(s) or data:image) */
+  nodeImageField: string;
   /** What the primary / secondary edge values drive */
   valueMap: ValueMapTarget;
   value2Map: ValueMapTarget;
@@ -182,6 +188,8 @@ export interface FlowOptions {
     fontSize: number;
     edgeColor: string;
     particleSpeed: number;
+    /** Size of a node image in pixels (it takes the icon's slot) */
+    imageSize?: number;
   };
   animation: {
     enabled: boolean;
@@ -260,6 +268,7 @@ export const DEFAULT_DATA_OPTIONS: DataOptions = {
   nodeGroupField: 'group',
   nodeStatusField: 'status',
   nodeValueField: '',
+  nodeImageField: 'image',
   valueMap: 'speed',
   value2Map: 'color',
   showEdgeValues: false,
@@ -276,6 +285,11 @@ export const DEFAULT_DATA_OPTIONS: DataOptions = {
 export const MAX_DATA_NODES = 400;
 export const MAX_DATA_EDGES = 1500;
 
+/** Node image size (px): default and the slider bounds of Appearance → Image size. */
+export const DEFAULT_IMAGE_SIZE = 24;
+export const MIN_IMAGE_SIZE = 12;
+export const MAX_IMAGE_SIZE = 64;
+
 export const DEFAULT_LINKS: LinkOptions = { nodeUrl: '', target: 'same', trigger: 'dblclick' };
 export const DEFAULT_INTERACTION: InteractionOptions = { zoom: true };
 
@@ -288,6 +302,7 @@ export const DEFAULT_OPTIONS: FlowOptions = {
     fontSize: 12,
     edgeColor: 'blue',
     particleSpeed: 1,
+    imageSize: 24,
   },
   animation: { enabled: true, speed: 1, reducedMotion: 'system' },
   layout: { editMode: false, gridSize: 20, snap: true, autoFit: true },

@@ -622,6 +622,7 @@ export const FlowCanvas: React.FC<FlowCanvasProps> = (props) => {
                 uid={uid}
                 nodeStyle={minimal ? 'minimal' : 'cards'}
                 fontSize={fontSize}
+                imageSize={options.appearance.imageSize}
                 value={value}
                 accent={accent}
                 selected={isSel || pendingFrom === n.id}

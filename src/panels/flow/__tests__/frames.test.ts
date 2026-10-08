@@ -77,6 +77,32 @@ describe('extractGraph', () => {
     expect(g.nodes.find((n) => n.id === 'web')?.explicit).toBe(false);
   });
 
+  it('reads a node image column, keeping only safe URLs', () => {
+    const nodeFrame = toDataFrame({
+      refId: 'N',
+      fields: [
+        { name: 'id', type: FieldType.string, values: ['api', 'db', 'cache', 'web'] },
+        { name: 'image', type: FieldType.string, values: ['https://example.test/api.png', 'javascript:alert(1)', null, 'data:image/svg+xml;base64,PHN2Zy8+'] },
+        { name: 'cpu', type: FieldType.number, values: [0.5, 0.9, 0.1, 0.2] },
+      ],
+    });
+    const g = extractGraph([table([['web', 'api', 1], ['api', 'db', 1], ['api', 'cache', 1]]), nodeFrame], names);
+    expect(g.nodes.find((n) => n.id === 'api')?.image).toBe('https://example.test/api.png');
+    expect(g.nodes.find((n) => n.id === 'web')?.image).toBe('data:image/svg+xml;base64,PHN2Zy8+');
+    expect(g.nodes.find((n) => n.id === 'db')?.image).toBeUndefined();
+    expect(g.nodes.find((n) => n.id === 'cache')?.image).toBeUndefined();
+    // The image column is text, so the value still comes from the first numeric field.
+    expect(g.nodes.find((n) => n.id === 'api')?.value).toBe(0.5);
+    // A renamed / empty image field is never read.
+    expect(extractGraph([nodeFrame], { ...names, nodeImageField: '' }).nodes.find((n) => n.id === 'api')?.image).toBeUndefined();
+    expect(extractGraph([nodeFrame], { ...names, nodeImageField: 'logo' }).nodes.find((n) => n.id === 'api')?.image).toBeUndefined();
+  });
+
+  it('reads a node image from series labels', () => {
+    const g = extractGraph([series({ id: 'api', image: 'https://example.test/api.png' }, [1])], names);
+    expect(g.nodes.find((n) => n.id === 'api')?.image).toBe('https://example.test/api.png');
+  });
+
   it('matches secondary values from a second series with the same source/target labels', () => {
     const frames = [series({ client: 'web', server: 'api' }, [10]), series({ client: 'web', server: 'api', __name__: 'errors' }, [0.2], 'errors')];
     const g = extractGraph(frames, { ...names, sourceField: 'client', targetField: 'server', value2Field: 'errors' });

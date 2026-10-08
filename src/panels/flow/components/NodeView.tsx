@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { css } from '@emotion/css';
 import { isIconName, type GrafanaTheme2 } from '@grafana/data';
 import { Icon } from '@grafana/ui';
-import type { FlowNode, NodeStyle, ResolvedSide } from '../types';
+import { safeImageUrl } from '../../../shared/imageUrl';
+import { DEFAULT_IMAGE_SIZE, MAX_IMAGE_SIZE, MIN_IMAGE_SIZE, type FlowNode, type NodeStyle, type ResolvedSide } from '../types';
 
 export interface NodeViewProps {
   node: FlowNode;
@@ -10,6 +11,8 @@ export interface NodeViewProps {
   uid: string;
   nodeStyle: NodeStyle;
   fontSize: number;
+  /** Size (px) of the node image when one is set; it takes the icon's slot */
+  imageSize?: number;
   /** Formatted live value (already run through the field display processor) */
   value?: string;
   accent: string;
@@ -42,12 +45,16 @@ const portPos = (n: FlowNode, side: ResolvedSide) => {
   }
 };
 
+const clampImageSize = (v: number | undefined) =>
+  Math.min(MAX_IMAGE_SIZE, Math.max(MIN_IMAGE_SIZE, Number.isFinite(v) ? (v as number) : DEFAULT_IMAGE_SIZE));
+
 export const NodeView: React.FC<NodeViewProps> = ({
   node: n,
   theme,
   uid,
   nodeStyle,
   fontSize,
+  imageSize,
   value,
   accent,
   selected,
@@ -65,6 +72,11 @@ export const NodeView: React.FC<NodeViewProps> = ({
   const minimal = nodeStyle === 'minimal';
   const isDark = theme.isDark;
 
+  // Image: only a safe URL is ever handed to the browser; a load failure falls back to the icon until the URL changes.
+  const image = safeImageUrl(n.image);
+  const [failedImage, setFailedImage] = useState<string | undefined>();
+  const showImage = !!image && failedImage !== image;
+
   const fill = minimal
     ? 'transparent'
     : hub
@@ -80,16 +92,59 @@ export const NodeView: React.FC<NodeViewProps> = ({
   const iconSize = hub ? 22 : pill ? 14 : circle ? Math.round(Math.min(n.w, n.h) * 0.4) : 18;
   const iconName = n.icon && isIconName(n.icon) ? n.icon : undefined;
   const iconColor = hub ? theme.colors.primary.text : pill ? accent : text;
+  // The image takes the icon's slot; it is capped so it always fits inside the node.
+  const imgSize = Math.max(8, Math.min(clampImageSize(imageSize), circle ? Math.round(Math.min(n.w, n.h) * 0.6) : n.h - 6));
+  /** Width of whatever is drawn in the media slot (image, icon or nothing) */
+  const slot = showImage ? imgSize : iconName ? iconSize : 0;
   const ix = pill ? 24 : 12;
-  const iy = (n.h - iconSize) / 2;
-  const tx = (iconName ? ix + iconSize : ix - 2) + (pill ? 7 : 10);
+  const iy = (n.h - slot) / 2;
+  const tx = (slot ? ix + slot : ix - 2) + (pill ? 7 : 10);
   const labelSize = hub ? fontSize + 1 : fontSize;
   const subSize = hub ? fontSize : fontSize - 1;
   const rx = pill ? n.h / 2 : 8;
   const clipId = `${uid}-clip-${n.id}`;
+  const imgClipId = `${uid}-img-${n.id}`;
   const r = circle ? Math.min(n.w, n.h) / 2 : 0;
 
   const linkClass = linked ? css({ cursor: 'pointer', '&:hover': { filter: `drop-shadow(0 0 5px ${accent})` } }) : undefined;
+
+  /** Image (clipped to a rounded square) or icon at the given slot position. */
+  const media = (x: number, y: number) => {
+    if (showImage) {
+      const imgRx = Math.round(imgSize * 0.2);
+      return (
+        <>
+          <clipPath id={imgClipId}>
+            <rect x={x} y={y} width={imgSize} height={imgSize} rx={imgRx} />
+          </clipPath>
+          <image
+            href={image}
+            x={x}
+            y={y}
+            width={imgSize}
+            height={imgSize}
+            preserveAspectRatio="xMidYMid meet"
+            clipPath={`url(#${imgClipId})`}
+            style={{ pointerEvents: 'none' }}
+            // SVG <image> fires `error` like <img>; the lint allowlist just does not know the element.
+            // eslint-disable-next-line react/no-unknown-property
+            onError={() => setFailedImage(image)}
+            data-testid={`flow-node-image-${n.id}`}
+          />
+        </>
+      );
+    }
+    if (iconName) {
+      return (
+        <foreignObject x={x} y={y} width={iconSize} height={iconSize}>
+          <div style={{ color: iconColor, display: 'flex', alignItems: 'center', justifyContent: 'center', width: iconSize, height: iconSize }}>
+            <Icon name={iconName} width={iconSize} height={iconSize} />
+          </div>
+        </foreignObject>
+      );
+    }
+    return null;
+  };
 
   return (
     <g
@@ -117,13 +172,7 @@ export const NodeView: React.FC<NodeViewProps> = ({
           {!minimal && (
             <circle cx={n.w / 2} cy={n.h / 2} r={r - 0.5} fill="none" stroke={accent} opacity={0.35} filter={`url(#${uid}-glow)`} />
           )}
-          {iconName && (
-            <foreignObject x={n.w / 2 - iconSize / 2} y={n.h / 2 - iconSize / 2 - (sub ? 4 : 0)} width={iconSize} height={iconSize}>
-              <div style={{ color: iconColor, display: 'flex', alignItems: 'center', justifyContent: 'center', width: iconSize, height: iconSize }}>
-                <Icon name={iconName} width={iconSize} height={iconSize} />
-              </div>
-            </foreignObject>
-          )}
+          {media(n.w / 2 - slot / 2, n.h / 2 - slot / 2 - (sub ? 4 : 0))}
           <text
             x={n.w / 2}
             y={n.h + fontSize + 2}
@@ -138,7 +187,7 @@ export const NodeView: React.FC<NodeViewProps> = ({
           {sub && (
             <text
               x={n.w / 2}
-              y={n.h / 2 + iconSize / 2 + (iconName ? 6 : 2)}
+              y={n.h / 2 + slot / 2 + (slot ? 6 : 2)}
               textAnchor="middle"
               fill={subColor}
               fontSize={subSize}
@@ -180,13 +229,7 @@ export const NodeView: React.FC<NodeViewProps> = ({
           ) : (
             n.status !== 'none' && <rect width={3} height={n.h} fill={accent} clipPath={`url(#${clipId})`} />
           )}
-          {iconName && (
-            <foreignObject x={ix} y={iy} width={iconSize} height={iconSize}>
-              <div style={{ color: iconColor, display: 'flex', alignItems: 'center', justifyContent: 'center', width: iconSize, height: iconSize }}>
-                <Icon name={iconName} width={iconSize} height={iconSize} />
-              </div>
-            </foreignObject>
-          )}
+          {media(ix, iy)}
           <text
             x={tx}
             y={pill || !sub ? n.h / 2 + labelSize * 0.35 : n.h / 2 - 3}

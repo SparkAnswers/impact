@@ -22,16 +22,23 @@ const edge = (e: Partial<FlowEdge> & Pick<FlowEdge, 'id' | 'from' | 'to'>): Flow
   ...e,
 });
 
+/** Inline glyphs (plain SVG, no external request) so the example shows node images offline. */
+export const SUN_IMAGE =
+  'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCI+PGNpcmNsZSBjeD0iMTIiIGN5PSIxMiIgcj0iNC41IiBmaWxsPSIjZjViNDAwIi8+PGcgc3Ryb2tlPSIjZjViNDAwIiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCI+PHBhdGggZD0iTTEyIDJ2M00xMiAxOXYzTTIgMTJoM00xOSAxMmgzTTQuOSA0LjlsMi4xIDIuMU0xNyAxN2wyLjEgMi4xTTQuOSAxOS4xTDcgMTdNMTcgN2wyLjEtMi4xIi8+PC9nPjwvc3ZnPg==';
+export const BATTERY_IMAGE =
+  'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCI+PHJlY3QgeD0iMiIgeT0iNyIgd2lkdGg9IjE4IiBoZWlnaHQ9IjEwIiByeD0iMiIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjM2ZiOTUwIiBzdHJva2Utd2lkdGg9IjIiLz48cmVjdCB4PSIyMC41IiB5PSIxMCIgd2lkdGg9IjIiIGhlaWdodD0iNCIgcng9IjAuNSIgZmlsbD0iIzNmYjk1MCIvPjxyZWN0IHg9IjQuNSIgeT0iOS41IiB3aWR0aD0iMy41IiBoZWlnaHQ9IjUiIGZpbGw9IiMzZmI5NTAiLz48cmVjdCB4PSI5LjUiIHk9IjkuNSIgd2lkdGg9IjMuNSIgaGVpZ2h0PSI1IiBmaWxsPSIjM2ZiOTUwIi8+PHJlY3QgeD0iMTQuNSIgeT0iOS41IiB3aWR0aD0iMy41IiBoZWlnaHQ9IjUiIGZpbGw9IiMzZmI5NTAiIG9wYWNpdHk9IjAuMzUiLz48L3N2Zz4=';
+
 /**
  * "Site power flow" example: sources on the left, a hub in the middle, loads on the right.
- * Field names match the demo dashboard's random-walk aliases.
+ * Field names match the demo dashboard's random-walk aliases. Solar and battery carry an inline
+ * image (sun / battery glyph) in place of their icon; the icon stays as the fallback.
  */
 export function createExampleDiagram(): FlowDiagram {
   return {
     nodes: [
-      node({ id: 'solar', label: 'Solar array', x: 40, y: 120, icon: 'power', valueField: 'solar_kw', status: 'ok' }),
+      node({ id: 'solar', label: 'Solar array', x: 40, y: 120, icon: 'power', image: SUN_IMAGE, valueField: 'solar_kw', status: 'ok' }),
       node({ id: 'grid', label: 'Grid import', x: 40, y: 200, icon: 'plug', valueField: 'grid_kw', status: 'warn' }),
-      node({ id: 'battery', label: 'Battery', x: 40, y: 280, icon: 'bolt', valueField: 'battery_kw', status: 'ok' }),
+      node({ id: 'battery', label: 'Battery', x: 40, y: 280, icon: 'bolt', image: BATTERY_IMAGE, valueField: 'battery_kw', status: 'ok' }),
       node({ id: 'generator', label: 'Generator', x: 40, y: 360, icon: 'cog', sublabel: 'offline', status: 'error' }),
       node({
         id: 'bus',

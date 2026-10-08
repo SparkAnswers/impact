@@ -77,6 +77,17 @@ describe('overrides', () => {
     expect(mergeOverrides(diagram, {})).toBe(diagram);
   });
 
+  it('merges an image override (and widens the node for it) and carries graph images into data nodes', () => {
+    const out = mergeOverrides(diagram, { a: { image: 'https://example.test/a.png', icon: 'bolt' } });
+    expect(out.nodes[0]).toMatchObject({ image: 'https://example.test/a.png', icon: 'bolt', w: 100 + 24 + 4 });
+    expect(cleanOverrides({ a: { image: '' }, b: { image: 'https://example.test/b.png' } })).toEqual({ b: { image: 'https://example.test/b.png' } });
+    const graph = extractGraph([frame], DEFAULT_DATA_OPTIONS);
+    graph.nodes.find((n) => n.id === 'api')!.image = 'data:image/png;base64,iVBORw0KGgo=';
+    const built = buildDataDiagram(graph, positions, DEFAULT_DATA_OPTIONS, theme, 12);
+    expect(built.diagram.nodes.find((n) => n.id === 'api')?.image).toBe('data:image/png;base64,iVBORw0KGgo=');
+    expect(built.diagram.nodes.find((n) => n.id === 'web')?.image).toBeUndefined();
+  });
+
   it('records moved nodes as overrides, keeping existing ones', () => {
     const moved: FlowDiagram = { ...diagram, nodes: [{ ...diagram.nodes[0], x: 20, y: 40 }, diagram.nodes[1]] };
     const out = overridesFromMove({ b: { color: 'green' }, a: { icon: 'cog' } }, diagram, moved);

@@ -76,7 +76,7 @@ Every panel also opens with a **Quick start** group: six presets per panel (for 
 
 ### Flow Designer
 
-Draws a diagram you design inside the panel, or builds one from query results. Nodes show the last value of a bound field; edges can map a field to particle speed, colour (via thresholds) or width. Turn on **Layout -> Edit layout** to drag nodes, draw edges from node ports, reshape curves with control-point handles, pan, zoom, undo and redo.
+Draws a diagram you design inside the panel, or builds one from query results. Nodes show the last value of a bound field and carry an icon or an image (an `http(s)` or inline `data:image` URL, typed in the Inspector or read from a node frame column); edges can map a field to particle speed, colour (via thresholds) or width. Turn on **Layout -> Edit layout** to drag nodes, draw edges from node ports, reshape curves with control-point handles, pan, zoom, undo and redo.
 
 **Data-driven diagrams.** Set **Data -> Diagram source** to `Data`: any frame with `source`, `target` and a value (a table, or Prometheus-style series whose labels carry the endpoints, for example `client`/`server` from tracing service graphs, or `node`/`pod`/`persistentvolumeclaim` from kube-state-metrics) becomes edges, nodes are derived from the endpoints or an optional node frame with id, label, group and status, and a layered or radial layout places everything with stable positions. `Data + manual overrides` lets you drag and restyle individual nodes while the rest follows the data. [docs/flow.md](https://github.com/SparkAnswers/impact/blob/main/docs/flow.md) has copy-paste query recipes for service graphs and host to pod to volume to storage chains.
 
@@ -91,7 +91,8 @@ Draws a diagram you design inside the panel, or builds one from query results. N
 | Edit layout            | Design mode: toolbar, dragging, drawing, pan and zoom. Off by default so viewers never move things |
 | Grid size / Snap       | Grid spacing and snapping while dragging                                                    |
 | Fit to panel           | Scale and centre the diagram to the panel when not editing                                  |
-| Inspector              | Properties of the selected node (shape, icon, label, status, bound field) or edge (style `Bezier` / `Orthogonal` / `Straight` / `Step`, curvature, stroke, colour, dash, arrowhead, glow, particle count / speed / size, bind to field, map value to speed / colour / width) |
+| Image size             | Pixel size of node images (they take the icon's slot; 12–64, default 24)                    |
+| Inspector              | Properties of the selected node (shape, icon, image URL, label, status, bound field) or edge (style `Bezier` / `Orthogonal` / `Straight` / `Step`, curvature, stroke, colour, dash, arrowhead, glow, particle count / speed / size, bind to field, map value to speed / colour / width) |
 | Import / export JSON   | The whole diagram as validated JSON, with a "Load example" button                           |
 
 ### Power Gauge

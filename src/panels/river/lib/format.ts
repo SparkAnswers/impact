@@ -49,11 +49,8 @@ export function mapperFor(bound: BoundChannel, fieldConfig: FieldConfigSource, t
   });
 }
 
-/** Only http(s) and data:image URLs are allowed for background images. */
-export function isSafeImageUrl(url: string): boolean {
-  const u = (url ?? '').trim();
-  return /^https?:\/\//i.test(u) || /^data:image\/(png|jpe?g|gif|webp|svg\+xml|avif);/i.test(u);
-}
+/** Only http(s) and data:image URLs are allowed for background images (shared policy in src/shared/imageUrl). */
+export { isSafeImageUrl } from '../../../shared/imageUrl';
 
 /** Replaces the {value} token. */
 export function applyValueToken(text: string, value: string): string {

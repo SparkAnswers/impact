@@ -102,12 +102,14 @@ All animation loops stop on unmount, pause while `document.hidden`, and fall bac
 - No runtime dependencies beyond the Grafana SDK packages, React and rxjs.
 - No `dangerouslySetInnerHTML`; all free text goes through React escaping. Labels support dashboard variables
   via `replaceVariables`.
-- Image URLs (Flow River background) accept only `http(s):` and `data:image/` schemes.
+- Image URLs (Flow River background, Flow Designer node images) accept only `http(s):` and `data:image/`
+  schemes; one shared check (`src/shared/imageUrl.ts`) is applied on JSON import, on node-frame parsing and
+  again at render time, so an unsafe URL never reaches an `<image>` element.
 - Diagram JSON import is validated and normalised before it is stored.
 
 ## Roadmap
 
 - Catalog submission and plugin signing.
-- Flow Designer: node images, more auto-layout controls.
+- Flow Designer: more auto-layout controls.
 - Flow River: per-channel trail layers, map tile backgrounds.
 - Status Bars: row click actions through data links on every column.

@@ -1,7 +1,7 @@
 # Impact Flow Designer
 
 A node-and-edge diagram panel for "where does it flow" views: power, water, traffic, pipelines,
-money. Nodes are cards, pills, hubs or circles with an icon, a status accent and a live value.
+money. Nodes are cards, pills, hubs or circles with an icon or an image, a status accent and a live value.
 Edges are soft-glowing curves with travelling particles whose speed, colour or width can follow a
 field in your data. The diagram is designed directly inside the panel (drag, draw, reshape) and
 stored in the panel options as JSON, so it travels with the dashboard.
@@ -57,9 +57,11 @@ Two shapes are recognised, and both can be mixed in one panel:
 
 Rows with the same source and target are merged (values summed). A **node frame** is any frame
 with the node id field (default `id`) and no source/target fields; it adds nodes (isolated ones
-too) or decorates existing ones with `label`, `group`, `status` and a numeric value. The status
-field goes through the standard **value mappings** first, then text such as `ok`, `running`,
-`bound`, `warn`, `pending`, `error`, `failed` (or the numbers 1 / 2 / 3) becomes the node status.
+too) or decorates existing ones with `label`, `group`, `status`, a numeric value and an `image`
+URL. The status field goes through the standard **value mappings** first, then text such as `ok`,
+`running`, `bound`, `warn`, `pending`, `error`, `failed` (or the numbers 1 / 2 / 3) becomes the
+node status. The image field (**Node image field**, default `image`) must hold an `http(s):` or
+`data:image/` URL; anything else is ignored and the node keeps its icon.
 
 A **secondary value field** (for example an error rate next to a request rate) is a second numeric
 column in the same table frame, or a second series per edge whose field / metric name matches the
@@ -279,6 +281,7 @@ result is the same wherever you start from; what survives is the drawn diagram, 
 | Appearance → Font size | Base label size in pixels; sub-labels and hub labels scale from it. |
 | Appearance → Default edge colour | Colour for edges without their own colour (named theme colour or hex). |
 | Appearance → Particle speed | Global multiplier on every edge's particle speed. |
+| Appearance → Image size | Size in pixels (12–64, default 24) of a node image. It takes the icon's slot (left of the label on cards and pills, centred on hubs and circles) and is capped to fit the node. |
 | Animation → Animation | Enables the particle animation. Automatically static when the tab is hidden. |
 | Animation → Speed | Animation speed multiplier (shown when animation is on). |
 | Animation → Reduced motion | `Follow system setting` (default) pauses the particles when the operating system asks for reduced motion and shows a small pause icon in the panel corner; `Always animate` ignores that setting; `Never animate` keeps the panel static. |
@@ -298,8 +301,8 @@ result is the same wherever you start from; what survives is the drawn diagram, 
 | Data → Show edge values | Draw the formatted value on every edge (a label field wins). |
 | Data → Group boxes | Faint rounded container with the group name around each group. |
 | Data → Top N edges by value | Keep only the busiest N edges (0 = all; hard cap 400 nodes / 1500 edges). |
-| Data → Edge and node fields | Source, Target, Value, Secondary value, Label, Source group, Target group field / label names for edge frames; Node id, label, group, status, value field names for node frames. Empty value fields mean "first numeric field"; a name that matches nothing means "no value". |
-| Data → Node overrides | Inspector for data nodes (overrides mode): label, shape, icon, status, colour, position; clear one node or reset all. |
+| Data → Edge and node fields | Source, Target, Value, Secondary value, Label, Source group, Target group field / label names for edge frames; Node id, label, group, status, value, image field names for node frames. Empty value fields mean "first numeric field"; a name that matches nothing means "no value". |
+| Data → Node overrides | Inspector for data nodes (overrides mode): label, shape, icon, image URL, status, colour, position; clear one node or reset all. |
 | Interaction → Zoom and pan | View-mode zoom (Ctrl/⌘ + wheel, pinch, plain wheel in view-panel mode), drag to pan, double-click to fit, floating +/−/fit control. Session only. |
 | Links → Node link | URL template with dashboard variables and `${node.id|label|group|value|status}` tokens. |
 | Links → Open in | `Same tab` or `New tab`. |
@@ -312,7 +315,8 @@ result is the same wherever you start from; what survives is the drawn diagram, 
 {
   "nodes": [
     { "id": "src", "label": "Source", "x": 40, "y": 120, "w": 140, "h": 52, "shape": "card",
-      "icon": "bolt", "status": "ok", "valueField": "source_kw", "valueFormat": "${value}",
+      "icon": "bolt", "image": "data:image/svg+xml;base64,...", "status": "ok",
+      "valueField": "source_kw", "valueFormat": "${value}",
       "link": "/d/site?var-source=${node.id}" }
   ],
   "edges": [
@@ -330,6 +334,11 @@ result is the same wherever you start from; what survives is the drawn diagram, 
 - `shape`: `card` | `pill` | `hub` | `circle`; `status`: `ok` | `warn` | `error` | `none`.
 - `icon`: any name from the standard icon set (for example `bolt`, `plug`, `home`, `database`,
   `cloud`, `rocket`, `cog`, `sitemap`); the Inspector lists common ones.
+- `image`: optional image URL drawn in place of the icon (Inspector → **Image URL**). Only
+  `http(s):` and `data:image/` URLs pass validation; an import with any other scheme is rejected.
+  The image is scaled to fit **Appearance → Image size** and clipped to a rounded square. If it
+  fails to load, the icon is shown instead. Inline `data:image/svg+xml;base64,...` glyphs keep a
+  dashboard self-contained (the example uses them for the solar array and the battery).
 - `style`: `bezier` | `orthogonal` | `straight` | `step`; `dash`: `solid` | `dash` | `dot`.
 - `controlPoints` are relative to the start and end points and only used by `bezier`.
 - Sides are `auto` (face the other node) or `left` | `right` | `top` | `bottom`.

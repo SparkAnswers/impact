@@ -13,6 +13,7 @@ import {
   type NodeStatus,
   type PortSide,
 } from '../types';
+import { isSafeImageUrl, MAX_IMAGE_URL } from '../../../shared/imageUrl';
 
 export type ValidationResult = { ok: true; diagram: FlowDiagram } | { ok: false; errors: string[] };
 
@@ -69,6 +70,15 @@ function validateNode(raw: unknown, i: number, errors: string[]): FlowNode | und
   }
   if (isStr(raw.icon) && raw.icon) {
     node.icon = cleanText(raw.icon, 40);
+  }
+  if (isStr(raw.image) && raw.image.trim()) {
+    // Not run through cleanText: a data URL is opaque, the scheme check is the whole policy.
+    const image = raw.image.trim().slice(0, MAX_IMAGE_URL);
+    if (isSafeImageUrl(image)) {
+      node.image = image;
+    } else {
+      errors.push(`nodes[${i}].image must be an http(s) or data:image URL`);
+    }
   }
   if (isStr(raw.color) && raw.color) {
     node.color = cleanText(raw.color, 40);

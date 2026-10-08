@@ -1,4 +1,5 @@
 import { FieldType, getFieldDisplayName, type DataFrame, type Field } from '@grafana/data';
+import { safeImageUrl } from '../imageUrl';
 
 /** Node health as understood by the graph parsers (shared by the flow and river panels). */
 export type NodeStatus = 'ok' | 'warn' | 'error' | 'none';
@@ -57,6 +58,8 @@ export interface GraphNode {
   explicit: boolean;
   /** First standard data link configured on the node id field (href), when any */
   link?: string;
+  /** Image URL from the node frame; only http(s) / data:image values survive parsing */
+  image?: string;
 }
 
 export interface Graph {
@@ -83,6 +86,8 @@ export interface FieldNames {
   nodeGroupField: string;
   nodeStatusField: string;
   nodeValueField: string;
+  /** Optional: node frames may carry an image URL per node (unset or empty: never read) */
+  nodeImageField?: string;
 }
 
 const norm = (s: string | undefined) => (s ?? '').trim().toLowerCase();
@@ -293,7 +298,8 @@ function tableNodes(frame: DataFrame, series: DataFrame[], names: FieldNames, c:
   const label = findField(frame, series, names.nodeLabelField);
   const group = findField(frame, series, names.nodeGroupField);
   const status = findField(frame, series, names.nodeStatusField);
-  const value = names.nodeValueField.trim() ? findField(frame, series, names.nodeValueField) : firstNumeric(frame, [idf, label, group, status]);
+  const image = names.nodeImageField ? findField(frame, series, names.nodeImageField) : undefined;
+  const value = names.nodeValueField.trim() ? findField(frame, series, names.nodeValueField) : firstNumeric(frame, [idf, label, group, status, image]);
   for (let i = 0; i < frame.length; i++) {
     const id = str(idf.values[i]);
     if (!id) {
@@ -311,6 +317,10 @@ function tableNodes(frame: DataFrame, series: DataFrame[], names: FieldNames, c:
       valueField: value ?? prev?.valueField,
       explicit: true,
     };
+    const img = (image ? safeImageUrl(image.values[i]) : undefined) ?? prev?.image;
+    if (img) {
+      node.image = img;
+    }
     c.nodes.set(id, node);
   }
   return true;
@@ -329,7 +339,7 @@ function seriesNodes(frame: DataFrame, names: FieldNames, c: Collected): boolean
     found = true;
     const prev = c.nodes.get(id);
     const statusText = labelOf(field.labels, names.nodeStatusField);
-    c.nodes.set(id, {
+    const node: GraphNode = {
       id,
       label: labelOf(field.labels, names.nodeLabelField) ?? prev?.label,
       group: labelOf(field.labels, names.nodeGroupField) ?? prev?.group,
@@ -337,7 +347,13 @@ function seriesNodes(frame: DataFrame, names: FieldNames, c: Collected): boolean
       value: lastValue(field),
       valueField: field,
       explicit: true,
-    });
+    };
+    // Labels are capped at 200 chars by `str`, so only short http(s) URLs realistically arrive this way.
+    const img = (names.nodeImageField ? safeImageUrl(labelOf(field.labels, names.nodeImageField)) : undefined) ?? prev?.image;
+    if (img) {
+      node.image = img;
+    }
+    c.nodes.set(id, node);
   }
   return found;
 }

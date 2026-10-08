@@ -7,7 +7,7 @@ import { InspectorEditor } from './editors/InspectorEditor';
 import { JsonEditor } from './editors/JsonEditor';
 import { OverridesEditor } from './editors/OverridesEditor';
 import { FLOW_PRESETS } from './presets';
-import { DEFAULT_OPTIONS, type FlowDiagram, type FlowOptions, type NodeOverride, type ValueMapTarget } from './types';
+import { DEFAULT_IMAGE_SIZE, DEFAULT_OPTIONS, MAX_IMAGE_SIZE, MIN_IMAGE_SIZE, type FlowDiagram, type FlowOptions, type NodeOverride, type ValueMapTarget } from './types';
 
 const APPEARANCE = ['Appearance'];
 const ANIMATION = ['Animation'];
@@ -93,6 +93,15 @@ export const plugin = new PanelPlugin<FlowOptions>(FlowPanel)
         category: APPEARANCE,
         defaultValue: DEFAULT_OPTIONS.appearance.particleSpeed,
         settings: { min: 0.1, max: 4, step: 0.1 },
+      })
+      .addSliderInput({
+        path: 'appearance.imageSize',
+        name: 'Image size',
+        description:
+          'Size in pixels of a node image (Inspector → Image URL, or the node image field). It takes the icon’s place: left of the label on cards and pills, centred on hubs and circles, and is capped to fit the node',
+        category: APPEARANCE,
+        defaultValue: DEFAULT_IMAGE_SIZE,
+        settings: { min: MIN_IMAGE_SIZE, max: MAX_IMAGE_SIZE, step: 1 },
       })
       .addBooleanSwitch({
         path: 'animation.enabled',
@@ -357,6 +366,15 @@ export const plugin = new PanelPlugin<FlowOptions>(FlowPanel)
         description: 'Node frames: optional numeric field shown as the node’s live value. Empty: first numeric field; a name that matches nothing (e.g. none): no value',
         category: DATA_FIELDS,
         defaultValue: D.nodeValueField,
+        showIf: isData,
+      })
+      .addTextInput({
+        path: 'data.nodeImageField',
+        name: 'Node image field',
+        description: 'Node frames: optional text field (or label) with an image URL drawn instead of the icon. Only http(s) and data:image URLs are used; empty: never',
+        category: DATA_FIELDS,
+        defaultValue: D.nodeImageField,
+        settings: { placeholder: 'none' },
         showIf: isData,
       })
       .addBooleanSwitch({

@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { css } from '@emotion/css';
 import type { GrafanaTheme2, SelectableValue, StandardEditorProps } from '@grafana/data';
 import { Button, ColorPicker, Combobox, InlineField, InlineSwitch, Input, RadioButtonGroup, Slider, Stack, Text, useStyles2, useTheme2, type ComboboxOption } from '@grafana/ui';
+import { isSafeImageUrl } from '../../../shared/imageUrl';
 import { fieldNames } from '../lib/data';
 import { normalizeDiagram } from '../lib/validate';
 import type { EdgeDash, EdgeStyle, FlowDiagram, FlowEdge, FlowInstanceState, FlowNode, FlowOptions, FlowSelection, NodeShape, NodeStatus, PortSide, BindTarget } from '../types';
@@ -142,6 +143,26 @@ export const ColorField: React.FC<{ label: string; value: string; onChange: (c: 
   );
 };
 
+export const IMAGE_URL_HINT = 'Only http(s) and data:image URLs are shown; anything else is ignored.';
+
+/** Image URL input shared by the node inspector and the data-node overrides editor. */
+export const ImageUrlField: React.FC<{ value: string | undefined; onChange: (v: string | undefined) => void; placeholder?: string }> = ({
+  value,
+  onChange,
+  placeholder,
+}) => {
+  const s = useStyles2(getInspectorStyles);
+  const invalid = !!value && !isSafeImageUrl(value);
+  return (
+    <>
+      <InlineField label="Image URL" labelWidth={LW} grow invalid={invalid} tooltip="Image drawn in place of the icon (http(s) or data:image URL). Falls back to the icon when it cannot be loaded; size under Appearance → Image size">
+        <Input value={value ?? ''} placeholder={placeholder ?? 'https://… or data:image/svg+xml;base64,…'} aria-label="Image URL" onChange={(e) => onChange(e.currentTarget.value || undefined)} />
+      </InlineField>
+      {invalid && <div className={s.hint}>{IMAGE_URL_HINT}</div>}
+    </>
+  );
+};
+
 /**
  * Inspector for the selected node or edge. Selection comes from the panel (click in design mode) via
  * instance state, or from the drop-down at the top of the editor.
@@ -224,6 +245,7 @@ export const InspectorEditor: React.FC<Props> = ({ value, onChange, context }) =
           <InlineField label="Icon" labelWidth={LW} grow>
             <Combobox options={ICONS} value={node.icon ?? null} createCustomValue isClearable placeholder="None" onChange={(v) => patchNode({ icon: v?.value || undefined })} />
           </InlineField>
+          <ImageUrlField value={node.image} onChange={(image) => patchNode({ image })} />
           <InlineField label="Status" labelWidth={LW} grow>
             <RadioButtonGroup options={STATUSES} value={node.status ?? 'none'} onChange={(v) => patchNode({ status: v })} size="sm" fullWidth />
           </InlineField>

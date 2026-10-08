@@ -3,7 +3,7 @@ import type { StandardEditorProps } from '@grafana/data';
 import { Button, Combobox, InlineField, Input, RadioButtonGroup, Stack, useStyles2, useTheme2, type ComboboxOption } from '@grafana/ui';
 import { cleanOverrides } from '../lib/datadriven';
 import type { FlowInstanceState, FlowOptions, FlowSelection, NodeOverride } from '../types';
-import { ColorField, getInspectorStyles, ICONS, LW, num, SHAPES, STATUSES } from './InspectorEditor';
+import { ColorField, getInspectorStyles, ICONS, ImageUrlField, LW, num, SHAPES, STATUSES } from './InspectorEditor';
 
 type Props = StandardEditorProps<Record<string, NodeOverride>, {}, FlowOptions, FlowInstanceState>;
 
@@ -80,6 +80,7 @@ export const OverridesEditor: React.FC<Props> = ({ value, onChange, context }) =
           <InlineField label="Icon" labelWidth={LW} grow>
             <Combobox options={ICONS} value={current.icon ?? null} createCustomValue isClearable placeholder="None" onChange={(v) => patch({ icon: v?.value || undefined })} />
           </InlineField>
+          <ImageUrlField value={current.image} placeholder={node.image || undefined} onChange={(image) => patch({ image })} />
           <InlineField label="Status" labelWidth={LW} grow tooltip="Overrides the status from the data">
             <RadioButtonGroup options={STATUSES} value={current.status ?? node.status ?? 'none'} onChange={(v) => patch({ status: v })} size="sm" fullWidth />
           </InlineField>

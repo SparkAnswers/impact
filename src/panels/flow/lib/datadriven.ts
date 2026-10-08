@@ -1,7 +1,7 @@
 import { getDisplayProcessor, type Field, type GrafanaTheme2 } from '@grafana/data';
 import { formatValue, type FieldValue } from './data';
 import type { Graph, GraphEdge } from './frames';
-import { DEFAULT_PARTICLES, EMPTY_DIAGRAM, type DataOptions, type EdgeBinding, type FlowDiagram, type FlowEdge, type FlowNode, type NodeOverride, type Point } from '../types';
+import { DEFAULT_IMAGE_SIZE, DEFAULT_PARTICLES, EMPTY_DIAGRAM, type DataOptions, type EdgeBinding, type FlowDiagram, type FlowEdge, type FlowNode, type NodeOverride, type Point } from '../types';
 
 /** Longest label drawn on a data node before it is shortened with an ellipsis. */
 export const MAX_LABEL = 28;
@@ -101,6 +101,9 @@ export function buildDataDiagram(graph: Graph, positions: Map<string, Point>, op
     if (n.link) {
       node.link = n.link;
     }
+    if (n.image) {
+      node.image = n.image;
+    }
     return node;
   });
 
@@ -165,7 +168,7 @@ export function buildDataDiagram(graph: Graph, positions: Map<string, Point>, op
   return { diagram: { ...EMPTY_DIAGRAM, nodes, edges }, fields, groups, groupColors };
 }
 
-const OVERRIDE_KEYS: Array<keyof NodeOverride> = ['x', 'y', 'label', 'color', 'icon', 'shape', 'status'];
+const OVERRIDE_KEYS: Array<keyof NodeOverride> = ['x', 'y', 'label', 'color', 'icon', 'image', 'shape', 'status'];
 
 /** Apply per-node overrides (position, look) on top of a data-driven diagram. Unknown ids are ignored. */
 export function mergeOverrides(diagram: FlowDiagram, overrides: Record<string, NodeOverride> | undefined): FlowDiagram {
@@ -186,7 +189,7 @@ export function mergeOverrides(diagram: FlowDiagram, overrides: Record<string, N
           (out as unknown as Record<string, unknown>)[k] = v;
         }
       }
-      // Restyled nodes need room: a longer label, the hub badge, the pill's dot + icon, or an icon.
+      // Restyled nodes need room: a longer label, the hub badge, the pill's dot + icon, or an icon / image.
       if (o.label) {
         out.w = Math.max(out.w, Math.round(28 + o.label.length * 7.2));
       }
@@ -195,7 +198,9 @@ export function mergeOverrides(diagram: FlowDiagram, overrides: Record<string, N
       } else if (out.shape === 'pill') {
         out.w += 24;
       }
-      if (o.icon && out.shape !== 'circle') {
+      if (o.image && out.shape !== 'circle') {
+        out.w += DEFAULT_IMAGE_SIZE + 4;
+      } else if (o.icon && out.shape !== 'circle') {
         out.w += 22;
       }
       return out;

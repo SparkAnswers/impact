@@ -11,6 +11,42 @@ describe('validateDiagram', () => {
       expect(res.diagram.edges[0].bind?.mapTo).toBe('speed');
     }
   });
+  it('keeps the example node images (safe data URLs) through validation', () => {
+    const res = parseDiagramJson(JSON.stringify(createExampleDiagram()));
+    expect(res.ok).toBe(true);
+    if (res.ok) {
+      expect(res.diagram.nodes.find((n) => n.id === 'solar')?.image).toMatch(/^data:image\/svg\+xml;base64,/);
+      expect(res.diagram.nodes.find((n) => n.id === 'grid')?.image).toBeUndefined();
+    }
+  });
+  it('accepts http(s) and data:image node images, trimmed', () => {
+    const res = validateDiagram({
+      nodes: [
+        { id: 'a', x: 0, y: 0, image: '  https://example.test/a.png ' },
+        { id: 'b', x: 0, y: 0, image: 'data:image/png;base64,iVBORw0KGgo=' },
+        { id: 'c', x: 0, y: 0, image: '' },
+      ],
+      edges: [],
+    });
+    expect(res.ok).toBe(true);
+    if (res.ok) {
+      expect(res.diagram.nodes.map((n) => n.image)).toEqual(['https://example.test/a.png', 'data:image/png;base64,iVBORw0KGgo=', undefined]);
+    }
+  });
+  it('rejects node images with unsafe schemes', () => {
+    for (const image of ['javascript:alert(1)', 'data:text/html;base64,PHNjcmlwdD4=', 'file:///x.png', '/relative.png']) {
+      const res = validateDiagram({ nodes: [{ id: 'a', x: 0, y: 0, image }], edges: [] });
+      expect(res.ok).toBe(false);
+      if (!res.ok) {
+        expect(res.errors).toEqual(['nodes[0].image must be an http(s) or data:image URL']);
+      }
+    }
+    // Stored options with a bad URL: normalised without the image rather than thrown away.
+    const norm = normalizeDiagram({ nodes: [{ id: 'a', x: 1, y: 2, icon: 'bolt', image: 'javascript:alert(1)' }], edges: [] });
+    expect(norm.nodes).toHaveLength(1);
+    expect(norm.nodes[0].image).toBeUndefined();
+    expect(norm.nodes[0].icon).toBe('bolt');
+  });
   it('rejects invalid JSON', () => {
     const res = parseDiagramJson('{nope');
     expect(res.ok).toBe(false);
