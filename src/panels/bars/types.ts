@@ -1,4 +1,5 @@
 import { ReducerID } from '@grafana/data';
+import type { MotionPreference } from '../../shared/motion';
 
 /** Visual style of the bar rendered in the "Progress" column of a row. */
 export type BarStyle =
@@ -80,6 +81,7 @@ export interface BarsOptions {
 
   // Animation
   animate: boolean;
+  reducedMotion: MotionPreference;
 }
 
 export const DEFAULT_OPTIONS: BarsOptions = {
@@ -112,6 +114,7 @@ export const DEFAULT_OPTIONS: BarsOptions = {
   backgroundColor: 'dark-blue',
 
   animate: true,
+  reducedMotion: 'system',
 };
 
 /** Row heights (px) per density when `rowHeight` is 0 (auto). */

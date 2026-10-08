@@ -2,21 +2,11 @@ import { useEffect, useRef, useState } from 'react';
 
 const easeOutCubic = (t: number) => 1 - Math.pow(1 - t, 3);
 
-function prefersReducedMotion(): boolean {
-  if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
-    return false;
-  }
-  try {
-    return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  } catch {
-    return false;
-  }
-}
-
 /**
  * Eases from the previously displayed value to `target` over `duration` ms using
- * requestAnimationFrame. Falls back to the raw target when animation is disabled, the
- * document is hidden or the user prefers reduced motion. Stops on unmount.
+ * requestAnimationFrame. Falls back to the raw target when animation is disabled (the caller
+ * resolves the reduced-motion preference through `useMotionAllowed`) or the document is hidden.
+ * Stops on unmount.
  */
 export function useAnimatedValue(target: number | null, enabled: boolean, duration: number): number | null {
   const [displayed, setDisplayed] = useState<number | null>(target);
@@ -36,8 +26,7 @@ export function useAnimatedValue(target: number | null, enabled: boolean, durati
       target !== null &&
       current.current !== null &&
       typeof requestAnimationFrame === 'function' &&
-      !(typeof document !== 'undefined' && document.hidden) &&
-      !prefersReducedMotion();
+      !(typeof document !== 'undefined' && document.hidden);
 
     cancel();
     if (!canAnimate) {

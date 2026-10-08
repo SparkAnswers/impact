@@ -14,6 +14,8 @@ import {
 } from '@grafana/data';
 import { locationService, PanelDataErrorView } from '@grafana/runtime';
 import { useTheme2 } from '@grafana/ui';
+import { useMotionAllowed } from '../../shared/motion';
+import { ReducedMotionHint } from '../../shared/ReducedMotionHint';
 import { extractSeries } from './lib/data';
 import {
   type BandModel,
@@ -75,17 +77,6 @@ function absoluteSteps(field: Field, min: number, max: number): Threshold[] {
     return { value, color: s.color };
   });
   return steps.sort((a, b) => a.value - b.value);
-}
-
-function prefersReducedMotion(): boolean {
-  if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
-    return false;
-  }
-  try {
-    return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  } catch {
-    return false;
-  }
 }
 
 /** Dashboard refresh from the URL (e.g. "10s"); null when not set. */
@@ -195,12 +186,13 @@ export const GaugePanel: React.FC<PanelProps<GaugeOptions>> = ({
     arrival.current = { at: Date.now(), prevAt: prev.seen ? prev.at : null, seen: true };
   }, [data.series]);
 
-  const liveWanted =
-    options.animate && (options.liveScroll || options.liveDrift || options.liveTrail || options.liveStale);
-  const liveEnabled = liveWanted && visible && !!series && !prefersReducedMotion();
+  // Animation switch combined with the Reduced motion preference (shared helper, follows the media query).
+  const motionOn = useMotionAllowed(options.animate, options.reducedMotion);
+  const liveWanted = motionOn && (options.liveScroll || options.liveDrift || options.liveTrail || options.liveStale);
+  const liveEnabled = liveWanted && visible && !!series;
 
   // Static fallback easing (used when live motion is off).
-  const displayed = useAnimatedValue(series?.latest ?? null, options.animate && !liveEnabled, options.animationDuration);
+  const displayed = useAnimatedValue(series?.latest ?? null, motionOn && !liveEnabled, options.animationDuration);
 
   const model = useMemo<GaugeModel | null>(() => {
     if (!series) {
@@ -654,6 +646,7 @@ export const GaugePanel: React.FC<PanelProps<GaugeOptions>> = ({
         aria-label={`Gauge ${label}`}
         data-testid="impact-gauge-canvas"
       />
+      <ReducedMotionHint animationEnabled={options.animate} preference={options.reducedMotion} width={width} />
     </div>
   );
 };

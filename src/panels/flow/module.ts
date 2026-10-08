@@ -1,3 +1,4 @@
+import { MOTION_PREFERENCE_CHOICES, MOTION_PREFERENCE_DESCRIPTION } from '../../shared/motion';
 import { PanelPlugin } from '@grafana/data';
 import { FlowPanel } from './FlowPanel';
 import { InspectorEditor } from './editors/InspectorEditor';
@@ -70,7 +71,7 @@ export const plugin = new PanelPlugin<FlowOptions>(FlowPanel)
       .addBooleanSwitch({
         path: 'animation.enabled',
         name: 'Animation',
-        description: 'Animate particles along edges. Always off when the system prefers reduced motion',
+        description: 'Animate particles along edges. See Reduced motion for the system preference',
         category: ANIMATION,
         defaultValue: DEFAULT_OPTIONS.animation.enabled,
       })
@@ -81,6 +82,15 @@ export const plugin = new PanelPlugin<FlowOptions>(FlowPanel)
         category: ANIMATION,
         defaultValue: DEFAULT_OPTIONS.animation.speed,
         settings: { min: 0.1, max: 4, step: 0.1 },
+        showIf: (o) => o.animation?.enabled !== false,
+      })
+      .addSelect({
+        path: 'animation.reducedMotion',
+        name: 'Reduced motion',
+        description: MOTION_PREFERENCE_DESCRIPTION,
+        category: ANIMATION,
+        defaultValue: DEFAULT_OPTIONS.animation.reducedMotion,
+        settings: { options: MOTION_PREFERENCE_CHOICES },
         showIf: (o) => o.animation?.enabled !== false,
       })
       .addBooleanSwitch({

@@ -61,8 +61,9 @@ demo dashboard (`provisioning/dashboards/impact/flow.json`) which binds six rand
 | Appearance → Font size | Base label size in pixels; sub-labels and hub labels scale from it. |
 | Appearance → Default edge colour | Colour for edges without their own colour (named theme colour or hex). |
 | Appearance → Particle speed | Global multiplier on every edge's particle speed. |
-| Animation → Animation | Enables the particle animation. Automatically static when the system prefers reduced motion or the tab is hidden. |
+| Animation → Animation | Enables the particle animation. Automatically static when the tab is hidden. |
 | Animation → Speed | Animation speed multiplier (shown when animation is on). |
+| Animation → Reduced motion | `Follow system setting` (default) pauses the particles when the operating system asks for reduced motion and shows a small pause icon in the panel corner; `Always animate` ignores that setting; `Never animate` keeps the panel static. |
 | Layout → Edit layout | Design mode toggle: toolbar, dragging, drawing, pan and zoom inside the panel. Off by default. |
 | Layout → Grid size | Spacing of the background grid and of snapping, in canvas pixels. |
 | Layout → Snap to grid | Snap node positions while dragging. |

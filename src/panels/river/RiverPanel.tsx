@@ -3,6 +3,8 @@ import { css } from '@emotion/css';
 import { type GrafanaTheme2, type PanelProps } from '@grafana/data';
 import { PanelDataErrorView } from '@grafana/runtime';
 import { useStyles2, useTheme2 } from '@grafana/ui';
+import { useMotionAllowed } from '../../shared/motion';
+import { ReducedMotionHint } from '../../shared/ReducedMotionHint';
 import { Legend } from './components/Legend';
 import { PathEditor } from './components/PathEditor';
 import { bindChannels, effectiveChannels } from './lib/data';
@@ -77,12 +79,6 @@ const getStyles = (theme: GrafanaTheme2, onImage: boolean) => {
   };
 };
 
-function prefersReducedMotion(): boolean {
-  return typeof window !== 'undefined' && typeof window.matchMedia === 'function'
-    ? Boolean(window.matchMedia('(prefers-reduced-motion: reduce)').matches)
-    : false;
-}
-
 export const RiverPanel: React.FC<PanelProps<RiverOptions>> = (props) => {
   const { data, width, height, fieldConfig, replaceVariables, onOptionsChange, timeZone, id } = props;
   const options = useMemo(() => ({ ...DEFAULT_OPTIONS, ...props.options }), [props.options]);
@@ -90,6 +86,7 @@ export const RiverPanel: React.FC<PanelProps<RiverOptions>> = (props) => {
   const onImage = options.background === 'image' && isSafeImageUrl(options.backgroundUrl);
   const styles = useStyles2(getStyles, onImage);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const motionOn = useMotionAllowed(options.animate, options.reducedMotion);
   const [loadedBg, setLoadedBg] = useState<{ url: string; img: HTMLImageElement } | null>(null);
 
   const channels = useMemo(() => effectiveChannels(options), [options]);
@@ -198,7 +195,7 @@ export const RiverPanel: React.FC<PanelProps<RiverOptions>> = (props) => {
       ctx.drawImage(particleLayer, 0, 0);
     };
 
-    const animate = options.animate && !prefersReducedMotion() && typeof requestAnimationFrame === 'function';
+    const animate = motionOn && typeof requestAnimationFrame === 'function';
     if (!animate) {
       for (const s of systems) {
         s.drawStatic(px);
@@ -252,7 +249,7 @@ export const RiverPanel: React.FC<PanelProps<RiverOptions>> = (props) => {
       stop();
       document.removeEventListener('visibilitychange', onVisibility);
     };
-  }, [geometries, options, theme, width, height, bgImage]);
+  }, [geometries, options, theme, width, height, bgImage, motionOn]);
 
   const onPathChange = useCallback(
     (channelId: string, path: Waypoint[]) => {
@@ -331,6 +328,7 @@ export const RiverPanel: React.FC<PanelProps<RiverOptions>> = (props) => {
         </>
       ) : null}
       {editing.length > 0 ? <PathEditor width={width} height={height} channels={editing} onChange={onPathChange} /> : null}
+      <ReducedMotionHint animationEnabled={options.animate} preference={options.reducedMotion} width={width} />
     </div>
   );
 };

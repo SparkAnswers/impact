@@ -6,7 +6,7 @@ export interface ParticlesProps {
   uid: string;
   /** Global multiplier from the Animation + Appearance options */
   speed: number;
-  /** When false, particles are drawn at static positions (reduced motion / animation off) */
+  /** When false, particles are drawn at static positions (animation off or reduced motion, resolved by the panel) */
   animate: boolean;
   highlight: string;
 }
@@ -51,9 +51,6 @@ function placeAll(paths: PathMap, circles: CircleMap, progress: Map<string, numb
   }
 }
 
-const prefersReducedMotion = () =>
-  typeof window !== 'undefined' && typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-
 /**
  * Travelling particles for every edge. A single requestAnimationFrame loop moves all circles using
  * `getPointAtLength` on hidden measuring paths; this stays smooth for dozens of edges because React is
@@ -82,8 +79,7 @@ export const Particles: React.FC<ParticlesProps> = ({ edges, uid, speed, animate
     return out;
   }, [edges]);
 
-  const reduced = prefersReducedMotion();
-  const running = animate && !reduced;
+  const running = animate;
 
   useEffect(() => {
     let raf = 0;

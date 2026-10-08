@@ -1,3 +1,5 @@
+import type { MotionPreference } from '../../shared/motion';
+
 /**
  * Data model for the Flow Designer panel. Everything here is stored as JSON in panel options.
  */
@@ -107,6 +109,8 @@ export interface FlowOptions {
   animation: {
     enabled: boolean;
     speed: number;
+    /** How the system reduce-motion preference is treated (default: follow it). */
+    reducedMotion?: MotionPreference;
   };
   layout: {
     editMode: boolean;
@@ -165,7 +169,7 @@ export const DEFAULT_OPTIONS: FlowOptions = {
     edgeColor: 'blue',
     particleSpeed: 1,
   },
-  animation: { enabled: true, speed: 1 },
+  animation: { enabled: true, speed: 1, reducedMotion: 'system' },
   layout: { editMode: false, gridSize: 20, snap: true, autoFit: true },
   diagram: EMPTY_DIAGRAM,
 };

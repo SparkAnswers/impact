@@ -1,33 +1,21 @@
 import { useEffect, useState } from 'react';
-
-function prefersReducedMotion(): boolean {
-  return typeof window !== 'undefined' && typeof window.matchMedia === 'function'
-    ? window.matchMedia('(prefers-reduced-motion: reduce)').matches
-    : false;
-}
+import { type MotionPreference, useMotionAllowed } from '../../../shared/motion';
 
 /**
- * True when animations should run: the Animation option is on, the user does not prefer reduced motion
- * and the document is visible. Listens for changes to both conditions.
+ * True when animations should run: the Animation option is on, the Reduced motion preference allows it
+ * (see `src/shared/motion.ts`) and the document is visible. Listens for changes to all conditions.
  */
-export function useMotionEnabled(enabled: boolean): boolean {
-  const [reduced, setReduced] = useState(prefersReducedMotion);
+export function useMotionEnabled(enabled: boolean, preference: MotionPreference | undefined): boolean {
+  const allowed = useMotionAllowed(enabled, preference);
   const [hidden, setHidden] = useState(() => typeof document !== 'undefined' && document.hidden);
 
   useEffect(() => {
-    const mq =
-      typeof window.matchMedia === 'function' ? window.matchMedia('(prefers-reduced-motion: reduce)') : undefined;
-    const onMq = () => setReduced(!!mq?.matches);
     const onVis = () => setHidden(document.hidden);
-    mq?.addEventListener?.('change', onMq);
     document.addEventListener('visibilitychange', onVis);
-    return () => {
-      mq?.removeEventListener?.('change', onMq);
-      document.removeEventListener('visibilitychange', onVis);
-    };
+    return () => document.removeEventListener('visibilitychange', onVis);
   }, []);
 
-  return enabled && !reduced && !hidden;
+  return allowed && !hidden;
 }
 
 /** Re-renders the caller every `ms` milliseconds (used to keep relative times fresh). */

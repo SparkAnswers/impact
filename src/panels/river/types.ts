@@ -1,3 +1,5 @@
+import type { MotionPreference } from '../../shared/motion';
+
 /** Normalised waypoint, 0..1 in panel coordinates (x to the right, y downwards). */
 export interface Waypoint {
   x: number;
@@ -100,6 +102,7 @@ export interface RiverOptions {
   channelHalo: boolean;
   animate: boolean;
   animationSpeed: number;
+  reducedMotion: MotionPreference;
 }
 
 export const DEFAULT_PARTICLES: ParticleOptions = {
@@ -158,6 +161,7 @@ export const DEFAULT_OPTIONS: RiverOptions = {
   channelHalo: true,
   animate: true,
   animationSpeed: 1,
+  reducedMotion: 'system',
 };
 
 /** Hard cap on particles across all channels and lanes. */
