@@ -16,6 +16,8 @@ export interface NodeViewProps {
   editing: boolean;
   /** Ports to draw (editing only) */
   ports?: ResolvedSide[];
+  /** Enter / leave tween (data-driven diagrams) */
+  opacity?: number;
   onPointerDown?: (e: React.PointerEvent<SVGGElement>, node: FlowNode) => void;
   onDoubleClick?: (node: FlowNode) => void;
   onPortPointerDown?: (e: React.PointerEvent<SVGCircleElement>, node: FlowNode, side: ResolvedSide) => void;
@@ -46,6 +48,7 @@ export const NodeView: React.FC<NodeViewProps> = ({
   accent,
   selected,
   editing,
+  opacity,
   onPointerDown,
   onDoubleClick,
   onPortPointerDown,
@@ -83,6 +86,7 @@ export const NodeView: React.FC<NodeViewProps> = ({
   return (
     <g
       transform={`translate(${n.x},${n.y})`}
+      opacity={opacity !== undefined && opacity < 1 ? opacity : undefined}
       style={{ cursor: editing ? 'grab' : 'default' }}
       onPointerDown={onPointerDown ? (e) => onPointerDown(e, n) : undefined}
       onDoubleClick={onDoubleClick ? () => onDoubleClick(n) : undefined}

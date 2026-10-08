@@ -120,3 +120,103 @@ describe('FlowPanel', () => {
     raf.mockRestore();
   });
 });
+
+describe('FlowPanel data-driven mode', () => {
+  const edgeFrame = () =>
+    applyFieldOverrides({
+      data: [
+        toDataFrame({
+          refId: 'A',
+          fields: [
+            { name: 'source', type: FieldType.string, values: ['web', 'api', 'api'] },
+            { name: 'target', type: FieldType.string, values: ['api', 'db', 'cache'] },
+            { name: 'Value', type: FieldType.number, values: [10, 4, 1], config: { unit: 'reqps' } },
+            { name: 'target_group', type: FieldType.string, values: ['backend', 'data', 'data'] },
+          ],
+        }),
+      ],
+      fieldConfig: { defaults: {}, overrides: [] },
+      replaceVariables: (v) => v,
+      theme,
+    });
+
+  function renderData(partial: Partial<FlowOptions['data']> = {}, onOptionsChange = jest.fn(), layout = DEFAULT_OPTIONS.layout) {
+    const options: FlowOptions = { ...DEFAULT_OPTIONS, layout, data: { ...DEFAULT_OPTIONS.data, source: 'data', ...partial } };
+    const props = {
+      id: 1,
+      data: { series: edgeFrame(), state: LoadingState.Done, timeRange: getDefaultTimeRange() },
+      timeRange: getDefaultTimeRange(),
+      timeZone: 'browser',
+      options,
+      onOptionsChange,
+      fieldConfig: { defaults: {}, overrides: [] },
+      onFieldConfigChange: jest.fn(),
+      replaceVariables: (v: string) => v,
+      width: 800,
+      height: 500,
+      transparent: false,
+      renderCounter: 0,
+      title: 'Flow',
+      eventBus: { publish: jest.fn(), subscribe: jest.fn(), getStream: jest.fn(), removeAllListeners: jest.fn(), newScopedBus: jest.fn() },
+      onChangeTimeRange: jest.fn(),
+    } as unknown as PanelProps<FlowOptions>;
+    return { ...render(<FlowPanel {...props} />), onOptionsChange };
+  }
+
+  it('builds nodes, edges, group boxes and edge labels from a source/target frame', () => {
+    renderData({ showEdgeValues: true });
+    for (const id of ['web', 'api', 'db', 'cache']) {
+      expect(screen.getByTestId(`flow-node-${id}`)).toBeInTheDocument();
+    }
+    expect(screen.getByTestId('flow-edge-web→api')).toBeInTheDocument();
+    expect(screen.getByTestId('flow-edge-label-web→api')).toHaveTextContent('10 req/s');
+    expect(screen.getByTestId('flow-groups')).toHaveTextContent('backend');
+    expect(screen.queryByText('Load example diagram')).not.toBeInTheDocument();
+    // Layered left to right: targets are right of their sources.
+    const x = (id: string) => Number(/translate\((-?[\d.]+),/.exec(screen.getByTestId(`flow-node-${id}`).getAttribute('transform') ?? '')?.[1]);
+    expect(x('api')).toBeGreaterThan(x('web'));
+    expect(x('db')).toBeGreaterThan(x('api'));
+  });
+
+  it('shows a hint when the frames carry no edges', () => {
+    const options: FlowOptions = { ...DEFAULT_OPTIONS, data: { ...DEFAULT_OPTIONS.data, source: 'data', sourceField: 'nope' } };
+    const { onOptionsChange } = renderPanel(options);
+    expect(screen.getByTestId('flow-data-empty')).toHaveTextContent('nope');
+    expect(onOptionsChange).not.toHaveBeenCalled();
+  });
+
+  it('persists a drag as a node override in "Data + manual overrides" mode and applies it', () => {
+    const onOptionsChange = jest.fn();
+    renderData({ source: 'overrides' }, onOptionsChange, { ...DEFAULT_OPTIONS.layout, editMode: true, snap: false });
+    const node = screen.getByTestId('flow-node-db');
+    const canvas = screen.getByTestId('flow-canvas');
+    act(() => {
+      fireEvent.pointerDown(node, { button: 0, clientX: 100, clientY: 100, pointerId: 1 });
+      fireEvent.pointerMove(canvas, { clientX: 130, clientY: 150, pointerId: 1 });
+      fireEvent.pointerUp(canvas, { clientX: 130, clientY: 150, pointerId: 1 });
+    });
+    expect(onOptionsChange).toHaveBeenCalledTimes(1);
+    const next = onOptionsChange.mock.calls[0][0];
+    expect(next.diagram).toEqual(DEFAULT_OPTIONS.diagram); // the manual diagram is untouched
+    expect(Object.keys(next.data.overrides)).toEqual(['db']);
+    expect(typeof next.data.overrides.db.x).toBe('number');
+
+    // Re-render with the override: the node sits at the overridden spot.
+    renderData({ source: 'overrides', overrides: { db: { x: 999, y: 7, color: 'red' } } });
+    const moved = screen.getAllByTestId('flow-node-db').at(-1)!;
+    expect(moved.getAttribute('transform')).toBe('translate(999,7)');
+  });
+
+  it('does not persist drags in plain "Data" mode', () => {
+    const onOptionsChange = jest.fn();
+    renderData({}, onOptionsChange, { ...DEFAULT_OPTIONS.layout, editMode: true });
+    const node = screen.getByTestId('flow-node-db');
+    const canvas = screen.getByTestId('flow-canvas');
+    act(() => {
+      fireEvent.pointerDown(node, { button: 0, clientX: 100, clientY: 100, pointerId: 1 });
+      fireEvent.pointerMove(canvas, { clientX: 160, clientY: 150, pointerId: 1 });
+      fireEvent.pointerUp(canvas, { clientX: 160, clientY: 150, pointerId: 1 });
+    });
+    expect(onOptionsChange).not.toHaveBeenCalled();
+  });
+});

@@ -28,7 +28,7 @@
       },
       "options": {
         "mode": "markdown",
-        "content": "**Flow Designer** draws node/edge diagrams with glowing edges and travelling particles. Nodes show the last value of a bound field (unit and decimals from standard options); edges can map a field to particle speed, colour (via thresholds) or width. Edit a panel and turn on *Layout → Edit layout* to drag nodes, draw edges and reshape curves."
+        "content": "**Flow Designer** draws node/edge diagrams with glowing edges and travelling particles. Nodes show the last value of a bound field (unit and decimals from standard options); edges can map a field to particle speed, colour (via thresholds) or width. Edit a panel and turn on *Layout \u2192 Edit layout* to drag nodes, draw edges and reshape curves."
       }
     },
     {
@@ -2546,6 +2546,441 @@
         }
       },
       "transparent": true
+    },
+    {
+      "id": 7,
+      "type": "text",
+      "title": "",
+      "gridPos": {
+        "x": 0,
+        "y": 29,
+        "w": 24,
+        "h": 3
+      },
+      "options": {
+        "mode": "markdown",
+        "content": "### Data-driven diagrams\nThe panels below are built from query results instead of being drawn: any frame with `source`/`target` fields (or series with those labels) becomes edges, nodes are laid out automatically (layered or radial), and values drive particle speed, colour or width. The right-hand panel shows **Data + manual overrides**: a few nodes were dragged and restyled; everything else still follows the data."
+      }
+    },
+    {
+      "id": 8,
+      "type": "sparkanswers-impact-flow-panel",
+      "title": "Microservice call graph (12 nodes, request rate \u2192 speed, status from a node frame)",
+      "gridPos": {
+        "x": 0,
+        "y": 32,
+        "w": 12,
+        "h": 13
+      },
+      "datasource": {
+        "type": "grafana-testdata-datasource",
+        "uid": "impact-testdata"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-testdata-datasource",
+            "uid": "impact-testdata"
+          },
+          "scenarioId": "csv_content",
+          "csvContent": "source,target,value,source_group,target_group\ngateway,auth,420,edge,core\ngateway,catalog,380,edge,core\ngateway,orders,210,edge,core\nauth,users-db,150,core,data\ncatalog,search,260,core,core\ncatalog,catalog-db,180,core,data\norders,payments,120,core,core\norders,inventory,160,core,core\norders,orders-db,140,core,data\ninventory,events,70,core,async\npayments,events,40,core,async\nevents,notifier,35,async,async\n"
+        },
+        {
+          "refId": "N",
+          "datasource": {
+            "type": "grafana-testdata-datasource",
+            "uid": "impact-testdata"
+          },
+          "scenarioId": "csv_content",
+          "csvContent": "id,label,status,value\ngateway,API gateway,ok,42\nauth,Auth,ok,12\ncatalog,Catalog,warn,31\nsearch,Search,ok,9\norders,Orders,ok,18\npayments,Payments,error,7\ninventory,Inventory,ok,14\nevents,Event bus,ok,22\nnotifier,Notifier,ok,3\nusers-db,Users DB,ok,2\ncatalog-db,Catalog DB,ok,4\norders-db,Orders DB,ok,3\n"
+        }
+      ],
+      "options": {
+        "appearance": {
+          "background": "dots",
+          "nodeStyle": "cards",
+          "fontSize": 12,
+          "edgeColor": "blue",
+          "particleSpeed": 1
+        },
+        "animation": {
+          "enabled": true,
+          "speed": 1,
+          "reducedMotion": "system"
+        },
+        "layout": {
+          "editMode": false,
+          "gridSize": 20,
+          "snap": true,
+          "autoFit": true
+        },
+        "diagram": {
+          "nodes": [],
+          "edges": [],
+          "viewport": {
+            "x": 0,
+            "y": 0,
+            "zoom": 1
+          },
+          "grid": {
+            "show": true,
+            "size": 20,
+            "snap": true
+          }
+        },
+        "data": {
+          "source": "data",
+          "sourceField": "source",
+          "targetField": "target",
+          "valueField": "",
+          "value2Field": "",
+          "labelField": "label",
+          "sourceGroupField": "source_group",
+          "targetGroupField": "target_group",
+          "nodeIdField": "id",
+          "nodeLabelField": "label",
+          "nodeGroupField": "group",
+          "nodeStatusField": "status",
+          "nodeValueField": "",
+          "valueMap": "speed",
+          "value2Map": "color",
+          "showEdgeValues": true,
+          "topN": 200,
+          "layout": "lr",
+          "layerGap": 120,
+          "nodeGap": 24,
+          "groupBoxes": true,
+          "overrides": {}
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "decimals": 0
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 9,
+      "type": "sparkanswers-impact-flow-panel",
+      "title": "Host \u2192 pod \u2192 PVC \u2192 PV \u2192 storage class (bytes \u2192 width, namespace groups)",
+      "gridPos": {
+        "x": 12,
+        "y": 32,
+        "w": 12,
+        "h": 13
+      },
+      "datasource": {
+        "type": "grafana-testdata-datasource",
+        "uid": "impact-testdata"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-testdata-datasource",
+            "uid": "impact-testdata"
+          },
+          "scenarioId": "csv_content",
+          "csvContent": "source,target,value,source_group,target_group\nhost-a,pod-web-1,1,hosts,web\nhost-a,pod-web-2,1,hosts,web\nhost-b,pod-api-1,1,hosts,api\nhost-b,pod-db-1,1,hosts,db\nhost-c,pod-cache-1,1,hosts,cache\npod-web-1,pvc-web-assets,1200,web,web\npod-api-1,pvc-api-uploads,5400,api,api\npod-db-1,pvc-db-data,98000,db,db\npod-cache-1,pvc-cache,800,cache,cache\npvc-web-assets,pv-0001,1200,web,\npvc-api-uploads,pv-0002,5400,api,\npvc-db-data,pv-0003,98000,db,\npvc-cache,pv-0004,800,cache,\npv-0001,ssd-local,1200,,\npv-0002,ssd-local,5400,,\npv-0003,nvme-fast,98000,,\npv-0004,ssd-local,800,,\n"
+        }
+      ],
+      "options": {
+        "appearance": {
+          "background": "dots",
+          "nodeStyle": "cards",
+          "fontSize": 12,
+          "edgeColor": "blue",
+          "particleSpeed": 1
+        },
+        "animation": {
+          "enabled": true,
+          "speed": 1,
+          "reducedMotion": "system"
+        },
+        "layout": {
+          "editMode": false,
+          "gridSize": 20,
+          "snap": true,
+          "autoFit": true
+        },
+        "diagram": {
+          "nodes": [],
+          "edges": [],
+          "viewport": {
+            "x": 0,
+            "y": 0,
+            "zoom": 1
+          },
+          "grid": {
+            "show": true,
+            "size": 20,
+            "snap": true
+          }
+        },
+        "data": {
+          "source": "data",
+          "sourceField": "source",
+          "targetField": "target",
+          "valueField": "",
+          "value2Field": "",
+          "labelField": "label",
+          "sourceGroupField": "source_group",
+          "targetGroupField": "target_group",
+          "nodeIdField": "id",
+          "nodeLabelField": "label",
+          "nodeGroupField": "group",
+          "nodeStatusField": "status",
+          "nodeValueField": "",
+          "valueMap": "width",
+          "value2Map": "color",
+          "showEdgeValues": false,
+          "topN": 200,
+          "layout": "lr",
+          "layerGap": 120,
+          "nodeGap": 18,
+          "groupBoxes": true,
+          "overrides": {}
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes",
+          "decimals": 1
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 10,
+      "type": "sparkanswers-impact-flow-panel",
+      "title": "Radial: hub in the middle (value \u2192 colour via thresholds)",
+      "gridPos": {
+        "x": 0,
+        "y": 45,
+        "w": 12,
+        "h": 12
+      },
+      "datasource": {
+        "type": "grafana-testdata-datasource",
+        "uid": "impact-testdata"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-testdata-datasource",
+            "uid": "impact-testdata"
+          },
+          "scenarioId": "csv_content",
+          "csvContent": "source,target,value,source_group,target_group\ngateway,auth,420,edge,core\ngateway,catalog,380,edge,core\ngateway,orders,210,edge,core\nauth,users-db,150,core,data\ncatalog,search,260,core,core\ncatalog,catalog-db,180,core,data\norders,payments,120,core,core\norders,inventory,160,core,core\norders,orders-db,140,core,data\ninventory,events,70,core,async\npayments,events,40,core,async\nevents,notifier,35,async,async\n"
+        }
+      ],
+      "options": {
+        "appearance": {
+          "background": "dots",
+          "nodeStyle": "cards",
+          "fontSize": 12,
+          "edgeColor": "blue",
+          "particleSpeed": 1
+        },
+        "animation": {
+          "enabled": true,
+          "speed": 1,
+          "reducedMotion": "system"
+        },
+        "layout": {
+          "editMode": false,
+          "gridSize": 20,
+          "snap": true,
+          "autoFit": true
+        },
+        "diagram": {
+          "nodes": [],
+          "edges": [],
+          "viewport": {
+            "x": 0,
+            "y": 0,
+            "zoom": 1
+          },
+          "grid": {
+            "show": true,
+            "size": 20,
+            "snap": true
+          }
+        },
+        "data": {
+          "source": "data",
+          "sourceField": "source",
+          "targetField": "target",
+          "valueField": "",
+          "value2Field": "",
+          "labelField": "label",
+          "sourceGroupField": "source_group",
+          "targetGroupField": "target_group",
+          "nodeIdField": "id",
+          "nodeLabelField": "label",
+          "nodeGroupField": "group",
+          "nodeStatusField": "status",
+          "nodeValueField": "",
+          "valueMap": "color",
+          "value2Map": "color",
+          "showEdgeValues": true,
+          "topN": 200,
+          "layout": "radial",
+          "layerGap": 120,
+          "nodeGap": 24,
+          "groupBoxes": false,
+          "overrides": {}
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "decimals": 0,
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 150
+              },
+              {
+                "color": "red",
+                "value": 300
+              }
+            ]
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 11,
+      "type": "sparkanswers-impact-flow-panel",
+      "title": "Data + manual overrides (Edit layout on - drag a node, it stays)",
+      "gridPos": {
+        "x": 12,
+        "y": 45,
+        "w": 12,
+        "h": 12
+      },
+      "datasource": {
+        "type": "grafana-testdata-datasource",
+        "uid": "impact-testdata"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-testdata-datasource",
+            "uid": "impact-testdata"
+          },
+          "scenarioId": "csv_content",
+          "csvContent": "source,target,value,source_group,target_group\ngateway,auth,420,edge,core\ngateway,catalog,380,edge,core\ngateway,orders,210,edge,core\nauth,users-db,150,core,data\ncatalog,search,260,core,core\ncatalog,catalog-db,180,core,data\norders,payments,120,core,core\norders,inventory,160,core,core\norders,orders-db,140,core,data\ninventory,events,70,core,async\npayments,events,40,core,async\nevents,notifier,35,async,async\n"
+        },
+        {
+          "refId": "N",
+          "datasource": {
+            "type": "grafana-testdata-datasource",
+            "uid": "impact-testdata"
+          },
+          "scenarioId": "csv_content",
+          "csvContent": "id,label,status,value\ngateway,API gateway,ok,42\nauth,Auth,ok,12\ncatalog,Catalog,warn,31\nsearch,Search,ok,9\norders,Orders,ok,18\npayments,Payments,error,7\ninventory,Inventory,ok,14\nevents,Event bus,ok,22\nnotifier,Notifier,ok,3\nusers-db,Users DB,ok,2\ncatalog-db,Catalog DB,ok,4\norders-db,Orders DB,ok,3\n"
+        }
+      ],
+      "options": {
+        "appearance": {
+          "background": "dots",
+          "nodeStyle": "cards",
+          "fontSize": 12,
+          "edgeColor": "blue",
+          "particleSpeed": 1
+        },
+        "animation": {
+          "enabled": true,
+          "speed": 1,
+          "reducedMotion": "system"
+        },
+        "layout": {
+          "editMode": true,
+          "gridSize": 20,
+          "snap": true,
+          "autoFit": true
+        },
+        "diagram": {
+          "nodes": [],
+          "edges": [],
+          "viewport": {
+            "x": 0,
+            "y": 0,
+            "zoom": 1
+          },
+          "grid": {
+            "show": true,
+            "size": 20,
+            "snap": true
+          }
+        },
+        "data": {
+          "source": "overrides",
+          "sourceField": "source",
+          "targetField": "target",
+          "valueField": "",
+          "value2Field": "",
+          "labelField": "label",
+          "sourceGroupField": "source_group",
+          "targetGroupField": "target_group",
+          "nodeIdField": "id",
+          "nodeLabelField": "label",
+          "nodeGroupField": "group",
+          "nodeStatusField": "status",
+          "nodeValueField": "",
+          "valueMap": "speed",
+          "value2Map": "color",
+          "showEdgeValues": false,
+          "topN": 200,
+          "layout": "tb",
+          "layerGap": 120,
+          "nodeGap": 24,
+          "groupBoxes": true,
+          "overrides": {
+            "gateway": {
+              "shape": "hub",
+              "icon": "cloud",
+              "x": 300,
+              "y": -80,
+              "label": "Edge gateway"
+            },
+            "events": {
+              "icon": "exchange-alt",
+              "color": "purple",
+              "shape": "pill"
+            },
+            "notifier": {
+              "x": 1040,
+              "y": 320,
+              "icon": "bell"
+            }
+          }
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "decimals": 0
+        },
+        "overrides": []
+      }
     }
   ]
 }
