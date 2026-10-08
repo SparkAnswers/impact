@@ -11,6 +11,7 @@ export type SecondaryMode = 'text' | 'reducer';
 export type TickMode = 'auto' | 'custom' | 'none';
 export type TitlePosition = 'hidden' | 'top' | 'bottom';
 export type BackgroundMode = 'panel' | 'transparent' | 'solid';
+export type PlaybackDelayMode = 'auto' | 'fixed';
 
 export interface GaugeOptions {
   // Data
@@ -50,6 +51,11 @@ export interface GaugeOptions {
   historyPoints: number;
   /** Seconds shown by the chart in stream mode. */
   streamDuration: number;
+  /** Stream mode jitter buffer: adaptive or a fixed number of seconds. */
+  playbackDelay: PlaybackDelayMode;
+  playbackDelaySeconds: number;
+  /** Stream mode: marker, fill, glow and big number show the sample under the playhead. */
+  liveFollow: boolean;
   fadeHistory: boolean;
   historyLineWidth: number;
   historyArea: boolean;
@@ -111,6 +117,9 @@ export const DEFAULT_OPTIONS: GaugeOptions = {
   historySource: 'timeRange',
   historyPoints: 120,
   streamDuration: 60,
+  playbackDelay: 'auto',
+  playbackDelaySeconds: 15,
+  liveFollow: true,
   fadeHistory: true,
   historyLineWidth: 1.6,
   historyArea: true,

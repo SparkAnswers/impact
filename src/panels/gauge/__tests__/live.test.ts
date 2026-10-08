@@ -1,6 +1,10 @@
 import {
+  adaptiveDelay,
+  advancePlayhead,
   breathing,
   canScroll,
+  interpolateAt,
+  underrunDelay,
   easeTowards,
   inferSampleInterval,
   isStale,
@@ -39,12 +43,13 @@ describe('refresh + stale', () => {
     expect(parseRefreshInterval(undefined)).toBeNull();
     expect(parseRefreshInterval('nope')).toBeNull();
   });
-  it('threshold is max(3x sample, 2x refresh)', () => {
-    expect(staleThreshold(1000, 10000)).toBe(20000);
-    expect(staleThreshold(15000, 10000)).toBe(45000);
-    expect(staleThreshold(null, 10000)).toBe(20000);
-    expect(staleThreshold(1000, null)).toBe(3000);
+  it('threshold is max(3x sample, 2x refresh, 60 s floor)', () => {
+    expect(staleThreshold(1000, 10000)).toBe(60000);
+    expect(staleThreshold(30000, 10000)).toBe(90000);
+    expect(staleThreshold(null, 40000)).toBe(80000);
+    expect(staleThreshold(1000, null)).toBe(60000);
     expect(staleThreshold(null, null)).toBeNull();
+    expect(staleThreshold(1000, 10000, 0)).toBe(20000);
   });
   it('detects stale samples', () => {
     expect(isStale(100000, 90000, 20000)).toBe(false);
@@ -106,6 +111,7 @@ describe('easing helpers', () => {
     expect(trailAlpha(0, 4000)).toBe(1);
     expect(trailAlpha(4000, 4000)).toBe(0);
     expect(trailAlpha(2000, 4000)).toBeCloseTo(0.25);
+    expect(trailAlpha(-500, 4000)).toBe(0);
   });
 });
 
@@ -124,5 +130,66 @@ describe('scheduler', () => {
     expect(cafSpy).toHaveBeenCalledTimes(1);
     rafSpy.mockRestore();
     cafSpy.mockRestore();
+  });
+});
+
+describe('playback delay', () => {
+  it('adapts to the observed refresh with a latency margin and clamps', () => {
+    expect(adaptiveDelay(10000, null, 200)).toBe(13500); // 1.25 x 10 s + 1 s minimum margin
+    expect(adaptiveDelay(10000, null, 2000)).toBe(15500); // margin 1.5 x latency
+    expect(adaptiveDelay(null, 30000, 0)).toBe(38500); // dashboard refresh fallback
+    expect(adaptiveDelay(null, null, 0)).toBe(15000); // nothing known yet
+    expect(adaptiveDelay(500, null, 0)).toBe(2000); // min 2 s
+    expect(adaptiveDelay(600000, null, 0)).toBe(300000); // max 5 min
+  });
+  it('underrun delay covers the gap plus margin', () => {
+    expect(underrunDelay(130000, 100000, 0)).toBe(31000);
+  });
+});
+
+describe('advancePlayhead', () => {
+  const newest = 100000;
+  it('starts at wall - delay when the buffer is healthy', () => {
+    expect(advancePlayhead(null, 110000, 15000, newest, 16)).toBe(95000);
+  });
+  it('starts at the newest sample when the delay is too small', () => {
+    expect(advancePlayhead(null, 110000, 5000, newest, 16)).toBe(newest);
+  });
+  it('moves at wall-clock speed while behind the target', () => {
+    expect(advancePlayhead(95000, 110016, 15000, newest, 16)).toBe(95016);
+  });
+  it('never passes the newest sample and never moves backwards', () => {
+    let p = 99900;
+    for (let i = 0; i < 400; i++) {
+      const next = advancePlayhead(p, 120000 + i * 16, 2000, newest, 16);
+      expect(next).toBeLessThanOrEqual(newest);
+      expect(next).toBeGreaterThanOrEqual(p);
+      p = next;
+    }
+    expect(p).toBeCloseTo(newest, 3);
+  });
+  it('holds when the delay grows past the current lag instead of jumping back', () => {
+    expect(advancePlayhead(95000, 110000, 20000, newest, 16)).toBe(95000);
+  });
+  it('resumes normal speed once new data extends the cap', () => {
+    const held = advancePlayhead(99990, 110000, 2000, newest, 16);
+    expect(held).toBeLessThanOrEqual(newest);
+    const next = advancePlayhead(held, 110016, 2000, 130000, 16);
+    expect(next).toBeCloseTo(held + 16, 6);
+  });
+});
+
+describe('interpolateAt', () => {
+  const t = [0, 1000, 2000, 4000];
+  const v = [0, 10, 20, 40];
+  it('interpolates linearly between neighbours', () => {
+    expect(interpolateAt(t, v, 500)).toBeCloseTo(5);
+    expect(interpolateAt(t, v, 3000)).toBeCloseTo(30);
+    expect(interpolateAt(t, v, 1000)).toBe(10);
+  });
+  it('clamps to the ends and handles empty input', () => {
+    expect(interpolateAt(t, v, -5)).toBe(0);
+    expect(interpolateAt(t, v, 9000)).toBe(40);
+    expect(interpolateAt([], [], 1)).toBeNull();
   });
 });
