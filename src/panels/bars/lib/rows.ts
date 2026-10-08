@@ -354,7 +354,7 @@ function buildFromTable(frame: DataFrame, frames: DataFrame[], options: BarsOpti
     sparkField,
     subtitleField,
   ]);
-  const extraFields = options.extraFields
+  const extraFields = options.extraFields?.length
     ? options.extraFields.map(byName).filter((f): f is Field => !!f)
     : fields.filter(
         (f) =>
