@@ -1,0 +1,90 @@
+{
+  "$schema": "https://raw.githubusercontent.com/grafana/grafana/main/docs/sources/developers/plugins/plugin.schema.json",
+  "type": "app",
+  "name": "Impact",
+  "id": "sparkanswers-impact-app",
+  "info": {
+    "keywords": [
+      "panel",
+      "flow",
+      "gauge",
+      "river",
+      "particles",
+      "progress",
+      "animation",
+      "diagram"
+    ],
+    "description": "Animated widgets for Grafana: a flow designer, a power gauge, a particle flow river and modern status bars.",
+    "author": {
+      "name": "SparkAnswers",
+      "url": "https://github.com/SparkAnswers"
+    },
+    "logos": {
+      "small": "img/logo.svg",
+      "large": "img/logo.svg"
+    },
+    "links": [
+      {
+        "name": "GitHub",
+        "url": "https://github.com/SparkAnswers/impact"
+      },
+      {
+        "name": "License",
+        "url": "https://github.com/SparkAnswers/impact/blob/main/LICENSE"
+      }
+    ],
+    "screenshots": [
+      {
+        "name": "Flow Designer",
+        "path": "img/flow.png"
+      },
+      {
+        "name": "Power Gauge",
+        "path": "img/gauge.png"
+      },
+      {
+        "name": "Flow River",
+        "path": "img/river.png"
+      },
+      {
+        "name": "Status Bars",
+        "path": "img/bars.png"
+      }
+    ],
+    "version": "%VERSION%",
+    "updated": "%TODAY%"
+  },
+  "includes": [
+    {
+      "type": "page",
+      "name": "Gallery",
+      "path": "/a/%PLUGIN_ID%",
+      "addToNav": true,
+      "defaultNav": true
+    },
+    {
+      "type": "panel",
+      "name": "Impact Flow Designer",
+      "path": "panels/flow/plugin.json"
+    },
+    {
+      "type": "panel",
+      "name": "Impact Power Gauge",
+      "path": "panels/gauge/plugin.json"
+    },
+    {
+      "type": "panel",
+      "name": "Impact Flow River",
+      "path": "panels/river/plugin.json"
+    },
+    {
+      "type": "panel",
+      "name": "Impact Status Bars",
+      "path": "panels/bars/plugin.json"
+    }
+  ],
+  "dependencies": {
+    "grafanaDependency": ">=12.0.0",
+    "plugins": []
+  }
+}

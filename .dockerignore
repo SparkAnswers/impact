@@ -1,0 +1,12 @@
+node_modules
+dist
+mockups
+imgs
+coverage
+.git
+*.zip
+work
+out
+.eslintcache
+test-results
+playwright-report

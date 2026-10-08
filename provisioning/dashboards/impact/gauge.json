@@ -1,0 +1,248 @@
+{
+  "uid": "impact-gauge",
+  "title": "Impact Gauge demo",
+  "tags": ["impact", "demo"],
+  "editable": true,
+  "schemaVersion": 41,
+  "version": 1,
+  "refresh": "5s",
+  "time": { "from": "now-15m", "to": "now" },
+  "timezone": "browser",
+  "panels": [
+    {
+      "id": 1,
+      "type": "sparkanswers-impact-gauge-panel",
+      "title": "Signed power (default)",
+      "description": "Default options: -50..200 kW range from the field min/max, square-root scale, positive values fill clockwise in orange from the zero mark, negative values fill the other way in green. The in-ring chart shows the panel time range.",
+      "gridPos": { "x": 0, "y": 0, "w": 8, "h": 14 },
+      "datasource": { "type": "grafana-testdata-datasource", "uid": "impact-testdata" },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "grafana-testdata-datasource", "uid": "impact-testdata" },
+          "scenarioId": "random_walk",
+          "alias": "power",
+          "startValue": 40,
+          "spread": 25,
+          "noise": 4,
+          "min": -50,
+          "max": 200
+        }
+      ],
+      "fieldConfig": {
+        "defaults": { "unit": "kwatt", "decimals": 1, "min": -50, "max": 200, "color": { "mode": "fixed", "fixedColor": "orange" } },
+        "overrides": []
+      },
+      "options": {
+        "secondaryText": "Avg. {value}",
+        "secondaryReducer": "mean",
+        "subtitleText": "Past 15 min"
+      }
+    },
+    {
+      "id": 2,
+      "type": "sparkanswers-impact-gauge-panel",
+      "title": "Semicircle, custom palette",
+      "description": "180 degree sweep, clockwise, linear scale, -5..10 kW import/export with a blue/purple palette, custom ticks and a computed sum in a different unit.",
+      "gridPos": { "x": 8, "y": 0, "w": 8, "h": 14 },
+      "datasource": { "type": "grafana-testdata-datasource", "uid": "impact-testdata" },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "grafana-testdata-datasource", "uid": "impact-testdata" },
+          "scenarioId": "random_walk",
+          "alias": "grid",
+          "startValue": 3,
+          "spread": 1.5,
+          "noise": 0.3,
+          "min": -5,
+          "max": 10
+        }
+      ],
+      "fieldConfig": {
+        "defaults": { "unit": "kwatt", "decimals": 2, "min": -5, "max": 10 },
+        "overrides": []
+      },
+      "options": {
+        "startAngle": 180,
+        "sweepAngle": 180,
+        "clockwise": true,
+        "scale": "linear",
+        "ringWidth": 7,
+        "glow": 18,
+        "positiveColor": "blue",
+        "negativeColor": "purple",
+        "tickMode": "custom",
+        "tickValues": "-5, 0, 5, 10",
+        "secondaryText": "Net {value}",
+        "secondaryReducer": "sum",
+        "secondaryUnit": "kwatth",
+        "secondaryDecimals": 1,
+        "subtitleText": "Today",
+        "titleText": "Grid import / export",
+        "titlePosition": "bottom"
+      }
+    },
+    {
+      "id": 3,
+      "type": "sparkanswers-impact-gauge-panel",
+      "title": "300 degree arc with thresholds",
+      "description": "Colour mode Thresholds: the ring is painted in bands from the standard field thresholds, the fill and the history line take the colour of the current value. Unit percent, no fade.",
+      "gridPos": { "x": 16, "y": 0, "w": 8, "h": 14 },
+      "datasource": { "type": "grafana-testdata-datasource", "uid": "impact-testdata" },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "grafana-testdata-datasource", "uid": "impact-testdata" },
+          "scenarioId": "random_walk",
+          "alias": "load",
+          "startValue": 55,
+          "spread": 12,
+          "noise": 3,
+          "min": 0,
+          "max": 100
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "decimals": 0,
+          "min": 0,
+          "max": 100,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "value": null, "color": "green" },
+              { "value": 55, "color": "orange" },
+              { "value": 80, "color": "red" }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "startAngle": 120,
+        "sweepAngle": 300,
+        "clockwise": true,
+        "scale": "linear",
+        "ringWidth": 6,
+        "glow": 16,
+        "colorMode": "thresholds",
+        "historyColorMode": "thresholds",
+        "fadeHistory": false,
+        "secondaryText": "Peak {value}",
+        "secondaryReducer": "max",
+        "subtitleText": "Last 15 min",
+        "titleText": "Load with thresholds",
+        "titlePosition": "bottom"
+      }
+    },
+    {
+      "id": 4,
+      "type": "sparkanswers-impact-gauge-panel",
+      "title": "Tiny (about 200 x 200)",
+      "description": "Small panel: tick labels and secondary text are hidden automatically as space runs out.",
+      "gridPos": { "x": 0, "y": 14, "w": 4, "h": 7 },
+      "datasource": { "type": "grafana-testdata-datasource", "uid": "impact-testdata" },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "grafana-testdata-datasource", "uid": "impact-testdata" },
+          "scenarioId": "random_walk",
+          "alias": "power",
+          "startValue": 30,
+          "spread": 20,
+          "noise": 4,
+          "min": -50,
+          "max": 200
+        }
+      ],
+      "fieldConfig": {
+        "defaults": { "unit": "kwatt", "decimals": 0, "min": -50, "max": 200 },
+        "overrides": []
+      },
+      "options": {
+        "showSecondary": false,
+        "glow": 8
+      }
+    },
+    {
+      "id": 5,
+      "type": "sparkanswers-impact-gauge-panel",
+      "title": "Last 60 samples, log compression, field colour",
+      "description": "History window = last N samples, log scale, fill uses the standard field colour, free-text secondary line with a template variable.",
+      "gridPos": { "x": 4, "y": 14, "w": 10, "h": 12 },
+      "datasource": { "type": "grafana-testdata-datasource", "uid": "impact-testdata" },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "grafana-testdata-datasource", "uid": "impact-testdata" },
+          "scenarioId": "random_walk",
+          "alias": "flow",
+          "startValue": 120,
+          "spread": 60,
+          "noise": 10,
+          "min": -200,
+          "max": 1000
+        }
+      ],
+      "fieldConfig": {
+        "defaults": { "unit": "litreh", "decimals": 0, "min": -200, "max": 1000, "color": { "mode": "fixed", "fixedColor": "dark-blue" } },
+        "overrides": []
+      },
+      "options": {
+        "scale": "log",
+        "colorMode": "field",
+        "historySource": "lastN",
+        "historyPoints": 60,
+        "secondaryMode": "text",
+        "secondaryText": "Dashboard refresh: $__interval",
+        "subtitleText": "Last 60 samples",
+        "valueLabel": "Flow",
+        "titleText": "Log compression",
+        "titlePosition": "top"
+      }
+    },
+    {
+      "id": 6,
+      "type": "sparkanswers-impact-gauge-panel",
+      "title": "Static, no history, no animation",
+      "description": "Wide panel with history and animation off, small arc (120 degrees) and a fixed value font size.",
+      "gridPos": { "x": 14, "y": 14, "w": 10, "h": 12 },
+      "datasource": { "type": "grafana-testdata-datasource", "uid": "impact-testdata" },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": { "type": "grafana-testdata-datasource", "uid": "impact-testdata" },
+          "scenarioId": "random_walk",
+          "alias": "temp",
+          "startValue": 21,
+          "spread": 1,
+          "noise": 0.2,
+          "min": -10,
+          "max": 40
+        }
+      ],
+      "fieldConfig": {
+        "defaults": { "unit": "celsius", "decimals": 1, "min": -10, "max": 40 },
+        "overrides": []
+      },
+      "options": {
+        "startAngle": 210,
+        "sweepAngle": 120,
+        "clockwise": true,
+        "scale": "linear",
+        "showHistory": false,
+        "animate": false,
+        "positiveColor": "red",
+        "negativeColor": "blue",
+        "valueFontSize": 56,
+        "secondaryText": "Range {value}",
+        "secondaryReducer": "range",
+        "subtitleText": "Over the visible range",
+        "titleText": "Temperature",
+        "titlePosition": "hidden"
+      }
+    }
+  ]
+}

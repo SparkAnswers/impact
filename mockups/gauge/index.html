@@ -1,0 +1,320 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Power Gauge – panel mockup</title>
+<style>
+  html,body{margin:0;background:#0b0c0e;font-family:Inter,"Segoe UI",system-ui,-apple-system,Roboto,sans-serif;color:#d8d9da}
+  .panel{width:1100px;height:600px;background:#181b1f;box-sizing:border-box;border:1px solid #2c3235;display:flex;flex-direction:column}
+  .panel-title{height:32px;line-height:32px;padding:0 12px;font-size:13px;font-weight:500;color:#ccccdc;border-bottom:1px solid #22252b}
+  .row{flex:1;display:flex;justify-content:space-around;align-items:stretch;padding:4px 8px 8px}
+  .inst{display:flex;flex-direction:column;align-items:center;width:355px}
+  .inst canvas{display:block}
+  .cap{font-size:11px;color:#8e9299;letter-spacing:.02em;text-align:center;line-height:1.4;margin-top:-4px}
+  .cap b{color:#c7c9cc;font-weight:500}
+</style>
+</head>
+<body>
+<div class="panel">
+  <div class="panel-title">Power Gauge – Tesla style (mockup)</div>
+  <div class="row">
+    <div class="inst"><canvas id="g1" width="355" height="520"></canvas><div class="cap"><b>1 · Default (Tesla)</b><br>0..200 kW, regen to -50, 195° arc, faded history</div></div>
+    <div class="inst"><canvas id="g2" width="355" height="520"></canvas><div class="cap"><b>2 · Semicircle, custom palette</b><br>180° sweep, blue/purple, -5..10 kW, import/export</div></div>
+    <div class="inst"><canvas id="g3" width="355" height="520"></canvas><div class="cap"><b>3 · 300° arc + thresholds</b><br>ring bands green/amber/red, history coloured by value</div></div>
+  </div>
+</div>
+
+<script>
+// ---------------------------------------------------------------------------
+// Power Gauge – drawGauge(ctx, opts)
+// Every key on `opts` maps 1:1 to a panel option we intend to expose.
+// ---------------------------------------------------------------------------
+const DEFAULTS = {
+  min: -50, max: 200, zero: 0,          // value range; `zero` is where the fill originates
+  zeroPosition: 0.8,                    // 0..1 fraction of the sweep where `zero` sits (Tesla puts it near the end)
+  scale: 'sqrt',                        // 'linear' | 'sqrt' – Tesla compresses the high end
+  startAngle: 225, sweepAngle: 195,     // degrees, screen-clockwise, 0 = 3 o'clock
+  clockwise: false,                     // values increase counter-clockwise (Tesla: 200 at top-left … -50 bottom-right)
+  positiveColor: '#ff8a1f', negativeColor: '#2ee59d',
+  ringColor: 'rgba(255,255,255,.22)', ringWidth: 5, glow: 14,
+  showTicks: true, tickValues: [200, 100, 50, 0, -50], tickLabels: null,
+  thresholds: null,                     // [{value, color}, …] – colours ring bands + history by value
+  historyLength: 120, fadeHistory: true, showHistory: true,
+  showValue: true, showAvg: true, avgText: 'Avg. 378 Wh/mi', avgSub: 'Past 30 mi',
+  unit: 'kW', decimals: 1, title: null,
+  dotColor: '#fff', valueFont: 300,
+};
+
+function drawGauge(ctx, o) {
+  const opts = Object.assign({}, DEFAULTS, o);
+  const { width: W, height: H } = ctx.canvas;
+  const cx = W / 2, cy = H / 2 - 45, R = Math.min(W, H) * 0.36;
+  ctx.clearRect(0, 0, W, H);
+
+  const span = opts.max - opts.min;
+  // value -> fraction 0..1 along sweep (0 = min end, 1 = max end)
+  const frac = v => {
+    v = Math.max(opts.min, Math.min(opts.max, v));
+    const zp = 1 - opts.zeroPosition;            // fraction (from min end) at zero
+    if (v >= opts.zero) {
+      let t = (v - opts.zero) / (opts.max - opts.zero || 1);
+      if (opts.scale === 'sqrt') t = Math.sqrt(t);
+      return zp + t * (1 - zp);
+    }
+    let t = (opts.zero - v) / (opts.zero - opts.min || 1);
+    if (opts.scale === 'sqrt') t = Math.sqrt(t);
+    return zp - t * zp;
+  };
+  const deg = d => d * Math.PI / 180;
+  // fraction -> screen angle (radians). clockwise=false: max at startAngle, moving CW decreases value.
+  const ang = f => opts.clockwise ? deg(opts.startAngle + f * opts.sweepAngle)
+                                  : deg(opts.startAngle + (1 - f) * opts.sweepAngle);
+  const polar = (a, r) => [cx + Math.cos(a) * r, cy + Math.sin(a) * r];
+  const arc = (f0, f1, r, w, color, blur) => {
+    let a0 = ang(f0), a1 = ang(f1);
+    if (a0 > a1) [a0, a1] = [a1, a0];
+    ctx.save();
+    ctx.lineWidth = w; ctx.strokeStyle = color; ctx.lineCap = 'butt';
+    if (blur) { ctx.shadowBlur = blur; ctx.shadowColor = color; }
+    ctx.beginPath(); ctx.arc(cx, cy, r, a0, a1); ctx.stroke();
+    ctx.restore();
+  };
+
+  // ---- base ring --------------------------------------------------------
+  if (opts.thresholds) {
+    const bands = [...opts.thresholds].sort((a, b) => a.value - b.value);
+    for (let i = 0; i < bands.length; i++) {
+      const v0 = Math.max(bands[i].value, opts.min);
+      const v1 = i + 1 < bands.length ? bands[i + 1].value : opts.max;
+      arc(frac(v0), frac(v1), R, 2, hexA(bands[i].color, .55));
+    }
+  } else {
+    arc(0, 1, R, 1.5, opts.ringColor);
+  }
+
+  // ---- live fill arc from zero to value -----------------------------------
+  const v = opts.value;
+  const f0 = frac(opts.zero), f1 = frac(v);
+  const col = v >= opts.zero ? colorFor(opts, v) : opts.negativeColor;
+  if (Math.abs(f1 - f0) > 0.001) {
+    arc(f0, f1, R, opts.ringWidth, col, opts.glow);
+    arc(f0, f1, R, opts.ringWidth, col, 0);
+  }
+
+  // ---- ticks --------------------------------------------------------------
+  if (opts.showTicks) {
+    ctx.save();
+    ctx.font = '500 13px Inter, system-ui, sans-serif';
+    ctx.fillStyle = 'rgba(255,255,255,.72)';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    opts.tickValues.forEach((tv, i) => {
+      if (tv < opts.min || tv > opts.max) return;
+      const a = ang(frac(tv));
+      const [x1, y1] = polar(a, R - 4), [x2, y2] = polar(a, R + 4);
+      ctx.strokeStyle = 'rgba(255,255,255,.5)'; ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
+      const [tx, ty] = polar(a, R + 20);
+      const label = opts.tickLabels ? opts.tickLabels[i] : String(tv);
+      if (!(opts.unit && tv === opts.zero)) ctx.fillText(label, tx, ty);
+    });
+    ctx.restore();
+  }
+
+  // ---- unit label just inside the ring at the zero mark ---------------------
+  if (opts.unit) {
+    ctx.save();
+    const a = ang(frac(opts.zero));
+    const [ux, uy] = polar(a, R + 22);
+    ctx.font = '500 13px Inter, system-ui, sans-serif';
+    ctx.fillStyle = 'rgba(255,255,255,.85)';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(opts.unit, ux, uy);
+    ctx.restore();
+  }
+
+  // ---- history sparkline inside the ring --------------------------------------
+  if (opts.showHistory && opts.history.length > 1) {
+    const hw = R * 1.5, hh = R * 0.9;
+    const hx = cx - hw / 2, hyTop = cy - R * 0.78;
+    const posSpan = Math.max(1e-6, opts.max - opts.zero), negSpan = Math.max(1e-6, opts.zero - opts.min);
+    // baseline placed so positive/negative areas are proportional to range
+    const base = hyTop + hh * (posSpan / (posSpan + negSpan));
+    const yOf = val => val >= opts.zero ? base - (val - opts.zero) / posSpan * (base - hyTop)
+                                        : base + (opts.zero - val) / negSpan * (hyTop + hh - base);
+    const n = opts.historyLength;
+    const hist = opts.history.slice(-n);
+    const xOf = i => hx + (i + (n - hist.length)) / (n - 1) * hw;
+
+    // baseline
+    ctx.save();
+    ctx.strokeStyle = 'rgba(255,255,255,.28)'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(hx, base); ctx.lineTo(hx + hw, base); ctx.stroke();
+    ctx.restore();
+
+    const fade = (color, alphaMax) => {
+      const g = ctx.createLinearGradient(hx, 0, hx + hw, 0);
+      if (opts.fadeHistory) {
+        g.addColorStop(0, hexA(color, 0));
+        g.addColorStop(0.3, hexA(color, alphaMax * 0.2));
+        g.addColorStop(0.75, hexA(color, alphaMax * 0.7));
+        g.addColorStop(1, hexA(color, alphaMax));
+      } else { g.addColorStop(0, hexA(color, alphaMax)); g.addColorStop(1, hexA(color, alphaMax)); }
+      return g;
+    };
+    const pathLine = () => { ctx.beginPath(); hist.forEach((val, i) => { const x = xOf(i), y = yOf(val); i ? ctx.lineTo(x, y) : ctx.moveTo(x, y); }); };
+    const pathArea = () => { pathLine(); ctx.lineTo(xOf(hist.length - 1), base); ctx.lineTo(xOf(0), base); ctx.closePath(); };
+
+    // positive half (clip above base), negative half (clip below base)
+    [[hyTop - 2, base, opts.positiveColor], [base, hyTop + hh + 2, opts.negativeColor]].forEach(([y0, y1, color]) => {
+      ctx.save();
+      ctx.beginPath(); ctx.rect(hx - 2, y0, hw + 4, y1 - y0); ctx.clip();
+      pathArea(); ctx.fillStyle = fade(color, 0.28); ctx.fill();
+      if (opts.thresholds && color === opts.positiveColor) {
+        // colour each segment by its value
+        ctx.lineWidth = 1.4; ctx.lineJoin = 'round';
+        for (let i = 1; i < hist.length; i++) {
+          const c = colorFor(opts, Math.max(hist[i], hist[i - 1]));
+          const a = opts.fadeHistory ? Math.pow(i / hist.length, 1.3) : 1;
+          ctx.strokeStyle = hexA(c, 0.15 + 0.85 * a);
+          ctx.beginPath(); ctx.moveTo(xOf(i - 1), yOf(hist[i - 1])); ctx.lineTo(xOf(i), yOf(hist[i])); ctx.stroke();
+        }
+      } else {
+        pathLine(); ctx.strokeStyle = fade(color, 1); ctx.lineWidth = 1.6; ctx.lineJoin = 'round'; ctx.stroke();
+      }
+      ctx.restore();
+    });
+  }
+
+  // ---- live dot on the ring ----------------------------------------------------
+  {
+    const [dx, dy] = polar(ang(f1), R);
+    ctx.save();
+    ctx.shadowBlur = 12; ctx.shadowColor = 'rgba(255,255,255,.9)';
+    ctx.fillStyle = opts.dotColor;
+    ctx.beginPath(); ctx.arc(dx, dy, 4.5, 0, Math.PI * 2); ctx.fill();
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = '#181b1f';
+    ctx.beginPath(); ctx.arc(dx, dy, 2, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+  }
+
+  // ---- centre text ---------------------------------------------------------------
+  ctx.save();
+  ctx.textAlign = 'center';
+  let y = cy + R * 0.45;
+  if (opts.showValue) {
+    ctx.textBaseline = 'alphabetic';
+    const txt = v.toFixed(opts.decimals);
+    ctx.font = `${opts.valueFont} 44px Inter, system-ui, sans-serif`;
+    const tw = ctx.measureText(txt).width;
+    ctx.font = '400 15px Inter, system-ui, sans-serif';
+    const uw = ctx.measureText(' ' + opts.unit).width;
+    const x0 = cx - (tw + uw) / 2;
+    ctx.fillStyle = '#fff';
+    ctx.font = `${opts.valueFont} 44px Inter, system-ui, sans-serif`;
+    ctx.textAlign = 'left'; ctx.fillText(txt, x0, y);
+    ctx.font = '400 15px Inter, system-ui, sans-serif';
+    ctx.fillStyle = 'rgba(255,255,255,.7)';
+    ctx.fillText(' ' + opts.unit, x0 + tw, y);
+    ctx.textAlign = 'center';
+    y += 32;
+  }
+  if (opts.showAvg) {
+    ctx.fillStyle = 'rgba(255,255,255,.92)';
+    const m = /^(.*?)(\d[\d.,]*)(.*)$/.exec(opts.avgText);
+    if (m) {
+      ctx.font = '400 15px Inter, system-ui, sans-serif'; const w1 = ctx.measureText(m[1]).width, w3 = ctx.measureText(m[3]).width;
+      ctx.font = '600 15px Inter, system-ui, sans-serif'; const w2 = ctx.measureText(m[2]).width;
+      let x = cx - (w1 + w2 + w3) / 2; ctx.textAlign = 'left';
+      ctx.font = '400 15px Inter, system-ui, sans-serif'; ctx.fillText(m[1], x, y); x += w1;
+      ctx.font = '600 15px Inter, system-ui, sans-serif'; ctx.fillText(m[2], x, y); x += w2;
+      ctx.font = '400 15px Inter, system-ui, sans-serif'; ctx.fillText(m[3], x, y);
+      ctx.textAlign = 'center';
+    } else { ctx.font = '400 15px Inter, system-ui, sans-serif'; ctx.fillText(opts.avgText, cx, y); }
+    ctx.font = '400 11px Inter, system-ui, sans-serif';
+    ctx.fillStyle = 'rgba(255,255,255,.55)';
+    ctx.fillText(opts.avgSub, cx, y + 17);
+  }
+  if (opts.title) {
+    ctx.font = '500 12px Inter, system-ui, sans-serif';
+    ctx.fillStyle = 'rgba(255,255,255,.6)'; ctx.letterSpacing = '0.08em';
+    ctx.fillText(opts.title.toUpperCase(), cx, cy + R + 44);
+  }
+  ctx.restore();
+}
+
+function colorFor(opts, v) {
+  if (!opts.thresholds) return v >= opts.zero ? opts.positiveColor : opts.negativeColor;
+  let c = opts.thresholds[0].color;
+  for (const t of opts.thresholds) if (v >= t.value) c = t.color;
+  return c;
+}
+function hexA(hex, a) {
+  if (hex.startsWith('rgb')) return hex.replace(/rgba?\(([^)]+)\)/, (_, p) => { const q = p.split(',').slice(0, 3).join(','); return `rgba(${q},${a})`; });
+  const n = parseInt(hex.slice(1), 16), r = n >> 16 & 255, g = n >> 8 & 255, b = n & 255;
+  return `rgba(${r},${g},${b},${a})`;
+}
+
+// ---------------------------------------------------------------------------
+// Demo data: three instances with a random-walk signal
+// ---------------------------------------------------------------------------
+function makeSignal(cfg) {
+  let v = cfg.start, t = 0;
+  return () => {
+    t++;
+    const drift = (cfg.bias - v) * 0.12;
+    v += drift + (Math.random() - 0.5) * cfg.noise + Math.sin(t / 9) * cfg.wave;
+    if (Math.random() < cfg.dipChance) v = (v + cfg.dip) / 2 + (Math.random() - 0.5) * cfg.noise;
+    return Math.max(cfg.min, Math.min(cfg.max, v));
+  };
+}
+
+const instances = [
+  { canvas: 'g1', opts: {}, sig: makeSignal({ start: 42, bias: 45, noise: 18, wave: 2, dipChance: 0.06, dip: -20, min: -50, max: 200 }) },
+  { canvas: 'g2', opts: {
+      min: -5, max: 10, zero: 0, zeroPosition: 0.6, scale: 'linear',
+      startAngle: 180, sweepAngle: 180, clockwise: true,
+      positiveColor: '#5b8def', negativeColor: '#b26bff', ringWidth: 7, glow: 18,
+      tickValues: [-5, 0, 5, 10], tickLabels: ['-5', '0', '5', '10'], unit: 'kW', decimals: 2,
+      avgText: 'Net 6.4 kWh', avgSub: 'Today', title: 'Grid Import / Export', fadeHistory: true, historyLength: 90,
+    }, sig: makeSignal({ start: 3.2, bias: 3.5, noise: 1.2, wave: 0.4, dipChance: 0.05, dip: -2.5, min: -5, max: 10 }) },
+  { canvas: 'g3', opts: {
+      min: 0, max: 100, zero: 0, zeroPosition: 1, scale: 'linear',
+      startAngle: 120, sweepAngle: 300, clockwise: true,
+      thresholds: [{ value: 0, color: '#2ee59d' }, { value: 55, color: '#ffb020' }, { value: 80, color: '#ff4d4f' }],
+      positiveColor: '#2ee59d', negativeColor: '#2ee59d', ringWidth: 6, glow: 16,
+      tickValues: [0, 25, 50, 75, 100], unit: '%', decimals: 0, showAvg: true,
+      avgText: 'Peak 92 %', avgSub: 'Last 15 min', title: 'Load with thresholds', fadeHistory: false, historyLength: 100,
+    }, sig: makeSignal({ start: 48, bias: 55, noise: 14, wave: 4, dipChance: 0.04, dip: 88, min: 0, max: 100 }) },
+];
+
+for (const inst of instances) {
+  inst.ctx = document.getElementById(inst.canvas).getContext('2d');
+  inst.history = [];
+  const n = (inst.opts.historyLength || DEFAULTS.historyLength);
+  for (let i = 0; i < n; i++) inst.history.push(inst.sig());
+  inst.target = inst.history[inst.history.length - 1];
+  inst.value = inst.target;
+}
+
+let lastSample = 0;
+function frame(ts) {
+  if (ts - lastSample > 150) {
+    lastSample = ts;
+    for (const inst of instances) {
+      inst.target = inst.sig();
+      inst.history.push(inst.target);
+      const n = inst.opts.historyLength || DEFAULTS.historyLength;
+      if (inst.history.length > n) inst.history.shift();
+    }
+  }
+  for (const inst of instances) {
+    inst.value += (inst.target - inst.value) * 0.18;     // eased needle
+    drawGauge(inst.ctx, Object.assign({}, inst.opts, { value: inst.value, history: inst.history }));
+  }
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>

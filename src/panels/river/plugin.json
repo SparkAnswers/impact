@@ -1,0 +1,33 @@
+{
+  "$schema": "https://raw.githubusercontent.com/grafana/grafana/main/docs/sources/developers/plugins/plugin.schema.json",
+  "type": "panel",
+  "name": "Impact Flow River",
+  "id": "sparkanswers-impact-river-panel",
+  "info": {
+    "keywords": [
+      "panel",
+      "impact",
+      "river",
+      "flow",
+      "particles",
+      "streamlines",
+      "canvas",
+      "animation"
+    ],
+    "description": "Animated particle streamlines flowing along one or more channels, coloured by value. Supports multiple data streams, parallel lanes, custom paths and colour scales.",
+    "author": {
+      "name": "SparkAnswers"
+    },
+    "logos": {
+      "small": "img/logo.svg",
+      "large": "img/logo.svg"
+    },
+    "screenshots": [],
+    "version": "%VERSION%",
+    "updated": "%TODAY%"
+  },
+  "dependencies": {
+    "grafanaDependency": ">=12.0.0",
+    "plugins": []
+  }
+}
