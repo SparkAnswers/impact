@@ -62,6 +62,9 @@ per data update.
   options** (and overrides). The panel never hard-codes a unit: the big value, tick labels and the
   computed secondary value all go through the field display processor.
 - Works out of the box with a TestData *Random Walk* query.
+- With **no query at all** the panel still renders: *Data > Demo data* defaults to *When no data*, which
+  feeds a generated series through the same field pipeline (unit, decimals, thresholds, overrides) and
+  marks the panel with a "Demo data" pill. Add a query (or set the option to *Off*) to switch to real data.
 
 ## Options
 
@@ -72,6 +75,7 @@ Standard field options used: Unit, Decimals, Min, Max, Thresholds, Color, Displa
 | Option | Description |
 | --- | --- |
 | Field | Numeric field to display. Empty = first numeric field of the first frame. |
+| Demo data | Built-in generated signed power series (1 s cadence, rolling window ending now). *When no data* (default): shown only when the query returns no frames or no numeric field. *Always*: ignores the query. *Off*: never; the empty state says "Needs one numeric time series". A small "Demo data" pill marks generated data. |
 
 ### Appearance
 

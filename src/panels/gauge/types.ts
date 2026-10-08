@@ -1,3 +1,4 @@
+import type { DemoMode } from '../../shared/demo';
 import type { MotionPreference } from '../../shared/motion';
 import type { HistorySource } from './lib/data';
 import type { SecondaryReducer } from './lib/reducers';
@@ -16,6 +17,8 @@ export type PlaybackDelayMode = 'auto' | 'fixed';
 export interface GaugeOptions {
   // Data
   fieldName?: string;
+  /** Built-in generated data: never, only when the query has nothing usable, or always. */
+  demoData: DemoMode;
 
   // Appearance
   background: BackgroundMode;
@@ -91,6 +94,8 @@ export interface GaugeOptions {
 }
 
 export const DEFAULT_OPTIONS: GaugeOptions = {
+  demoData: 'whenNoData',
+
   background: 'panel',
   backgroundColor: '',
   startAngle: 225,

@@ -1,4 +1,5 @@
 import { ReducerID } from '@grafana/data';
+import type { DemoMode } from '../../shared/demo';
 import type { MotionPreference } from '../../shared/motion';
 
 /** Visual style of the bar rendered in the "Progress" column of a row. */
@@ -38,6 +39,10 @@ export interface BarsFieldConfig {
 }
 
 export interface BarsOptions {
+  // Data
+  /** Built-in generated data: never, only when the query has nothing usable, or always. */
+  demoData: DemoMode;
+
   // Columns
   nameField?: string;
   subtitleField?: string;
@@ -85,6 +90,8 @@ export interface BarsOptions {
 }
 
 export const DEFAULT_OPTIONS: BarsOptions = {
+  demoData: 'whenNoData',
+
   reducer: ReducerID.lastNotNull,
 
   barStyle: 'percent',

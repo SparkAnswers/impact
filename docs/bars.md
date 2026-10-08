@@ -9,7 +9,10 @@ rows are windowed so only the visible slice is rendered.
 
 ## Data expectations
 
-The panel works on either shape of data:
+The panel works on either shape of data. With **no query at all** it still renders: *Data > Demo data*
+defaults to *When no data*, which feeds a generated device table through the same field pipeline (unit,
+thresholds, mappings, overrides) and marks the panel with a "Demo data" pill. Add a query (or set the
+option to *Off*) to switch to real data.
 
 **Table input (one row per entity)** - a single frame where each row is an entity, for example a CSV,
 SQL or logs-to-table result. Column roles are auto-detected and can be fixed in the _Columns_ options:
@@ -38,6 +41,7 @@ value mappings (text, colour and icon for statuses) and data links.
 
 | Option                                                                      | Description                                                                                                                                                          |
 | --------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Data > Demo data                                                            | Built-in generated device table (12 rows, one of every bar style). *When no data* (default): used only when the query returns no frames or no usable fields. *Always*: ignores the query. *Off*: never; the empty state says "Needs a table or several series". A "Demo data" pill marks generated data. |
 | Columns > Name / Subtitle / Value / Status / Time / Sparkline / Style field | Pick the field for each role; empty means auto-detect.                                                                                                               |
 | Columns > Stack fields                                                      | Comma-separated numeric fields combined in one bar by the stacked style.                                                                                             |
 | Columns > Extra columns                                                     | Comma-separated fields shown as plain columns after the bar; empty shows every unused field.                                                                         |

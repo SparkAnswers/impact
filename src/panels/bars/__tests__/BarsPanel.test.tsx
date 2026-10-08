@@ -1,11 +1,11 @@
 import React from 'react';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { FieldType, LoadingState, getDefaultTimeRange, toDataFrame, type PanelProps } from '@grafana/data';
-import { BarsPanel } from '../BarsPanel';
+import { BARS_NO_DATA_MESSAGE, BarsPanel } from '../BarsPanel';
 import { DEFAULT_OPTIONS, type BarsOptions } from '../types';
 
 jest.mock('@grafana/runtime', () => ({
-  PanelDataErrorView: () => <div data-testid="no-data">No data</div>,
+  PanelDataErrorView: ({ message }: { message?: string }) => <div data-testid="no-data">{message ?? 'No data'}</div>,
 }));
 
 // Equivalent of the testdata "CSV content" scenario after parsing.
@@ -134,8 +134,31 @@ describe('BarsPanel', () => {
     expect(root.style.getPropertyValue('--pb-bg')).not.toBe('');
   });
 
-  it('shows the no-data view when there are no rows', () => {
+  it('shows the no-data view with a helpful message when there are no rows and demo data is off', () => {
+    renderPanel({ demoData: 'off' }, []);
+    expect(screen.getByTestId('no-data')).toHaveTextContent(BARS_NO_DATA_MESSAGE);
+    expect(screen.queryByTestId('impact-demo-badge')).not.toBeInTheDocument();
+  });
+
+  it('renders a generated device table showing every bar style with the badge when the query is empty', () => {
     renderPanel({}, []);
-    expect(screen.getByTestId('no-data')).toBeInTheDocument();
+    expect(screen.queryByTestId('no-data')).not.toBeInTheDocument();
+    expect(screen.getByTestId('impact-demo-badge')).toBeInTheDocument();
+    expect(screen.getAllByRole('row').length).toBeGreaterThanOrEqual(13);
+    expect(screen.getByText('Gateway')).toBeInTheDocument();
+    expect(screen.getByText('Firewall')).toBeInTheDocument();
+    for (const style of ['sweep', 'percent', 'segmented', 'striped', 'bidirectional', 'stacked', 'sparkline', 'pill']) {
+      expect(document.querySelector(`[data-style="${style}"]`)).not.toBeNull();
+    }
+  });
+
+  it('uses real data without the badge in when-no-data mode, and demo data in always', () => {
+    renderPanel({ demoData: 'whenNoData' });
+    expect(screen.getByText('Edge Gateway')).toBeInTheDocument();
+    expect(screen.queryByTestId('impact-demo-badge')).not.toBeInTheDocument();
+    cleanup();
+    renderPanel({ demoData: 'always' });
+    expect(screen.queryByText('Edge Gateway')).not.toBeInTheDocument();
+    expect(screen.getByTestId('impact-demo-badge')).toBeInTheDocument();
   });
 });

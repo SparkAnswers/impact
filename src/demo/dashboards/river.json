@@ -751,6 +751,75 @@
         "overrides": []
       },
       "transparent": true
+    },
+    {
+      "id": 6,
+      "type": "sparkanswers-impact-river-panel",
+      "title": "No query · demo data",
+      "description": "This panel's query returns no data (TestData 'No data points'; an empty target list would be replaced by a default random walk). Data → Demo data = When no data (the default) renders three generated series (lanes mode shows all of them) with a 'Demo data' badge. Add a query and the real result takes over; set Demo data to Off to see the empty state instead.",
+      "gridPos": {
+        "x": 0,
+        "y": 45,
+        "w": 24,
+        "h": 10
+      },
+      "datasource": {
+        "type": "grafana-testdata-datasource",
+        "uid": "${DS_TESTDATA}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-testdata-datasource",
+            "uid": "${DS_TESTDATA}"
+          },
+          "scenarioId": "no_data_points"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "options": {
+        "demoData": "whenNoData",
+        "title": "Generated flow",
+        "subtitle": "No query behind this panel",
+        "caption": "Demo",
+        "captionValue": true,
+        "channels": [
+          {
+            "id": "demo",
+            "name": "Flow",
+            "path": [],
+            "speedSource": {
+              "mode": "series",
+              "series": ""
+            },
+            "widthSource": {
+              "mode": "fixed"
+            },
+            "widthPx": 90,
+            "colorScale": "turbo",
+            "customStops": [],
+            "scaleDomain": {
+              "mode": "auto"
+            },
+            "particles": {
+              "count": 2500,
+              "speed": 1,
+              "trail": 0.86,
+              "width": 1.1,
+              "color": "white"
+            },
+            "direction": "forward",
+            "labels": [],
+            "opacity": 0.86,
+            "multiSeries": "lanes",
+            "smoothing": 0
+          }
+        ]
+      }
     }
   ]
 }

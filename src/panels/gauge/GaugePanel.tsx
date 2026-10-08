@@ -15,9 +15,10 @@ import {
 } from '@grafana/data';
 import { locationService, PanelDataErrorView } from '@grafana/runtime';
 import { useTheme2 } from '@grafana/ui';
+import { DemoBadge, rollingSignedPowerSeries, useDemoFrames, type DemoGenerator } from '../../shared/demo';
 import { useMotionAllowed } from '../../shared/motion';
 import { ReducedMotionHint } from '../../shared/ReducedMotionHint';
-import { extractSeries } from './lib/data';
+import { extractSeries, pickField } from './lib/data';
 import {
   type BandModel,
   defaultLiveState,
@@ -168,6 +169,13 @@ interface LiveData {
 
 const MAX_TRAIL = 50;
 
+/** Demo data: one signed power series at the window cadence (1 s over the last 15 min), anchored to now. */
+const demoGenerator: DemoGenerator = (w) => [rollingSignedPowerSeries(w.now, w.durationMs, w.stepMs)];
+/** Real data counts as usable when it has at least one numeric field. */
+const hasNumericField = (series: Parameters<typeof pickField>[0]) => pickField(series) !== null;
+
+export const GAUGE_NO_DATA_MESSAGE = 'Needs one numeric time series';
+
 export const GaugePanel: React.FC<PanelProps<GaugeOptions>> = ({
   id,
   data,
@@ -187,16 +195,26 @@ export const GaugePanel: React.FC<PanelProps<GaugeOptions>> = ({
   const liveRef = useRef<HTMLCanvasElement>(null);
   const [visible, setVisible] = useState(true);
 
+  // Generated data when the query has nothing usable (or always), through the same field-config pipeline.
+  const { frames, isDemo } = useDemoFrames(data, options.demoData, demoGenerator, {
+    fieldConfig,
+    replaceVariables,
+    theme,
+    timeZone,
+    timeRange,
+    isUsable: hasNumericField,
+  });
+
   const series = useMemo(
     () =>
-      extractSeries(data.series, {
+      extractSeries(frames, {
         fieldName: options.fieldName,
         source: options.historySource,
         points: options.historyPoints,
         streamDuration: Math.max(1, options.streamDuration) * 1000,
         timeRange,
       }),
-    [data.series, options.fieldName, options.historySource, options.historyPoints, options.streamDuration, timeRange]
+    [frames, options.fieldName, options.historySource, options.historyPoints, options.streamDuration, timeRange]
   );
 
   // Arrival bookkeeping: when did this data land, and how long since the previous one (observed refresh).
@@ -205,7 +223,7 @@ export const GaugePanel: React.FC<PanelProps<GaugeOptions>> = ({
   useEffect(() => {
     const prev = arrival.current;
     arrival.current = { at: Date.now(), prevAt: prev.seen ? prev.at : null, seen: true };
-  }, [data.series]);
+  }, [frames]);
 
   // Animation switch combined with the Reduced motion preference (shared helper, follows the media query).
   const motionOn = useMotionAllowed(options.animate, options.reducedMotion);
@@ -724,7 +742,9 @@ export const GaugePanel: React.FC<PanelProps<GaugeOptions>> = ({
   }, [liveEnabled, width, height, staleFormat]);
 
   if (!series) {
-    return <PanelDataErrorView panelId={id} data={data} fieldConfig={fieldConfig} needsNumberField />;
+    return (
+      <PanelDataErrorView panelId={id} data={data} fieldConfig={fieldConfig} needsNumberField message={GAUGE_NO_DATA_MESSAGE} />
+    );
   }
 
   const label = model?.valueText ? `${model.valueText.prefix ?? ''}${model.valueText.text}${model.valueText.suffix ?? ''}` : 'no data';
@@ -743,6 +763,7 @@ export const GaugePanel: React.FC<PanelProps<GaugeOptions>> = ({
         aria-label={`Gauge ${label}`}
         data-testid="impact-gauge-canvas"
       />
+      <DemoBadge visible={isDemo} width={width} />
       <ReducedMotionHint animationEnabled={options.animate} preference={options.reducedMotion} width={width} />
     </div>
   );

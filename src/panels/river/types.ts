@@ -1,3 +1,4 @@
+import type { DemoMode } from '../../shared/demo';
 import type { MotionPreference } from '../../shared/motion';
 
 /** Normalised waypoint, 0..1 in panel coordinates (x to the right, y downwards). */
@@ -83,6 +84,8 @@ export type BackgroundMode = 'panel' | 'image' | 'none';
 export type BackgroundFit = 'cover' | 'contain';
 
 export interface RiverOptions {
+  /** Built-in generated data: never, only when the query has nothing usable, or always. */
+  demoData: DemoMode;
   channels: Channel[];
   defaultColorScale: ColorPreset;
   showLegend: boolean;
@@ -143,6 +146,7 @@ export function createChannel(partial: Partial<Channel> = {}): Channel {
 }
 
 export const DEFAULT_OPTIONS: RiverOptions = {
+  demoData: 'whenNoData',
   channels: [],
   defaultColorScale: 'turbo',
   showLegend: true,

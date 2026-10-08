@@ -1,7 +1,7 @@
 import React from 'react';
-import { render, screen } from '@testing-library/react';
+import { cleanup, render, screen } from '@testing-library/react';
 import { dateTime, FieldType, LoadingState, type PanelProps, toDataFrame } from '@grafana/data';
-import { GaugePanel } from '../GaugePanel';
+import { GAUGE_NO_DATA_MESSAGE, GaugePanel } from '../GaugePanel';
 import { DEFAULT_OPTIONS, type GaugeOptions } from '../types';
 
 jest.mock('@grafana/runtime', () => ({
@@ -123,11 +123,38 @@ describe('GaugePanel', () => {
     expect(calls.fillText ?? 0).toBe(0);
   });
 
-  it('shows the error view without numeric data', () => {
-    const props = makeProps({});
+  it('shows the error view with a helpful message without numeric data when demo data is off', () => {
+    const props = makeProps({ demoData: 'off' });
     props.data.series = [toDataFrame({ fields: [{ name: 's', type: FieldType.string, values: ['a'] }] })];
     render(<GaugePanel {...props} />);
-    expect(screen.getByTestId('error-view')).toBeInTheDocument();
+    expect(screen.getByTestId('error-view')).toHaveTextContent(GAUGE_NO_DATA_MESSAGE);
+    expect(screen.queryByTestId('impact-demo-badge')).not.toBeInTheDocument();
+  });
+
+  it('renders generated demo data with the badge when the query is empty (default: when no data)', () => {
+    const props = makeProps({});
+    props.data.series = [];
+    render(<GaugePanel {...props} />);
+    expect(screen.queryByTestId('error-view')).not.toBeInTheDocument();
+    expect(screen.getByTestId('impact-demo-badge')).toBeInTheDocument();
+    expect(screen.getByTestId('impact-gauge-canvas').getAttribute('aria-label')).toMatch(/kW/);
+    expect(calls.arc).toBeGreaterThan(0);
+  });
+
+  it('ignores the query in always and hides the badge below 160 px', () => {
+    render(<GaugePanel {...makeProps({ demoData: 'always' })} />);
+    // The real frame's latest value is -12.5; demo data shows something else.
+    expect(screen.getByTestId('impact-gauge-canvas').getAttribute('aria-label')).not.toContain('-12.5');
+    expect(screen.getByTestId('impact-demo-badge')).toBeInTheDocument();
+    cleanup();
+    render(<GaugePanel {...makeProps({ demoData: 'always' }, 150, 150)} />);
+    expect(screen.queryByTestId('impact-demo-badge')).not.toBeInTheDocument();
+  });
+
+  it('keeps real data and no badge when the query has data in when-no-data mode', () => {
+    render(<GaugePanel {...makeProps({ demoData: 'whenNoData' })} />);
+    expect(screen.getByTestId('impact-gauge-canvas').getAttribute('aria-label')).toContain('-12.5');
+    expect(screen.queryByTestId('impact-demo-badge')).not.toBeInTheDocument();
   });
 
   it('runs the shared frame loop in live mode and redraws the live layer per frame', () => {

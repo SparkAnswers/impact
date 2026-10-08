@@ -1,3 +1,4 @@
+import { DEMO_MODE_CHOICES, DEMO_MODE_DESCRIPTION } from '../../shared/demo';
 import { MOTION_PREFERENCE_CHOICES, MOTION_PREFERENCE_DESCRIPTION } from '../../shared/motion';
 import { FieldColorModeId, FieldConfigProperty, FieldType, PanelPlugin } from '@grafana/data';
 import { GaugePanel } from './GaugePanel';
@@ -35,6 +36,14 @@ export const plugin = new PanelPlugin<GaugeOptions>(GaugePanel)
         description: 'Numeric field to display. Defaults to the first numeric field of the first series.',
         category: CAT_DATA,
         settings: { filter: (f) => f.type === FieldType.number, noFieldsMessage: 'No numeric fields found' },
+      })
+      .addRadio({
+        path: 'demoData',
+        name: 'Demo data',
+        description: DEMO_MODE_DESCRIPTION,
+        category: CAT_DATA,
+        defaultValue: DEFAULT_OPTIONS.demoData,
+        settings: { options: DEMO_MODE_CHOICES },
       })
 
       // Appearance

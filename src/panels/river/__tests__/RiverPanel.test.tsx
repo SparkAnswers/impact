@@ -1,12 +1,12 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react';
 import { type DataFrame, FieldType, LoadingState, type PanelProps, getDefaultTimeRange, toDataFrame } from '@grafana/data';
-import { RiverPanel } from '../RiverPanel';
+import { RIVER_NO_DATA_MESSAGE, RiverPanel } from '../RiverPanel';
 import { DEFAULT_OPTIONS, type RiverOptions, createChannel } from '../types';
 import { presetWaypoints } from '../lib/path';
 
 jest.mock('@grafana/runtime', () => ({
-  PanelDataErrorView: () => <div data-testid="error-view">No data</div>,
+  PanelDataErrorView: ({ message }: { message?: string }) => <div data-testid="error-view">{message ?? 'No data'}</div>,
 }));
 
 const frame = (refId: string, name: string, values: number[]): DataFrame =>
@@ -69,8 +69,26 @@ describe('RiverPanel', () => {
     const props = makeProps({ channels: [createChannel({ id: 'a', path: presetWaypoints('u'), editPath: true })] }, series);
     render(<RiverPanel {...props} />);
     expect(screen.getByTestId('river-path-editor')).toBeInTheDocument();
-    render(<RiverPanel {...makeProps({}, [])} />);
-    expect(screen.getByTestId('error-view')).toBeInTheDocument();
+    render(<RiverPanel {...makeProps({ demoData: 'off' }, [])} />);
+    expect(screen.getByTestId('error-view')).toHaveTextContent(RIVER_NO_DATA_MESSAGE);
+    expect(screen.queryByTestId('impact-demo-badge')).not.toBeInTheDocument();
+  });
+
+  it('renders generated demo data with the badge when the query is empty (default: when no data)', () => {
+    render(<RiverPanel {...makeProps({ caption: 'Now', captionValue: true }, [])} />);
+    expect(screen.queryByTestId('error-view')).not.toBeInTheDocument();
+    expect(screen.getByTestId('river-panel')).toBeInTheDocument();
+    expect(screen.getByTestId('impact-demo-badge')).toBeInTheDocument();
+    // The demo series carry a percent unit which the field pipeline turns into the caption value.
+    expect(screen.getAllByText(/%$/).length).toBeGreaterThan(0);
+  });
+
+  it('shows real data without the badge in when-no-data mode and demo data in always', () => {
+    const { unmount } = render(<RiverPanel {...makeProps({ captionValue: true, caption: 'x' }, series)} />);
+    expect(screen.queryByTestId('impact-demo-badge')).not.toBeInTheDocument();
+    unmount();
+    render(<RiverPanel {...makeProps({ demoData: 'always' }, series)} />);
+    expect(screen.getByTestId('impact-demo-badge')).toBeInTheDocument();
   });
 
   it('renders with default options and no channels configured', () => {

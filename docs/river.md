@@ -10,6 +10,9 @@ range *is* the river, flowing from the oldest sample at the start of the path to
 ## Data
 
 The panel reads **numeric fields** from the query result. Time fields are ignored (values are used in order).
+With **no query at all** the panel still renders: *Data > Demo data* defaults to *When no data*, which feeds
+generated series through the same field pipeline (unit, thresholds, overrides) and marks the panel with a
+"Demo data" pill. Add a query (or set the option to *Off*) to switch to real data.
 
 ### One series (default)
 
@@ -61,6 +64,7 @@ range) or *Fixed*. Legend ticks are formatted by the field display processor (un
 
 | Option                       | Description                                                                               |
 | ---------------------------- | ----------------------------------------------------------------------------------------- |
+| Data > Demo data             | Built-in generated data (three smooth 0..100 series). *When no data* (default): used only when the query returns no frames or no numeric field. *Always*: ignores the query. *Off*: never; the empty state says "Needs one or more numeric series". A "Demo data" pill marks generated data. |
 | Channels                     | List editor: add, remove, reorder channels. Each card has path, data, width, colour, particles and labels. |
 | Channel > Path               | Waypoints as normalised `x, y` pairs (0..1). Presets: Horizontal, S-curve, Diagonal, U. **Edit on canvas** shows draggable handles on the panel. |
 | Channel > Speed              | Series / Field / Fixed source for the values along the path.                              |

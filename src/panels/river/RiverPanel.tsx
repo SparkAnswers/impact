@@ -3,11 +3,12 @@ import { css } from '@emotion/css';
 import { type GrafanaTheme2, type PanelProps } from '@grafana/data';
 import { PanelDataErrorView } from '@grafana/runtime';
 import { useStyles2, useTheme2 } from '@grafana/ui';
+import { DemoBadge, rollingMultiSeries, useDemoFrames, type DemoGenerator } from '../../shared/demo';
 import { useMotionAllowed } from '../../shared/motion';
 import { ReducedMotionHint } from '../../shared/ReducedMotionHint';
 import { Legend } from './components/Legend';
 import { PathEditor } from './components/PathEditor';
-import { bindChannels, effectiveChannels } from './lib/data';
+import { bindChannels, effectiveChannels, getNumericFields } from './lib/data';
 import { applyValueToken, displayFor, formatValue, isSafeImageUrl, legendFormatter, mapperFor } from './lib/format';
 import { pointAt } from './lib/path';
 import { ParticleSystem, allocateParticles, buildChannelGeometry, paintRibbon, trailKeep } from './lib/render';
@@ -79,8 +80,18 @@ const getStyles = (theme: GrafanaTheme2, onImage: boolean) => {
   };
 };
 
+/** Demo data: three smooth 0..100 series (first one feeds the default channel; lanes and A/B/C bindings get all three). */
+const demoGenerator: DemoGenerator = (w) =>
+  rollingMultiSeries(3, w.now, w.durationMs, Math.max(w.stepMs, Math.ceil(w.durationMs / 240_000) * 1000), {
+    unit: 'percent',
+  });
+/** Real data counts as usable when it has at least one numeric field. */
+const hasNumericField = (series: Parameters<typeof getNumericFields>[0]) => getNumericFields(series).length > 0;
+
+export const RIVER_NO_DATA_MESSAGE = 'Needs one or more numeric series';
+
 export const RiverPanel: React.FC<PanelProps<RiverOptions>> = (props) => {
-  const { data, width, height, fieldConfig, replaceVariables, onOptionsChange, timeZone, id } = props;
+  const { data, width, height, fieldConfig, replaceVariables, onOptionsChange, timeZone, timeRange, id } = props;
   const options = useMemo(() => ({ ...DEFAULT_OPTIONS, ...props.options }), [props.options]);
   const theme = useTheme2();
   const onImage = options.background === 'image' && isSafeImageUrl(options.backgroundUrl);
@@ -89,8 +100,18 @@ export const RiverPanel: React.FC<PanelProps<RiverOptions>> = (props) => {
   const motionOn = useMotionAllowed(options.animate, options.reducedMotion);
   const [loadedBg, setLoadedBg] = useState<{ url: string; img: HTMLImageElement } | null>(null);
 
+  // Generated data when the query has nothing usable (or always), through the same field-config pipeline.
+  const { frames, isDemo } = useDemoFrames(data, options.demoData, demoGenerator, {
+    fieldConfig,
+    replaceVariables,
+    theme,
+    timeZone,
+    timeRange,
+    isUsable: hasNumericField,
+  });
+
   const channels = useMemo(() => effectiveChannels(options), [options]);
-  const bound = useMemo(() => bindChannels(channels, data.series), [channels, data.series]);
+  const bound = useMemo(() => bindChannels(channels, frames), [channels, frames]);
   const geometries = useMemo(
     () => bound.map((b) => buildChannelGeometry(b, mapperFor(b, fieldConfig, theme), width, height)),
     [bound, fieldConfig, theme, width, height]
@@ -261,8 +282,8 @@ export const RiverPanel: React.FC<PanelProps<RiverOptions>> = (props) => {
     [onOptionsChange, options]
   );
 
-  if (data.series.length === 0 && !channels.some((c) => c.speedSource?.mode === 'fixed')) {
-    return <PanelDataErrorView panelId={id} data={data} needsNumberField />;
+  if (!hasNumericField(frames) && !channels.some((c) => c.speedSource?.mode === 'fixed')) {
+    return <PanelDataErrorView panelId={id} data={data} fieldConfig={fieldConfig} needsNumberField message={RIVER_NO_DATA_MESSAGE} />;
   }
 
   const text = (s: string) => applyValueToken(replaceVariables(s ?? ''), latestText);
@@ -328,6 +349,7 @@ export const RiverPanel: React.FC<PanelProps<RiverOptions>> = (props) => {
         </>
       ) : null}
       {editing.length > 0 ? <PathEditor width={width} height={height} channels={editing} onChange={onPathChange} /> : null}
+      <DemoBadge visible={isDemo} width={width} />
       <ReducedMotionHint animationEnabled={options.animate} preference={options.reducedMotion} width={width} />
     </div>
   );

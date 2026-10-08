@@ -16,9 +16,17 @@ no query at all (fresh Grafana, Kubernetes without provisioning, screenshots, te
 All generators take a `seed` (default differs per generator) and return the same values for the same
 arguments, so tests can snapshot them and animations replay identically.
 
-## Intended "Demo data" option
+| `rollingSignedPowerSeries(now, durationMs, stepMs, opts?)` | like `signedPowerSeries`, but values are a function of absolute time (`signedPowerAt`) and timestamps snap to the step grid, so regenerating later just slides the window | Power Gauge demo data (stream / live motion) |
+| `rollingMultiSeries(n, now, durationMs, stepMs, opts?)` | like `multiSeries`, time-anchored (`smoothNoise` + slow cycles) | Flow River demo data |
+| `deviceTableWithStyles(n, opts?)` | `deviceTable` with the `style` column cycling through every bar style | Status Bars demo data |
 
-Each panel will add an option (`Data > Source: Query | Demo`) that, when set to _Demo_, ignores
-`data.series` and feeds the matching generator (with `now = Date.now()` rounded to the step and the
-panel's time range as `durationMs`) into the normal data-shaping path. The panels own that wiring; this
-folder only provides the frames. Keep generators pure: no `Date.now()`, no `Math.random()`, no DOM.
+## The "Demo data" option (`useDemoData.ts`, `DemoBadge.tsx`)
+
+The gauge, river and bars panels expose `Data > Demo data: Off | When no data | Always` (default
+_When no data_). `useDemoFrames(data, mode, generator, deps)` returns `{ frames, isDemo }`: the query
+result when it is usable (or the mode is _Off_), otherwise the generator's frames pushed through
+`applyFieldOverrides` with the panel's field config, `replaceVariables`, theme and time zone, so units,
+decimals, thresholds, mappings and overrides behave exactly as for real data. The window ends at the
+panel time range end (falling back to `Date.now()`), is at least 15 minutes long and has a 1 s cadence
+for short ranges; it is regenerated on every `PanelData` / time range change. `DemoBadge` is the small
+"Demo data" pill (hidden under 160 px). Keep generators pure: no `Date.now()`, no `Math.random()`, no DOM.

@@ -1,4 +1,5 @@
 import { FieldConfigProperty, FieldType, PanelPlugin, ReducerID, ThresholdsMode } from '@grafana/data';
+import { DEMO_MODE_CHOICES, DEMO_MODE_DESCRIPTION } from '../../shared/demo';
 import { MOTION_PREFERENCE_CHOICES, MOTION_PREFERENCE_DESCRIPTION } from '../../shared/motion';
 import { BarsPanel } from './BarsPanel';
 import { ListEditor } from './editors/ListEditor';
@@ -16,6 +17,7 @@ const STYLE_LABELS: Record<string, string> = {
 };
 const styleOptions = BAR_STYLES.map((s) => ({ value: s, label: STYLE_LABELS[s] }));
 
+const DATA = ['Data'];
 const COLUMNS = ['Columns'];
 const BAR = ['Bar'];
 const TABLE = ['Table'];
@@ -56,6 +58,15 @@ export const plugin = new PanelPlugin<BarsOptions, BarsFieldConfig>(BarsPanel)
   })
   .setPanelOptions((builder) => {
     builder
+      // Data
+      .addRadio({
+        path: 'demoData',
+        name: 'Demo data',
+        description: DEMO_MODE_DESCRIPTION,
+        category: DATA,
+        defaultValue: DEFAULT_OPTIONS.demoData,
+        settings: { options: DEMO_MODE_CHOICES },
+      })
       // Columns
       .addFieldNamePicker({
         path: 'nameField',

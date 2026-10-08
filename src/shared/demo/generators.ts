@@ -254,3 +254,123 @@ export function edgeTable(opts: SeriesOptions = {}): DataFrame {
     ],
   });
 }
+
+// ---- Time-anchored ("rolling") generators ---------------------------------------------------------
+// The generators above shape their series over the requested window, so moving `now` reshapes them.
+// The ones below are pure functions of the absolute timestamp: regenerating for a later `now` yields
+// the same values at the same instants, so a panel can regenerate on every refresh and its history
+// simply slides (stream / live-motion modes keep working with no jumps).
+
+/** One deterministic unit value for an integer lattice point. */
+function latticeUnit(i: number, seed: number): number {
+  return seededRandom(Math.imul(i, 7919) + Math.imul(seed, 104729))();
+}
+
+/**
+ * Smooth seeded value noise over absolute time, in -1..1. Continuous in `t`; `periodMs` sets how
+ * quickly it wanders (one lattice point per period). Same `t`, `periodMs` and `seed` give the same value.
+ */
+export function smoothNoise(t: number, periodMs: number, seed = 1): number {
+  const x = t / Math.max(1, periodMs);
+  const i = Math.floor(x);
+  const f = x - i;
+  const s = f * f * (3 - 2 * f);
+  const a = latticeUnit(i, seed);
+  const b = latticeUnit(i + 1, seed);
+  return (a + (b - a) * s) * 2 - 1;
+}
+
+/** Timestamps on the `stepMs` grid ending at (or just before) `now`. */
+function gridTimestamps(now: number, durationMs: number, stepMs: number): number[] {
+  const step = Math.max(1, stepMs);
+  return timestamps(Math.floor(now / step) * step, durationMs, step);
+}
+
+/**
+ * Signed net power (kW) at an absolute time: a 15 minute swell, a faster ripple and smooth noise,
+ * crossing zero (import vs export). Range -20..20.
+ */
+export function signedPowerAt(t: number, seed = 1): number {
+  const swell = Math.sin((t / 900_000) * Math.PI * 2) * 12;
+  const ripple = Math.sin((t / 128_000) * Math.PI * 2) * 3.5;
+  const noise = smoothNoise(t, 20_000, seed) * 2.5 + smoothNoise(t, 4_000, seed + 7) * 0.8;
+  return round(Math.max(-20, Math.min(20, swell + ripple + noise)), 2);
+}
+
+/** Same shape as `signedPowerSeries` but anchored to absolute time: timestamps snap to the step grid. */
+export function rollingSignedPowerSeries(
+  now: number,
+  durationMs: number,
+  stepMs: number,
+  opts: SeriesOptions = {}
+): DataFrame {
+  const seed = opts.seed ?? 1;
+  const time = gridTimestamps(now, durationMs, stepMs);
+  const values = time.map((t) => signedPowerAt(t, seed));
+  return series(opts.name ?? 'power', time, values, opts.unit ?? 'kwatt', -20, 20);
+}
+
+/**
+ * Same shape as `multiSeries` but anchored to absolute time: `n` smooth frames in `min..max` sharing
+ * grid-snapped timestamps, each with its own slow cycle and noise.
+ */
+export function rollingMultiSeries(
+  n: number,
+  now: number,
+  durationMs: number,
+  stepMs: number,
+  opts: MultiSeriesOptions = {}
+): DataFrame[] {
+  const min = opts.min ?? 0;
+  const max = opts.max ?? 100;
+  const span = max - min;
+  const time = gridTimestamps(now, durationMs, stepMs);
+  const frames: DataFrame[] = [];
+  for (let s = 0; s < Math.max(0, n); s++) {
+    const seed = (opts.seed ?? 3) * 1000 + s;
+    const period = 600_000 + s * 260_000;
+    const phase = (s * Math.PI * 2) / 3;
+    const values = time.map((t) => {
+      const cycle = Math.sin((t / period) * Math.PI * 2 + phase) * 0.28;
+      const slow = smoothNoise(t, 90_000, seed) * 0.14;
+      const fast = smoothNoise(t, 12_000, seed + 11) * 0.05;
+      const v = min + span * (0.5 + cycle + slow + fast);
+      return round(Math.min(max, Math.max(min, v)), 2);
+    });
+    frames.push(series(opts.names?.[s] ?? `series-${s + 1}`, time, values, opts.unit, min, max));
+  }
+  return frames;
+}
+
+/** Every bar style the status bars support, in display order. */
+const ALL_BAR_STYLES = ['percent', 'segmented', 'striped', 'sweep', 'bidirectional', 'stacked', 'sparkline', 'pill'];
+
+/**
+ * Like `deviceTable` but the `style` column cycles through every bar style in order, so a demo table
+ * of 8+ rows shows each style at least once. Other columns are generated as in `deviceTable`.
+ */
+export function deviceTableWithStyles(n: number, opts: SeriesOptions & { now?: number } = {}): DataFrame {
+  const frame = deviceTable(n, opts);
+  const rnd = seededRandom((opts.seed ?? 4) + 17);
+  const style = frame.fields.find((f) => f.name === 'style');
+  const progress = frame.fields.find((f) => f.name === 'progress');
+  if (!style || !progress) {
+    return frame;
+  }
+  const styles: string[] = [];
+  const values: Array<number | null> = [];
+  for (let i = 0; i < frame.length; i++) {
+    const st = ALL_BAR_STYLES[i % ALL_BAR_STYLES.length];
+    styles.push(st);
+    if (st === 'sweep' || st === 'pill') {
+      values.push(null);
+    } else if (st === 'bidirectional') {
+      values.push(round((rnd() - 0.5) * 8, 1));
+    } else {
+      values.push(round(rnd() * 100, 0));
+    }
+  }
+  style.values = styles;
+  progress.values = values;
+  return frame;
+}

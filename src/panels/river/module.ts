@@ -1,3 +1,4 @@
+import { DEMO_MODE_CHOICES, DEMO_MODE_DESCRIPTION } from '../../shared/demo';
 import { MOTION_PREFERENCE_CHOICES, MOTION_PREFERENCE_DESCRIPTION } from '../../shared/motion';
 import { FieldConfigProperty, PanelPlugin, ThresholdsMode } from '@grafana/data';
 import { RiverPanel } from './RiverPanel';
@@ -24,6 +25,14 @@ export const plugin = new PanelPlugin<RiverOptions>(RiverPanel)
   })
   .setPanelOptions((builder) => {
     builder
+      .addRadio({
+        path: 'demoData',
+        name: 'Demo data',
+        description: DEMO_MODE_DESCRIPTION,
+        category: ['Data'],
+        defaultValue: DEFAULT_OPTIONS.demoData,
+        settings: { options: DEMO_MODE_CHOICES },
+      })
       .addCustomEditor({
         id: 'channels',
         path: 'channels',

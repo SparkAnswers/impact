@@ -563,6 +563,48 @@
         "animate": true,
         "reducedMotion": "always"
       }
+    },
+    {
+      "id": 11,
+      "type": "sparkanswers-impact-gauge-panel",
+      "title": "No query · demo data",
+      "description": "This panel's query returns no data (TestData 'No data points'; an empty target list would be replaced by a default random walk). Data → Demo data = When no data (the default) renders a generated signed power series through the normal field pipeline, with a 'Demo data' badge. Add a query and the real result takes over; set Demo data to Off to see the empty state instead.",
+      "gridPos": {
+        "x": 0,
+        "y": 40,
+        "w": 8,
+        "h": 12
+      },
+      "datasource": {
+        "type": "grafana-testdata-datasource",
+        "uid": "${DS_TESTDATA}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-testdata-datasource",
+            "uid": "${DS_TESTDATA}"
+          },
+          "scenarioId": "no_data_points"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "decimals": 1,
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "orange"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "demoData": "whenNoData",
+        "subtitleText": "Generated · last 15 min",
+        "historySource": "stream",
+        "streamDuration": 60
+      }
     }
   ]
 }
