@@ -74,6 +74,17 @@ The Gallery page (`src/app/Gallery.tsx`) can install the demo dashboards on any 
 Note for the Docker stack: Grafana records a plugin's file list when it loads it, so a rebuild that adds new
 chunk files (new lazy imports) returns 404 for them until the container restarts.
 
+## Quick start presets
+
+Every panel's first option group is **Quick start**: a grid of presets (`src/panels/<id>/presets.ts`) built on
+`src/shared/presets/`. A Grafana option editor can only change the option it is registered for, so the editor
+writes a request `{ preset, token }` under `options.quickStart` and the panel, which owns `onOptionsChange` and
+`onFieldConfigChange`, applies it through the `useQuickStart` hook: `applyPreset` merges the preset over the
+panel defaults (arrays replace, objects merge), carries the catalog's `keep` paths (field names, drawn diagrams,
+dragged positions) over from the current options, merges the preset's field defaults into
+`fieldConfig.defaults`, and records `applied: token`. Nothing runs unless a request is pending, so saved
+dashboards are not touched when they load.
+
 ## Rendering approaches
 
 | Panel | Technique |
@@ -97,6 +108,6 @@ All animation loops stop on unmount, pause while `document.hidden`, and fall bac
 ## Roadmap
 
 - Catalog submission and plugin signing.
-- Flow Designer: auto-layout, grouping, node images.
+- Flow Designer: node images, more auto-layout controls.
 - Flow River: per-channel trail layers, map tile backgrounds.
 - Status Bars: row click actions through data links on every column.

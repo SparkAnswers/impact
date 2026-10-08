@@ -3,10 +3,12 @@ import type { PanelProps } from '@grafana/data';
 import { PanelDataErrorView } from '@grafana/runtime';
 import { useTheme2 } from '@grafana/ui';
 import { DemoBadge, deviceTableWithStyles, useDemoFrames, type DemoGenerator } from '../../shared/demo';
+import { useQuickStart } from '../../shared/presets';
 import { ReducedMotionHint } from '../../shared/ReducedMotionHint';
 import { BarsTable } from './components/BarsTable';
 import { useMotionEnabled } from './components/useMotion';
 import { buildModel } from './lib/rows';
+import { BARS_PRESETS } from './presets';
 import type { BarsOptions } from './types';
 
 /** Demo data: a 12-row device table whose style column cycles through every bar style. */
@@ -24,8 +26,11 @@ export const BarsPanel: React.FC<PanelProps<BarsOptions>> = ({
   fieldConfig,
   replaceVariables,
   id,
+  onOptionsChange,
+  onFieldConfigChange,
 }) => {
   const theme = useTheme2();
+  useQuickStart(BARS_PRESETS, { options, fieldConfig, onOptionsChange, onFieldConfigChange });
   const animate = useMotionEnabled(options.animate, options.reducedMotion);
   // Generated data when the query has nothing usable (or always), through the same field-config pipeline.
   const { frames, isDemo } = useDemoFrames(data, options.demoData, demoGenerator, {

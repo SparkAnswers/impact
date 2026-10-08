@@ -1,6 +1,7 @@
 import type { DemoMode } from '../../shared/demo';
 import type { LayoutDirection } from '../../shared/graph/layout';
 import type { MotionPreference } from '../../shared/motion';
+import type { QuickStartState } from '../../shared/presets';
 
 /** Normalised waypoint, 0..1 in panel coordinates (x to the right, y downwards). */
 export interface Waypoint {
@@ -142,6 +143,8 @@ export interface NetworkOptions {
 }
 
 export interface RiverOptions {
+  /** Last Quick start preset request (see src/shared/presets). */
+  quickStart?: QuickStartState;
   /** Built-in generated data: never, only when the query has nothing usable, or always. */
   demoData: DemoMode;
   channelSource: ChannelSource;

@@ -1,10 +1,12 @@
 import { DEMO_MODE_CHOICES } from '../../shared/demo';
 import { MOTION_PREFERENCE_CHOICES, MOTION_PREFERENCE_DESCRIPTION } from '../../shared/motion';
+import { createQuickStartEditor, QUICK_START_CATEGORY, QUICK_START_DESCRIPTION } from '../../shared/presets';
 import { PanelPlugin, type SelectableValue } from '@grafana/data';
 import { FlowPanel } from './FlowPanel';
 import { InspectorEditor } from './editors/InspectorEditor';
 import { JsonEditor } from './editors/JsonEditor';
 import { OverridesEditor } from './editors/OverridesEditor';
+import { FLOW_PRESETS } from './presets';
 import { DEFAULT_OPTIONS, type FlowDiagram, type FlowOptions, type NodeOverride, type ValueMapTarget } from './types';
 
 const APPEARANCE = ['Appearance'];
@@ -32,6 +34,14 @@ export const plugin = new PanelPlugin<FlowOptions>(FlowPanel)
   })
   .setPanelOptions((builder) => {
     builder
+      .addCustomEditor({
+        id: 'quickStart',
+        path: 'quickStart',
+        name: 'Presets',
+        description: QUICK_START_DESCRIPTION,
+        category: QUICK_START_CATEGORY,
+        editor: createQuickStartEditor(FLOW_PRESETS),
+      })
       .addSelect({
         path: 'appearance.background',
         name: 'Background',

@@ -12,6 +12,7 @@ in `src/panels/<id>/` and is bundled automatically because it has its own `plugi
 - `components/`       sub-components
 - `lib/`              pure, framework-free logic (geometry, colour scales, data shaping). Unit test this.
 - `editors/`          custom option editors (`StandardEditorProps`)
+- `presets.ts`        Quick start catalog (`PresetCatalog` from `src/shared/presets`): complete option bundles, applied by the panel
 - `__tests__/`        jest tests (`*.test.ts(x)`), use `@testing-library/react` for components
 - `img/logo.svg`      icon for the panel picker (already present, replace with a panel-specific SVG)
 

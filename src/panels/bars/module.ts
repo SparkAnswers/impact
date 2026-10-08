@@ -1,8 +1,10 @@
 import { FieldConfigProperty, FieldType, PanelPlugin, ReducerID, ThresholdsMode } from '@grafana/data';
 import { DEMO_MODE_CHOICES, DEMO_MODE_DESCRIPTION } from '../../shared/demo';
 import { MOTION_PREFERENCE_CHOICES, MOTION_PREFERENCE_DESCRIPTION } from '../../shared/motion';
+import { createQuickStartEditor, QUICK_START_CATEGORY, QUICK_START_DESCRIPTION } from '../../shared/presets';
 import { BarsPanel } from './BarsPanel';
 import { ListEditor } from './editors/ListEditor';
+import { BARS_PRESETS } from './presets';
 import { BAR_STYLES, DEFAULT_OPTIONS, type BarsFieldConfig, type BarsOptions } from './types';
 
 const STYLE_LABELS: Record<string, string> = {
@@ -58,6 +60,14 @@ export const plugin = new PanelPlugin<BarsOptions, BarsFieldConfig>(BarsPanel)
   })
   .setPanelOptions((builder) => {
     builder
+      .addCustomEditor({
+        id: 'quickStart',
+        path: 'quickStart',
+        name: 'Presets',
+        description: QUICK_START_DESCRIPTION,
+        category: QUICK_START_CATEGORY,
+        editor: createQuickStartEditor(BARS_PRESETS),
+      })
       // Data
       .addRadio({
         path: 'demoData',

@@ -72,6 +72,8 @@ Grafana Cloud does not accept unsigned plugins; that needs the catalog listing, 
 
 All panels use the standard field options (unit, decimals, min/max, thresholds, colour scheme, value mappings, overrides) for every number they display, so nothing is hard-coded to a particular unit. Free-text labels accept dashboard variables. Each panel has a **Background** option (panel, transparent or solid colour) and honours Grafana's own transparent toggle. Each panel has an **Animation** toggle; animation also pauses automatically in hidden tabs and for users who prefer reduced motion, unless the panel's *Reduced motion* option is set to *Always animate*.
 
+Every panel also opens with a **Quick start** group: six presets per panel (for example *Service graph from data*, *300° arc with thresholds*, *Parallel lanes*, *Compact gradient*) that set every option plus the matching unit, range and thresholds with one click, keeping your query, field choices and drawn items. See the per-panel docs for the full list.
+
 ### Flow Designer
 
 Draws a diagram you design inside the panel, or builds one from query results. Nodes show the last value of a bound field; edges can map a field to particle speed, colour (via thresholds) or width. Turn on **Layout -> Edit layout** to drag nodes, draw edges from node ports, reshape curves with control-point handles, pan, zoom, undo and redo.

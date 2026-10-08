@@ -67,6 +67,22 @@ per data update.
   feeds a generated series through the same field pipeline (unit, decimals, thresholds, overrides) and
   marks the panel with a "Demo data" pill. Add a query (or set the option to *Off*) to switch to real data.
 
+## Quick start
+
+The first option group, **Quick start > Presets**, holds ready-made configurations. One click sets every
+option of the panel, plus the unit, range, decimals or thresholds the preset defines in the standard field
+options, to a complete look you can then tune. A preset starts from the panel defaults, not from the current options, so the
+result is the same wherever you start from; what survives is the Field choice and the Demo data choice.
+
+| Preset | What you get |
+| --- | --- |
+| Signed power, live | zero mark on the ring, streaming history, kW with a -50..200 range |
+| 300° arc with thresholds | near-full linear ring coloured by thresholds, 0..100 % |
+| Semicircle, net import/export | half ring, custom ticks, summed secondary line in kWh |
+| Last 60 samples, log scale | history of the newest samples, log compression, field colour |
+| Static, no history | short arc, big value, no chart, no animation |
+| Compact | no secondary line, soft glow, no tick labels |
+
 ## Options
 
 Standard field options used: Unit, Decimals, Min, Max, Thresholds, Color, Display name.

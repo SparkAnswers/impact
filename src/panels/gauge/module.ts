@@ -1,8 +1,10 @@
 import { DEMO_MODE_CHOICES, DEMO_MODE_DESCRIPTION } from '../../shared/demo';
 import { MOTION_PREFERENCE_CHOICES, MOTION_PREFERENCE_DESCRIPTION } from '../../shared/motion';
+import { createQuickStartEditor, QUICK_START_CATEGORY, QUICK_START_DESCRIPTION } from '../../shared/presets';
 import { FieldColorModeId, FieldConfigProperty, FieldType, PanelPlugin } from '@grafana/data';
 import { GaugePanel } from './GaugePanel';
 import { REDUCER_OPTIONS } from './lib/reducers';
+import { GAUGE_PRESETS } from './presets';
 import { DEFAULT_OPTIONS, type GaugeOptions } from './types';
 
 const CAT_DATA = ['Data'];
@@ -28,6 +30,14 @@ export const plugin = new PanelPlugin<GaugeOptions>(GaugePanel)
   })
   .setPanelOptions((builder) => {
     builder
+      .addCustomEditor({
+        id: 'quickStart',
+        path: 'quickStart',
+        name: 'Presets',
+        description: QUICK_START_DESCRIPTION,
+        category: QUICK_START_CATEGORY,
+        editor: createQuickStartEditor(GAUGE_PRESETS),
+      })
       .addFieldNamePicker({
         path: 'fieldName',
         name: 'Field',

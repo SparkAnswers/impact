@@ -5,9 +5,11 @@ import { locationService } from '@grafana/runtime';
 import { Button, usePanelContext, useStyles2, useTheme2 } from '@grafana/ui';
 import { DemoBadge, edgeTable, useDemoFrames, type DemoGenerator } from '../../shared/demo';
 import { useMotionAllowed } from '../../shared/motion';
+import { useQuickStart } from '../../shared/presets';
 import { ReducedMotionHint } from '../../shared/ReducedMotionHint';
 import { FlowCanvas } from './components/FlowCanvas';
 import { Toolbar, type Tool } from './components/Toolbar';
+import { FLOW_PRESETS } from './presets';
 import { ZoomControls } from './components/ZoomControls';
 import { formatValue, indexFields } from './lib/data';
 import { buildDataDiagram, mergeOverrides, nodeSize, overridesFromMove, shortLabel } from './lib/datadriven';
@@ -134,6 +136,7 @@ const getStyles = (theme: GrafanaTheme2) => ({
 export const FlowPanel: React.FC<PanelProps<FlowOptions>> = ({
   options,
   onOptionsChange,
+  onFieldConfigChange,
   data,
   width,
   height,
@@ -143,6 +146,7 @@ export const FlowPanel: React.FC<PanelProps<FlowOptions>> = ({
   timeRange,
 }) => {
   const theme = useTheme2();
+  useQuickStart(FLOW_PRESETS, { options, fieldConfig, onOptionsChange, onFieldConfigChange });
   const styles = useStyles2(getStyles);
   const uid = useId().replace(/[^a-zA-Z0-9]/g, '');
   const panelContext = usePanelContext();

@@ -239,6 +239,22 @@ relative URLs are opened.
    diagram is fitted to the panel (unless **Fit to panel** is disabled, in which case the saved
    viewport is used).
 
+## Quick start
+
+The first option group, **Quick start > Presets**, holds ready-made configurations. One click sets every
+option of the panel, plus the unit, range, decimals or thresholds the preset defines in the standard field
+options, to a complete look you can then tune. A preset starts from the panel defaults, not from the current options, so the
+result is the same wherever you start from; what survives is the drawn diagram, manual overrides, link settings, the edge/node field names, the data-driven settings (source, layout, value mapping...) when the preset does not set them, and the Demo data choice.
+
+| Preset | What you get |
+| --- | --- |
+| Site power flow | hand-drawn example diagram with live kW values (unit and thresholds set), the one from the showcase |
+| Service graph from data | data-driven, layered left to right, request rate drives particle speed and is printed on edges |
+| Radial hub | data-driven radial layout, edge value sets the colour through thresholds |
+| Topology, width by value | data-driven layers with group boxes, bytes drive the edge width |
+| Minimal outline | outlined nodes on a line grid; keeps the diagram and data settings |
+| Static, no animation | plain background, no particles |
+
 ## Options
 
 | Option | Description |

@@ -17,6 +17,7 @@ import { locationService, PanelDataErrorView } from '@grafana/runtime';
 import { useTheme2 } from '@grafana/ui';
 import { DemoBadge, rollingSignedPowerSeries, useDemoFrames, type DemoGenerator } from '../../shared/demo';
 import { useMotionAllowed } from '../../shared/motion';
+import { useQuickStart } from '../../shared/presets';
 import { ReducedMotionHint } from '../../shared/ReducedMotionHint';
 import { extractSeries, pickField } from './lib/data';
 import {
@@ -52,6 +53,7 @@ import { reduceValues } from './lib/reducers';
 import { normalizeScale, valueToAngle } from './lib/scale';
 import { subscribeFrames } from './lib/scheduler';
 import { autoRange, decimalsNeeded, generateTicks, parseTickList } from './lib/ticks';
+import { GAUGE_PRESETS } from './presets';
 import { DEFAULT_OPTIONS, type GaugeOptions } from './types';
 import { useAnimatedValue } from './useAnimatedValue';
 
@@ -188,9 +190,12 @@ export const GaugePanel: React.FC<PanelProps<GaugeOptions>> = ({
   timeZone,
   replaceVariables,
   transparent,
+  onOptionsChange,
+  onFieldConfigChange,
 }) => {
   const theme = useTheme2();
   const options = useMemo(() => ({ ...DEFAULT_OPTIONS, ...rawOptions }), [rawOptions]);
+  useQuickStart(GAUGE_PRESETS, { options, fieldConfig, onOptionsChange, onFieldConfigChange });
   const wrapRef = useRef<HTMLDivElement>(null);
   const staticRef = useRef<HTMLCanvasElement>(null);
   const liveRef = useRef<HTMLCanvasElement>(null);

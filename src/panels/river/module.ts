@@ -1,10 +1,12 @@
 import { DEMO_MODE_CHOICES, DEMO_MODE_DESCRIPTION } from '../../shared/demo';
 import { MOTION_PREFERENCE_CHOICES, MOTION_PREFERENCE_DESCRIPTION } from '../../shared/motion';
+import { createQuickStartEditor, QUICK_START_CATEGORY, QUICK_START_DESCRIPTION } from '../../shared/presets';
 import { FieldConfigProperty, PanelPlugin, ThresholdsMode } from '@grafana/data';
 import { RiverPanel } from './RiverPanel';
 import { ChannelsEditor } from './editors/ChannelsEditor';
 import { PositionsEditor } from './editors/PositionsEditor';
 import { COLOR_PRESET_OPTIONS } from './lib/colors';
+import { RIVER_PRESETS } from './presets';
 import { DEFAULT_NETWORK, DEFAULT_OPTIONS, type RiverOptions } from './types';
 
 const NETWORK = ['Network map'];
@@ -32,6 +34,14 @@ export const plugin = new PanelPlugin<RiverOptions>(RiverPanel)
   })
   .setPanelOptions((builder) => {
     builder
+      .addCustomEditor({
+        id: 'quickStart',
+        path: 'quickStart',
+        name: 'Presets',
+        description: QUICK_START_DESCRIPTION,
+        category: QUICK_START_CATEGORY,
+        editor: createQuickStartEditor(RIVER_PRESETS),
+      })
       .addRadio({
         path: 'demoData',
         name: 'Demo data',

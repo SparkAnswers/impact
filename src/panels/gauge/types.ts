@@ -1,5 +1,6 @@
 import type { DemoMode } from '../../shared/demo';
 import type { MotionPreference } from '../../shared/motion';
+import type { QuickStartState } from '../../shared/presets';
 import type { HistorySource } from './lib/data';
 import type { SecondaryReducer } from './lib/reducers';
 import type { ScaleKind } from './lib/scale';
@@ -15,6 +16,8 @@ export type BackgroundMode = 'panel' | 'transparent' | 'solid';
 export type PlaybackDelayMode = 'auto' | 'fixed';
 
 export interface GaugeOptions {
+  /** Last Quick start preset request (see src/shared/presets). */
+  quickStart?: QuickStartState;
   // Data
   fieldName?: string;
   /** Built-in generated data: never, only when the query has nothing usable, or always. */

@@ -5,6 +5,7 @@ import { PanelDataErrorView } from '@grafana/runtime';
 import { useStyles2, useTheme2 } from '@grafana/ui';
 import { DemoBadge, rollingMultiSeries, useDemoFrames, type DemoGenerator } from '../../shared/demo';
 import { useMotionAllowed } from '../../shared/motion';
+import { useQuickStart } from '../../shared/presets';
 import { ReducedMotionHint } from '../../shared/ReducedMotionHint';
 import { Legend } from './components/Legend';
 import { NodeEditor } from './components/NodeEditor';
@@ -14,6 +15,7 @@ import { applyValueToken, displayFor, formatValue, isSafeImageUrl, legendFormatt
 import { buildNetwork, demoNetworkFrames, hasEdges, networkParticleCounts, spreadLabels } from './lib/network';
 import { pointAt } from './lib/path';
 import { ParticleSystem, allocateParticles, buildChannelGeometry, paintNodes, paintRibbon, trailKeep } from './lib/render';
+import { RIVER_PRESETS } from './presets';
 import { DEFAULT_NETWORK, DEFAULT_OPTIONS, MAX_TOTAL_PARTICLES, type RiverOptions, type Waypoint } from './types';
 
 /**
@@ -130,8 +132,9 @@ export const RIVER_NO_DATA_MESSAGE = 'Needs one or more numeric series';
 export const RIVER_NO_EDGES_MESSAGE = 'Needs edges: a source and a target field (or series labels) per link';
 
 export const RiverPanel: React.FC<PanelProps<RiverOptions>> = (props) => {
-  const { data, width, height, fieldConfig, replaceVariables, onOptionsChange, timeZone, timeRange, id } = props;
+  const { data, width, height, fieldConfig, replaceVariables, onOptionsChange, onFieldConfigChange, timeZone, timeRange, id } = props;
   const options = useMemo(() => ({ ...DEFAULT_OPTIONS, ...props.options }), [props.options]);
+  useQuickStart(RIVER_PRESETS, { options, fieldConfig, onOptionsChange, onFieldConfigChange });
   const theme = useTheme2();
   const onImage = options.background === 'image' && isSafeImageUrl(options.backgroundUrl);
   const styles = useStyles2(getStyles, onImage);

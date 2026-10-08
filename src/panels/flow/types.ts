@@ -1,5 +1,6 @@
 import type { DemoMode } from '../../shared/demo';
 import type { MotionPreference } from '../../shared/motion';
+import type { QuickStartState } from '../../shared/presets';
 
 /**
  * Data model for the Flow Designer panel. Everything here is stored as JSON in panel options.
@@ -169,6 +170,8 @@ export interface InteractionOptions {
 }
 
 export interface FlowOptions {
+  /** Last Quick start preset request (see src/shared/presets). */
+  quickStart?: QuickStartState;
   interaction?: InteractionOptions;
   links?: LinkOptions;
   appearance: {

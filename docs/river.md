@@ -133,6 +133,22 @@ max by (device, status) (device_up)
 With range queries (series shape) the panel uses the last value of each series and matches the width series by its
 metric name, so `Width field = link_capacity_bits` works for both shapes.
 
+## Quick start
+
+The first option group, **Quick start > Presets**, holds ready-made configurations. One click sets every
+option of the panel, plus the unit, range, decimals or thresholds the preset defines in the standard field
+options, to a complete look you can then tune. A preset starts from the panel defaults, not from the current options, so the
+result is the same wherever you start from; what survives is the background image URL, the network field names, typed and dragged node positions and the Demo data choice.
+
+| Preset | What you get |
+| --- | --- |
+| Single stream | one wide S-curve on the first series with labelled intake and outlet |
+| Three channels | three straight pipes bound to series A, B, C; the third flows backwards when negative |
+| Parallel lanes | every series as a lane inside one diagonal river |
+| Thresholds, transparent | a wave coloured by the standard thresholds over a see-through panel |
+| Network map, auto layout | one channel per source/target link, nodes laid out left to right |
+| Network map, pinned nodes | links over typed node positions, a second value sets the width |
+
 ## Options
 
 | Option                       | Description                                                                               |

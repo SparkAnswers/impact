@@ -38,6 +38,22 @@ Each numeric series becomes one row: the name is the series display name, the va
 Standard field config applies: unit, decimals, min, max, no-value text, display name, colour, thresholds,
 value mappings (text, colour and icon for statuses) and data links.
 
+## Quick start
+
+The first option group, **Quick start > Presets**, holds ready-made configurations. One click sets every
+option of the panel, plus the unit, range, decimals or thresholds the preset defines in the standard field
+options, to a complete look you can then tune. A preset starts from the panel defaults, not from the current options, so the
+result is the same wherever you start from; what survives is every column choice (name, value, status, time, sparkline, style, stack and extra fields) and the Demo data choice.
+
+| Preset | What you get |
+| --- | --- |
+| Device list | threshold-coloured percent bars, status dots, checkboxes, footer |
+| Series with sparklines | one row per time series, last value on a sparkline, sorted by value |
+| Stacked | every numeric column stacked in one bar |
+| Bidirectional | bars centred on zero with their own colours |
+| Compact gradient | dense rows, thin flat bars with a gradient, no animation |
+| Status pills | a coloured pill per row from the value mappings, no bar |
+
 ## Options
 
 | Option                                                                      | Description                                                                                                                                                          |

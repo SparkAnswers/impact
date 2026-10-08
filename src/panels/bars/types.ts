@@ -1,6 +1,7 @@
 import { ReducerID } from '@grafana/data';
 import type { DemoMode } from '../../shared/demo';
 import type { MotionPreference } from '../../shared/motion';
+import type { QuickStartState } from '../../shared/presets';
 
 /** Visual style of the bar rendered in the "Progress" column of a row. */
 export type BarStyle =
@@ -39,6 +40,8 @@ export interface BarsFieldConfig {
 }
 
 export interface BarsOptions {
+  /** Last Quick start preset request (see src/shared/presets). */
+  quickStart?: QuickStartState;
   // Data
   /** Built-in generated data: never, only when the query has nothing usable, or always. */
   demoData: DemoMode;
