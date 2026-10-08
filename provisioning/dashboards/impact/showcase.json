@@ -1361,6 +1361,198 @@
           }
         ]
       }
+    },
+    {
+      "id": 8,
+      "type": "sparkanswers-impact-flow-panel",
+      "title": "Flow Designer \u00b7 built from data (service graph)",
+      "gridPos": {
+        "x": 0,
+        "y": 48,
+        "w": 12,
+        "h": 12
+      },
+      "datasource": {
+        "type": "grafana-testdata-datasource",
+        "uid": "impact-testdata"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-testdata-datasource",
+            "uid": "impact-testdata"
+          },
+          "scenarioId": "csv_content",
+          "csvContent": "source,target,value,source_group,target_group\ngateway,auth,420,edge,core\ngateway,catalog,380,edge,core\ngateway,orders,210,edge,core\nauth,users-db,150,core,data\ncatalog,search,260,core,core\ncatalog,catalog-db,180,core,data\norders,payments,120,core,core\norders,inventory,160,core,core\norders,orders-db,140,core,data\ninventory,events,70,core,async\npayments,events,40,core,async\nevents,notifier,35,async,async\n"
+        },
+        {
+          "refId": "N",
+          "datasource": {
+            "type": "grafana-testdata-datasource",
+            "uid": "impact-testdata"
+          },
+          "scenarioId": "csv_content",
+          "csvContent": "id,label,status,value\ngateway,API gateway,ok,42\nauth,Auth,ok,12\ncatalog,Catalog,warn,31\nsearch,Search,ok,9\norders,Orders,ok,18\npayments,Payments,error,7\ninventory,Inventory,ok,14\nevents,Event bus,ok,22\nnotifier,Notifier,ok,3\nusers-db,Users DB,ok,2\ncatalog-db,Catalog DB,ok,4\norders-db,Orders DB,ok,3\n"
+        }
+      ],
+      "options": {
+        "appearance": {
+          "background": "dots",
+          "nodeStyle": "cards",
+          "fontSize": 12,
+          "edgeColor": "blue",
+          "particleSpeed": 1
+        },
+        "animation": {
+          "enabled": true,
+          "speed": 1,
+          "reducedMotion": "system"
+        },
+        "layout": {
+          "editMode": false,
+          "gridSize": 20,
+          "snap": true,
+          "autoFit": true
+        },
+        "diagram": {
+          "nodes": [],
+          "edges": [],
+          "viewport": {
+            "x": 0,
+            "y": 0,
+            "zoom": 1
+          },
+          "grid": {
+            "show": true,
+            "size": 20,
+            "snap": true
+          }
+        },
+        "data": {
+          "source": "data",
+          "sourceField": "source",
+          "targetField": "target",
+          "valueField": "",
+          "value2Field": "",
+          "labelField": "label",
+          "sourceGroupField": "source_group",
+          "targetGroupField": "target_group",
+          "nodeIdField": "id",
+          "nodeLabelField": "label",
+          "nodeGroupField": "group",
+          "nodeStatusField": "status",
+          "nodeValueField": "",
+          "valueMap": "speed",
+          "value2Map": "color",
+          "showEdgeValues": true,
+          "topN": 200,
+          "layout": "lr",
+          "layerGap": 120,
+          "nodeGap": 24,
+          "groupBoxes": true,
+          "overrides": {}
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "decimals": 0
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 9,
+      "type": "sparkanswers-impact-river-panel",
+      "title": "Flow River \u00b7 network map from data",
+      "description": "Channel source = Network map: one channel per link from a source/target/value table (query A), nodes decorated by a node table (query N). Layered left-to-right auto layout; the two reverse pairs (Dist 2 \u2194 Access 2, Dist 3 \u2194 Access 3) are offset so both directions stay visible.",
+      "gridPos": {
+        "x": 12,
+        "y": 48,
+        "w": 12,
+        "h": 12
+      },
+      "datasource": {
+        "type": "grafana-testdata-datasource",
+        "uid": "impact-testdata"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-testdata-datasource",
+            "uid": "impact-testdata"
+          },
+          "scenarioId": "csv_content",
+          "csvContent": "source,target,value,width\ncore-a,dist-1,460,10\ncore-a,dist-2,390,10\ncore-b,dist-1,260,10\ncore-b,dist-2,410,10\ncore-b,dist-3,300,10\ndist-1,access-1,180,1\ndist-1,access-2,150,1\ndist-2,access-2,220,1\naccess-2,dist-2,140,1\ndist-2,access-3,170,1\ndist-3,access-3,130,1\naccess-3,dist-3,90,1\ndist-3,access-4,90,1\naccess-4,storage,60,25\n"
+        },
+        {
+          "refId": "N",
+          "datasource": {
+            "type": "grafana-testdata-datasource",
+            "uid": "impact-testdata"
+          },
+          "scenarioId": "csv_content",
+          "csvContent": "id,label,status\ncore-a,Core A,ok\ncore-b,Core B,ok\ndist-1,Dist 1,ok\ndist-2,Dist 2,ok\ndist-3,Dist 3,warn\naccess-1,Access 1,ok\naccess-2,Access 2,ok\naccess-3,Access 3,ok\naccess-4,Access 4,error\nstorage,Storage,ok\n"
+        }
+      ],
+      "options": {
+        "channelSource": "network",
+        "title": "Switch uplinks",
+        "subtitle": "Throughput per link, auto layout",
+        "caption": "All uplinks",
+        "captionBig": false,
+        "captionValue": true,
+        "showLegend": true,
+        "legendPosition": "bottom-right",
+        "particleCountMultiplier": 1,
+        "channels": [],
+        "network": {
+          "sourceField": "source",
+          "targetField": "target",
+          "valueField": "value",
+          "value2Field": "",
+          "labelField": "label",
+          "nodeIdField": "id",
+          "nodeLabelField": "label",
+          "nodeStatusField": "status",
+          "placement": "auto",
+          "layoutDirection": "lr",
+          "layout": {
+            "positions": [],
+            "overrides": {}
+          },
+          "editNodes": false,
+          "nodeSize": 14,
+          "widthPx": 28,
+          "curve": 0.12,
+          "colorScale": "turbo",
+          "scaleDomain": {
+            "mode": "auto"
+          },
+          "direction": "forward",
+          "particleBudget": 6000,
+          "particles": {
+            "count": 0,
+            "speed": 1,
+            "trail": 0.88,
+            "width": 1.2,
+            "color": "white",
+            "fixedColor": "#ffffff"
+          },
+          "showNodeLabels": true,
+          "showValueLabels": true,
+          "captionChannel": ""
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "Mbits",
+          "decimals": 0
+        },
+        "overrides": []
+      }
     }
   ]
 }

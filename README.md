@@ -1,6 +1,6 @@
 # Impact - Animated Widgets for Grafana
 
-Four visualisations in one plugin: a **Flow Designer** for node-and-edge diagrams with travelling particles, a **Power Gauge** with a signed arc and in-ring history, a **Flow River** of particle streamlines coloured by value, and **Status Bars** for clean rows of animated progress bars.
+Four visualisations in one plugin: a **Flow Designer** for node-and-edge diagrams with travelling particles, drawn by hand or built from your data, a **Power Gauge** with a signed arc, in-ring history and a live stream mode, a **Flow River** of particle streamlines coloured by value, including a data-driven network map, and **Status Bars** for clean rows of animated progress bars. Every panel renders generated demo data until a query is wired, and the app's Gallery page installs the demo dashboards on any Grafana with one click.
 
 ## Screenshots
 
@@ -70,14 +70,18 @@ Grafana Cloud does not accept unsigned plugins; that needs the catalog listing, 
 
 ## Configuration
 
-All panels use the standard field options (unit, decimals, min/max, thresholds, colour scheme, value mappings, overrides) for every number they display, so nothing is hard-coded to a particular unit. Free-text labels accept dashboard variables. Each panel has an **Animation** toggle; animation also pauses automatically in hidden tabs and for users who prefer reduced motion, unless the panel's *Reduced motion* option is set to *Always animate*.
+All panels use the standard field options (unit, decimals, min/max, thresholds, colour scheme, value mappings, overrides) for every number they display, so nothing is hard-coded to a particular unit. Free-text labels accept dashboard variables. Each panel has a **Background** option (panel, transparent or solid colour) and honours Grafana's own transparent toggle. Each panel has an **Animation** toggle; animation also pauses automatically in hidden tabs and for users who prefer reduced motion, unless the panel's *Reduced motion* option is set to *Always animate*.
 
 ### Flow Designer
 
-Draws a diagram you design inside the panel. Nodes show the last value of a bound field; edges can map a field to particle speed, colour (via thresholds) or width. Turn on **Layout -> Edit layout** to drag nodes, draw edges from node ports, reshape curves with control-point handles, pan, zoom, undo and redo.
+Draws a diagram you design inside the panel, or builds one from query results. Nodes show the last value of a bound field; edges can map a field to particle speed, colour (via thresholds) or width. Turn on **Layout -> Edit layout** to drag nodes, draw edges from node ports, reshape curves with control-point handles, pan, zoom, undo and redo.
+
+**Data-driven diagrams.** Set **Data -> Diagram source** to `Data`: any frame with `source`, `target` and a value (a table, or Prometheus-style series whose labels carry the endpoints, for example `client`/`server` from tracing service graphs, or `node`/`pod`/`persistentvolumeclaim` from kube-state-metrics) becomes edges, nodes are derived from the endpoints or an optional node frame with id, label, group and status, and a layered or radial layout places everything with stable positions. `Data + manual overrides` lets you drag and restyle individual nodes while the rest follows the data. [docs/flow.md](https://github.com/SparkAnswers/impact/blob/main/docs/flow.md) has copy-paste query recipes for service graphs and host to pod to volume to storage chains.
 
 | Option                 | Description                                                                                 |
 | ---------------------- | ------------------------------------------------------------------------------------------- |
+| Diagram source         | `Manual`, `Data` or `Data + manual overrides`; with field pickers for source, target, value, label, group, node id and status, layout direction, gaps, group boxes, edge labels and Top N |
+| Demo data              | `Off`, `When no data` (default) or `Always`: a generated graph until a query is wired       |
 | Background             | `Panel`, `Transparent`, `Dot grid` or `Line grid`                                           |
 | Node style             | `Cards` (filled, status accent) or `Minimal` (outlined)                                     |
 | Default edge colour    | Colour for edges without their own                                                          |
@@ -95,13 +99,16 @@ A ring gauge for signed quantities. The fill grows one way from a configurable z
 | Option                           | Description                                                                                     |
 | -------------------------------- | ----------------------------------------------------------------------------------------------- |
 | Field                            | Numeric field to show; defaults to the first one                                                |
+| Demo data                        | `Off`, `When no data` (default) or `Always`                                                     |
 | Start angle / Sweep / Clockwise  | Arc geometry, from a small 180° semicircle to a near-full 300° ring                              |
 | Fill width / Ring colour / Glow  | Ring appearance                                                                                 |
 | Zero mark / Zero position        | Where the fill starts, and where on the arc it sits                                             |
 | Scale                            | `Linear`, `Square root` or `Log` compression of the positive side                               |
 | Ticks / Tick values / Tick labels| Automatic or custom ticks, formatted with the field unit                                        |
 | Colour mode                      | `Fixed` positive / negative colours, `Thresholds` (ring bands from standard thresholds) or `Field` colour |
-| History                          | Show, window (`time range` or `last N`), fade older samples, line width, area fill, colour by sign or thresholds |
+| History                          | Show, window (`time range`, `last N` or `stream`), fade older samples, line width, area fill, colour by sign or thresholds |
+| Stream duration / Playback delay | In stream mode the chart shows the last N seconds scrolling at a constant speed, played a little behind real time through an adaptive buffer so no gap opens between refreshes |
+| Live motion                      | Continuous scroll, marker drift with breathing glow, trail, value follows playback, stale indicator. Only samples already received are played |
 | Value label / Show value         | Big number with the field unit, with automatic font sizing                                      |
 | Secondary line                   | Computed (`mean`, `last`, `min`, `max`, `sum`, `range` over the window, own unit and decimals) or free text with a `{value}` placeholder |
 | Subtitle / Title / Title position| Extra text                                                                                      |
@@ -111,8 +118,12 @@ A ring gauge for signed quantities. The fill grows one way from a configurable z
 
 Particle streamlines flowing along one or more channels, coloured by value. A single series is the simplest case: the panel time range becomes the river, oldest at the intake and newest at the outlet. Add channels for more streams.
 
+**Network map.** Set **Data -> Channel source** to `Network map` and feed it the same edge shape as the Flow Designer (source, target, value, optional width value). Every link becomes a river between node pucks, placed by auto layout or by typed positions you can match to a floor plan, with reverse pairs offset so both directions stay readable.
+
 | Option                      | Description                                                                                       |
 | --------------------------- | ------------------------------------------------------------------------------------------------- |
+| Channel source              | `Manual` channels or `Network map` from edge data, with node placement, layout direction, positions editor, node size, labels and particle budget |
+| Demo data                   | `Off`, `When no data` (default) or `Always`                                                       |
 | Channels                    | Add, remove and reorder channels. Each has its own path, data, width, colour scale, particles and labels |
 | Channel -> Path             | Waypoints in 0..1 panel coordinates, presets (`Horizontal`, `S-curve`, `Diagonal`, `U`) and **Edit on canvas** drag handles |
 | Channel -> Speed            | `Series` (by query or name), `Field` (by display name) or `Fixed`. Unset channels auto-bind to series in order |
@@ -134,6 +145,7 @@ A table where one column is a bar. Time-series input gives one row per series (w
 | Option                      | Description                                                                                       |
 | --------------------------- | ------------------------------------------------------------------------------------------------- |
 | Columns                     | Name, subtitle, value, status, time, sparkline and style fields; stack fields; extra columns; reducer for series |
+| Demo data                   | `Off`, `When no data` (default) or `Always`: a 12-row device table showing every bar style         |
 | Bar style                   | `Sweep` (indeterminate), `Percent`, `Segmented`, `Striped`, `Bidirectional`, `Stacked`, `Sparkline` or `Pill`. A style field or a field override sets it per row |
 | Colour mode                 | `Fixed`, `Thresholds`, `Gradient` (min to max) or `Field` colour                                  |
 | Track height / width / radius | Bar geometry                                                                                     |
