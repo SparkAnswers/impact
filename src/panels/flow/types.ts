@@ -40,6 +40,8 @@ export interface FlowNode {
   valueField?: string;
   /** Optional printf-like template, `${value}` is replaced by the formatted value */
   valueFormat?: string;
+  /** Group name (data-driven diagrams only; drives the group colour and group boxes) */
+  group?: string;
 }
 
 export interface EdgeParticles {
@@ -74,6 +76,10 @@ export interface FlowEdge {
   glow: boolean;
   particles: EdgeParticles;
   bind?: EdgeBinding;
+  /** Second binding (data-driven diagrams: the secondary value field) */
+  bind2?: EdgeBinding;
+  /** Small text drawn at the middle of the edge (data-driven diagrams) */
+  label?: string;
 }
 
 export interface Viewport {
@@ -98,6 +104,52 @@ export interface FlowDiagram {
 export type BackgroundStyle = 'panel' | 'transparent' | 'dots' | 'lines';
 export type NodeStyle = 'cards' | 'minimal';
 
+/** Where the diagram comes from: drawn by hand, built from query results, or built from data with manual tweaks. */
+export type DiagramSource = 'manual' | 'data' | 'overrides';
+export type LayoutDirection = 'lr' | 'tb' | 'radial';
+export type ValueMapTarget = BindTarget | 'none';
+
+/** Per-node tweaks on top of a data-driven diagram, keyed by node id. */
+export interface NodeOverride {
+  x?: number;
+  y?: number;
+  label?: string;
+  color?: string;
+  icon?: string;
+  shape?: NodeShape;
+  status?: NodeStatus;
+}
+
+export interface DataOptions {
+  source: DiagramSource;
+  /** Edge frames: field or label names */
+  sourceField: string;
+  targetField: string;
+  valueField: string;
+  value2Field: string;
+  labelField: string;
+  sourceGroupField: string;
+  targetGroupField: string;
+  /** Node frames: field or label names */
+  nodeIdField: string;
+  nodeLabelField: string;
+  nodeGroupField: string;
+  nodeStatusField: string;
+  nodeValueField: string;
+  /** What the primary / secondary edge values drive */
+  valueMap: ValueMapTarget;
+  value2Map: ValueMapTarget;
+  /** Draw the formatted primary value on each edge (when no label field is set) */
+  showEdgeValues: boolean;
+  /** Keep only the N edges with the highest value (0 = all, still capped) */
+  topN: number;
+  layout: LayoutDirection;
+  layerGap: number;
+  nodeGap: number;
+  groupBoxes: boolean;
+  overrides: Record<string, NodeOverride>;
+}
+
 export interface FlowOptions {
   appearance: {
     background: BackgroundStyle;
@@ -120,6 +172,7 @@ export interface FlowOptions {
     autoFit: boolean;
   };
   diagram: FlowDiagram;
+  data: DataOptions;
 }
 
 /** Selection shared between the panel and the inspector option editor via panel instance state. */
@@ -130,6 +183,8 @@ export interface FlowSelection {
 
 export interface FlowInstanceState {
   selection?: FlowSelection;
+  /** The diagram currently built from data (so option editors can inspect data nodes) */
+  dataDiagram?: FlowDiagram;
 }
 
 export const DEFAULT_PARTICLES: EdgeParticles = { enabled: true, count: 2, speed: 1, size: 2 };
@@ -161,6 +216,35 @@ export const EMPTY_DIAGRAM: FlowDiagram = {
   grid: { show: true, size: 20, snap: true },
 };
 
+export const DEFAULT_DATA_OPTIONS: DataOptions = {
+  source: 'manual',
+  sourceField: 'source',
+  targetField: 'target',
+  valueField: '',
+  value2Field: '',
+  labelField: 'label',
+  sourceGroupField: 'source_group',
+  targetGroupField: 'target_group',
+  nodeIdField: 'id',
+  nodeLabelField: 'label',
+  nodeGroupField: 'group',
+  nodeStatusField: 'status',
+  nodeValueField: '',
+  valueMap: 'speed',
+  value2Map: 'color',
+  showEdgeValues: false,
+  topN: 200,
+  layout: 'lr',
+  layerGap: 120,
+  nodeGap: 24,
+  groupBoxes: true,
+  overrides: {},
+};
+
+/** Hard limits for data-driven diagrams; beyond these the panel truncates and shows a notice. */
+export const MAX_DATA_NODES = 400;
+export const MAX_DATA_EDGES = 1500;
+
 export const DEFAULT_OPTIONS: FlowOptions = {
   appearance: {
     background: 'dots',
@@ -172,4 +256,5 @@ export const DEFAULT_OPTIONS: FlowOptions = {
   animation: { enabled: true, speed: 1, reducedMotion: 'system' },
   layout: { editMode: false, gridSize: 20, snap: true, autoFit: true },
   diagram: EMPTY_DIAGRAM,
+  data: DEFAULT_DATA_OPTIONS,
 };

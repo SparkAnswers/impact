@@ -1,14 +1,27 @@
 import { MOTION_PREFERENCE_CHOICES, MOTION_PREFERENCE_DESCRIPTION } from '../../shared/motion';
-import { PanelPlugin } from '@grafana/data';
+import { PanelPlugin, type SelectableValue } from '@grafana/data';
 import { FlowPanel } from './FlowPanel';
 import { InspectorEditor } from './editors/InspectorEditor';
 import { JsonEditor } from './editors/JsonEditor';
-import { DEFAULT_OPTIONS, type FlowDiagram, type FlowOptions } from './types';
+import { OverridesEditor } from './editors/OverridesEditor';
+import { DEFAULT_OPTIONS, type FlowDiagram, type FlowOptions, type NodeOverride, type ValueMapTarget } from './types';
 
 const APPEARANCE = ['Appearance'];
 const ANIMATION = ['Animation'];
 const LAYOUT = ['Layout'];
 const DIAGRAM = ['Diagram'];
+const DATA = ['Data'];
+const DATA_FIELDS = ['Data', 'Edge and node fields'];
+
+const D = DEFAULT_OPTIONS.data;
+const isManual = (o: FlowOptions) => !o.data || o.data.source === 'manual' || !o.data.source;
+const isData = (o: FlowOptions) => !isManual(o);
+const VALUE_MAPS: Array<SelectableValue<ValueMapTarget>> = [
+  { value: 'speed', label: 'Particle speed' },
+  { value: 'color', label: 'Colour' },
+  { value: 'width', label: 'Width' },
+  { value: 'none', label: 'Nothing' },
+];
 
 export const plugin = new PanelPlugin<FlowOptions>(FlowPanel)
   .useFieldConfig({
@@ -122,6 +135,208 @@ export const plugin = new PanelPlugin<FlowOptions>(FlowPanel)
         category: LAYOUT,
         defaultValue: DEFAULT_OPTIONS.layout.autoFit,
       })
+      .addSelect({
+        path: 'data.source',
+        name: 'Diagram source',
+        description:
+          'Manual: draw the diagram by hand. Data: build nodes and edges from the query results and lay them out automatically. Data + manual overrides: same, but nodes you drag (or tweak in the Node overrides editor) keep their position and look',
+        category: DATA,
+        defaultValue: D.source,
+        settings: {
+          options: [
+            { value: 'manual', label: 'Manual' },
+            { value: 'data', label: 'Data' },
+            { value: 'overrides', label: 'Data + manual overrides' },
+          ],
+        },
+      })
+      .addRadio({
+        path: 'data.layout',
+        name: 'Layout direction',
+        description: 'Layered layout from left to right or top to bottom, or a radial layout with the most connected node in the middle',
+        category: DATA,
+        defaultValue: D.layout,
+        settings: {
+          options: [
+            { value: 'lr', label: 'Left to right' },
+            { value: 'tb', label: 'Top to bottom' },
+            { value: 'radial', label: 'Radial' },
+          ],
+        },
+        showIf: isData,
+      })
+      .addSliderInput({
+        path: 'data.layerGap',
+        name: 'Layer gap',
+        description: 'Distance between layers (edge length) in canvas pixels',
+        category: DATA,
+        defaultValue: D.layerGap,
+        settings: { min: 40, max: 400, step: 10 },
+        showIf: isData,
+      })
+      .addSliderInput({
+        path: 'data.nodeGap',
+        name: 'Node gap',
+        description: 'Distance between neighbouring nodes in a layer in canvas pixels',
+        category: DATA,
+        defaultValue: D.nodeGap,
+        settings: { min: 4, max: 120, step: 2 },
+        showIf: isData,
+      })
+      .addSelect({
+        path: 'data.valueMap',
+        name: 'Value drives',
+        description: 'What the edge value controls: particle speed, colour (via the value field’s thresholds / colour scheme) or stroke width',
+        category: DATA,
+        defaultValue: D.valueMap,
+        settings: { options: VALUE_MAPS },
+        showIf: isData,
+      })
+      .addSelect({
+        path: 'data.value2Map',
+        name: 'Secondary value drives',
+        description: 'What the secondary value field controls (only when a secondary value field is set and present)',
+        category: DATA,
+        defaultValue: D.value2Map,
+        settings: { options: VALUE_MAPS },
+        showIf: (o) => isData(o) && !!o.data?.value2Field,
+      })
+      .addBooleanSwitch({
+        path: 'data.showEdgeValues',
+        name: 'Show edge values',
+        description: 'Draw the formatted value on each edge (the label field wins when set)',
+        category: DATA,
+        defaultValue: D.showEdgeValues,
+        showIf: isData,
+      })
+      .addBooleanSwitch({
+        path: 'data.groupBoxes',
+        name: 'Group boxes',
+        description: 'Draw a faint rounded container around the nodes of each group (needs a group field)',
+        category: DATA,
+        defaultValue: D.groupBoxes,
+        showIf: isData,
+      })
+      .addNumberInput({
+        path: 'data.topN',
+        name: 'Top N edges by value',
+        description: 'Keep only the N edges with the highest value (0 = all). Diagrams are always capped at 400 nodes / 1500 edges',
+        category: DATA,
+        defaultValue: D.topN,
+        settings: { min: 0, max: 1500, integer: true },
+        showIf: isData,
+      })
+      .addTextInput({
+        path: 'data.sourceField',
+        name: 'Source field',
+        description: 'Field (or series label) holding the edge source node id',
+        category: DATA_FIELDS,
+        defaultValue: D.sourceField,
+        showIf: isData,
+      })
+      .addTextInput({
+        path: 'data.targetField',
+        name: 'Target field',
+        description: 'Field (or series label) holding the edge target node id',
+        category: DATA_FIELDS,
+        defaultValue: D.targetField,
+        showIf: isData,
+      })
+      .addTextInput({
+        path: 'data.valueField',
+        name: 'Value field',
+        description: 'Numeric field with the edge value. Empty: the first numeric field of the frame (series: the series value). A name that matches nothing: no values',
+        category: DATA_FIELDS,
+        defaultValue: D.valueField,
+        settings: { placeholder: 'auto' },
+        showIf: isData,
+      })
+      .addTextInput({
+        path: 'data.value2Field',
+        name: 'Secondary value field',
+        description: 'Optional second numeric field (or series / metric name) per edge, e.g. an error rate next to a request rate',
+        category: DATA_FIELDS,
+        defaultValue: D.value2Field,
+        settings: { placeholder: 'none' },
+        showIf: isData,
+      })
+      .addTextInput({
+        path: 'data.labelField',
+        name: 'Label field',
+        description: 'Optional text field (or label) drawn on the edge',
+        category: DATA_FIELDS,
+        defaultValue: D.labelField,
+        settings: { placeholder: 'none' },
+        showIf: isData,
+      })
+      .addTextInput({
+        path: 'data.sourceGroupField',
+        name: 'Source group field',
+        description: 'Optional field (or label) with the group of the source node, e.g. a namespace',
+        category: DATA_FIELDS,
+        defaultValue: D.sourceGroupField,
+        settings: { placeholder: 'none' },
+        showIf: isData,
+      })
+      .addTextInput({
+        path: 'data.targetGroupField',
+        name: 'Target group field',
+        description: 'Optional field (or label) with the group of the target node',
+        category: DATA_FIELDS,
+        defaultValue: D.targetGroupField,
+        settings: { placeholder: 'none' },
+        showIf: isData,
+      })
+      .addTextInput({
+        path: 'data.nodeIdField',
+        name: 'Node id field',
+        description: 'Node frames: field (or label) with the node id. A frame with this field and no source/target adds or decorates nodes',
+        category: DATA_FIELDS,
+        defaultValue: D.nodeIdField,
+        showIf: isData,
+      })
+      .addTextInput({
+        path: 'data.nodeLabelField',
+        name: 'Node label field',
+        description: 'Node frames: optional display label (defaults to the id)',
+        category: DATA_FIELDS,
+        defaultValue: D.nodeLabelField,
+        showIf: isData,
+      })
+      .addTextInput({
+        path: 'data.nodeGroupField',
+        name: 'Node group field',
+        description: 'Node frames: optional group (drives the node colour and group boxes)',
+        category: DATA_FIELDS,
+        defaultValue: D.nodeGroupField,
+        showIf: isData,
+      })
+      .addTextInput({
+        path: 'data.nodeStatusField',
+        name: 'Node status field',
+        description: 'Node frames: optional status. Text such as ok / running / warn / pending / error / failed (after value mappings) or 1 / 2 / 3 become the node status',
+        category: DATA_FIELDS,
+        defaultValue: D.nodeStatusField,
+        showIf: isData,
+      })
+      .addTextInput({
+        path: 'data.nodeValueField',
+        name: 'Node value field',
+        description: 'Node frames: optional numeric field shown as the node’s live value. Empty: first numeric field; a name that matches nothing (e.g. none): no value',
+        category: DATA_FIELDS,
+        defaultValue: D.nodeValueField,
+        showIf: isData,
+      })
+      .addCustomEditor<{}, Record<string, NodeOverride>>({
+        id: 'flow-overrides',
+        path: 'data.overrides',
+        name: 'Node overrides',
+        description: 'Position and look of individual data nodes (also written when you drag nodes in design mode)',
+        category: DATA,
+        editor: OverridesEditor,
+        defaultValue: {},
+        showIf: (o) => o.data?.source === 'overrides',
+      })
       .addCustomEditor<{}, FlowDiagram>({
         id: 'flow-inspector',
         path: 'diagram',
@@ -130,6 +345,7 @@ export const plugin = new PanelPlugin<FlowOptions>(FlowPanel)
         category: DIAGRAM,
         editor: InspectorEditor,
         defaultValue: DEFAULT_OPTIONS.diagram,
+        showIf: isManual,
       })
       .addCustomEditor<{}, FlowDiagram>({
         id: 'flow-json',
@@ -139,5 +355,6 @@ export const plugin = new PanelPlugin<FlowOptions>(FlowPanel)
         category: DIAGRAM,
         editor: JsonEditor,
         defaultValue: DEFAULT_OPTIONS.diagram,
+        showIf: isManual,
       });
   });

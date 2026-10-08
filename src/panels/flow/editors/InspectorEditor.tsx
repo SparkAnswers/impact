@@ -8,7 +8,7 @@ import type { EdgeDash, EdgeStyle, FlowDiagram, FlowEdge, FlowInstanceState, Flo
 
 type Props = StandardEditorProps<FlowDiagram, {}, FlowOptions, FlowInstanceState>;
 
-const ICONS = [
+export const ICONS = [
   'bolt',
   'plug',
   'power',
@@ -45,13 +45,13 @@ const ICONS = [
   'circle',
 ].map((v) => ({ label: v, value: v }));
 
-const SHAPES: Array<SelectableValue<NodeShape>> = [
+export const SHAPES: Array<SelectableValue<NodeShape>> = [
   { label: 'Card', value: 'card' },
   { label: 'Pill', value: 'pill' },
   { label: 'Hub', value: 'hub' },
   { label: 'Circle', value: 'circle' },
 ];
-const STATUSES: Array<SelectableValue<NodeStatus>> = [
+export const STATUSES: Array<SelectableValue<NodeStatus>> = [
   { label: 'None', value: 'none' },
   { label: 'OK', value: 'ok' },
   { label: 'Warn', value: 'warn' },
@@ -81,9 +81,9 @@ const TARGETS: Array<SelectableValue<BindTarget>> = [
   { label: 'Width', value: 'width' },
 ];
 
-const LW = 11;
+export const LW = 11;
 
-const getStyles = (theme: GrafanaTheme2) => ({
+export const getInspectorStyles = (theme: GrafanaTheme2) => ({
   section: css({
     fontSize: 11,
     fontWeight: theme.typography.fontWeightMedium,
@@ -114,19 +114,19 @@ const getStyles = (theme: GrafanaTheme2) => ({
   hint: css({ fontSize: 11, color: theme.colors.text.secondary, marginTop: theme.spacing(0.5) }),
 });
 
-const num = (v: string, fallback: number) => {
+export const num = (v: string, fallback: number) => {
   const n = Number(v);
   return Number.isFinite(n) ? n : fallback;
 };
 
-const ColorField: React.FC<{ label: string; value: string; onChange: (c: string) => void; theme: GrafanaTheme2; placeholder?: string }> = ({
+export const ColorField: React.FC<{ label: string; value: string; onChange: (c: string) => void; theme: GrafanaTheme2; placeholder?: string }> = ({
   label,
   value,
   onChange,
   theme,
   placeholder,
 }) => {
-  const s = useStyles2(getStyles);
+  const s = useStyles2(getInspectorStyles);
   const shown = value || placeholder || 'blue';
   return (
     <InlineField label={label} labelWidth={LW} grow>
@@ -147,7 +147,7 @@ const ColorField: React.FC<{ label: string; value: string; onChange: (c: string)
  * instance state, or from the drop-down at the top of the editor.
  */
 export const InspectorEditor: React.FC<Props> = ({ value, onChange, context }) => {
-  const s = useStyles2(getStyles);
+  const s = useStyles2(getInspectorStyles);
   const diagram = useMemo(() => normalizeDiagram(value), [value]);
   const fromPanel = context.instanceState?.selection;
   const [local, setLocal] = useState<FlowSelection | undefined>(fromPanel);

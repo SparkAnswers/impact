@@ -2,7 +2,8 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { GrafanaTheme2 } from '@grafana/data';
 import { Input } from '@grafana/ui';
 import { applyBinding, formatValue, type FieldValue } from '../lib/data';
-import { edgeGeometry, hitNode, nearestSide, portOffsets, snap, uniqueId } from '../lib/geometry';
+import { groupPalette } from '../lib/datadriven';
+import { boundingBox, edgeGeometry, hitNode, nearestSide, portOffsets, snap, uniqueId } from '../lib/geometry';
 import {
   DEFAULT_EDGE,
   DEFAULT_NODE,
@@ -34,6 +35,10 @@ export interface FlowCanvasProps {
   viewport: Viewport;
   animate: boolean;
   uid: string;
+  /** Enter / leave opacities keyed by `node:<id>` / `edge:<id>` (data-driven diagrams) */
+  opacity?: Map<string, number>;
+  /** Draw a faint container around every node group */
+  groupBoxes?: boolean;
   onViewport: (vp: Viewport) => void;
   onSelect: (sel?: FlowSelection) => void;
   /** Transient update while dragging (no undo entry) */
@@ -63,7 +68,7 @@ const colorOf = (theme: GrafanaTheme2, c: string | undefined, fallback: string) 
 const sanitizeId = (s: string) => s.replace(/[^a-zA-Z0-9_-]/g, '');
 
 export const FlowCanvas: React.FC<FlowCanvasProps> = (props) => {
-  const { diagram, width, height, theme, options, fields, editing, tool, selection, viewport, animate, uid, onViewport, onSelect, onDraft, onCommit, onTool } =
+  const { diagram, width, height, theme, options, fields, editing, tool, selection, viewport, animate, uid, opacity, groupBoxes, onViewport, onSelect, onDraft, onCommit, onTool } =
     props;
   const svgRef = useRef<SVGSVGElement>(null);
   const dragRef = useRef<Drag | undefined>(undefined);
@@ -90,14 +95,51 @@ export const FlowCanvas: React.FC<FlowCanvasProps> = (props) => {
       }
       const geo = edgeGeometry(edge, from, to, offsets);
       const bound = applyBinding(edge.bind, fields);
-      const color = bound.color ?? colorOf(theme, edge.color, edgeColorFallback);
-      const width = bound.width ?? edge.stroke;
-      out.push({ edge, geo, color, width, speed: bound.speed ?? 1, reversed: bound.reversed, markerId: `${uid}-arrow-${sanitizeId(edge.id)}` });
+      const bound2 = applyBinding(edge.bind2, fields);
+      const color = bound.color ?? bound2.color ?? colorOf(theme, edge.color, edgeColorFallback);
+      const width = bound.width ?? bound2.width ?? edge.stroke;
+      out.push({
+        edge,
+        geo,
+        color,
+        width,
+        speed: bound.speed ?? bound2.speed ?? 1,
+        reversed: bound.reversed || bound2.reversed,
+        markerId: `${uid}-arrow-${sanitizeId(edge.id)}`,
+      });
     }
     return out;
   }, [diagram.edges, nodeMap, offsets, fields, theme, edgeColorFallback, uid]);
 
   const markers = useMemo(() => resolved.filter((r) => r.edge.arrow).map((r) => ({ id: r.markerId!, color: r.color })), [resolved]);
+
+  // Faint rounded containers per node group (data-driven diagrams with a group field).
+  const groups = useMemo(() => {
+    if (!groupBoxes) {
+      return [];
+    }
+    const byGroup = new Map<string, FlowNode[]>();
+    for (const n of diagram.nodes) {
+      if (n.group) {
+        (byGroup.get(n.group) ?? byGroup.set(n.group, []).get(n.group)!).push(n);
+      }
+    }
+    const colors = groupPalette(Array.from(byGroup.keys()), theme);
+    const pad = 14;
+    return Array.from(byGroup.entries())
+      .sort(([a], [b]) => (a < b ? -1 : 1))
+      .map(([name, nodes]) => {
+        const box = boundingBox(nodes)!;
+        return { name, x: box.x - pad, y: box.y - pad - 10, w: box.w + pad * 2, h: box.h + pad * 2 + 10, color: colorOf(theme, colors.get(name), 'blue') };
+      });
+  }, [groupBoxes, diagram.nodes, theme]);
+
+  const nodeOpacity = (id: string) => opacity?.get(`node:${id}`);
+  const edgeOpacity = (e: FlowEdge) => {
+    const own = opacity?.get(`edge:${e.id}`);
+    const ends = Math.min(nodeOpacity(e.from) ?? 1, nodeOpacity(e.to) ?? 1);
+    return own === undefined ? ends : Math.min(own, ends);
+  };
 
   const gridSize = Math.max(4, options.layout.gridSize || diagram.grid.size || 20);
   const snapOn = options.layout.snap && diagram.grid.snap;
@@ -460,9 +502,32 @@ export const FlowCanvas: React.FC<FlowCanvasProps> = (props) => {
       {bgFill !== 'none' && <rect width={width} height={height} fill={bgFill} />}
       {showGrid && <rect width={width} height={height} fill={`url(#${gridId})`} />}
       <g transform={`translate(${viewport.x} ${viewport.y}) scale(${viewport.zoom})`}>
+        {groups.length > 0 && (
+          <g data-testid="flow-groups" style={{ pointerEvents: 'none' }}>
+            {groups.map((g) => (
+              <g key={g.name}>
+                <rect x={g.x} y={g.y} width={g.w} height={g.h} rx={12} fill={g.color} opacity={0.07} />
+                <rect x={g.x} y={g.y} width={g.w} height={g.h} rx={12} fill="none" stroke={g.color} opacity={0.35} strokeDasharray="4 3" />
+                <text x={g.x + 10} y={g.y + fontSize + 2} fill={g.color} fontSize={fontSize - 1} fontWeight={600} opacity={0.9} style={{ userSelect: 'none' }}>
+                  {g.name}
+                </text>
+              </g>
+            ))}
+          </g>
+        )}
         <g>
           {resolved.map((item) => (
-            <EdgeView key={item.edge.id} item={item} theme={theme} uid={uid} selected={selection?.kind === 'edge' && selection.id === item.edge.id} editing={editing} onPointerDown={onEdgeDown} />
+            <EdgeView
+              key={item.edge.id}
+              item={item}
+              theme={theme}
+              uid={uid}
+              selected={selection?.kind === 'edge' && selection.id === item.edge.id}
+              editing={editing}
+              opacity={edgeOpacity(item.edge)}
+              fontSize={Math.max(8, fontSize - 2)}
+              onPointerDown={onEdgeDown}
+            />
           ))}
         </g>
         <Particles edges={resolved} uid={uid} speed={options.animation.speed * options.appearance.particleSpeed} animate={animate} highlight={theme.isDark ? '#ffffff' : theme.colors.text.primary} />
@@ -484,6 +549,7 @@ export const FlowCanvas: React.FC<FlowCanvasProps> = (props) => {
                 accent={accent}
                 selected={isSel || pendingFrom === n.id}
                 editing={editing}
+                opacity={nodeOpacity(n.id)}
                 onPointerDown={onNodeDown}
                 onDoubleClick={onNodeDoubleClick}
                 onPortPointerDown={onPortDown}

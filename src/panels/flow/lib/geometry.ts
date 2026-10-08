@@ -227,6 +227,15 @@ export function edgeGeometry(
   return { a, b, aSide, bSide, ...built };
 }
 
+/** Point half-way along an edge (exact for bezier, the path midpoint for straight / step / orthogonal). */
+export function midpoint(geo: EdgeGeometry): Point {
+  if (geo.c1 && geo.c2) {
+    const { a, b, c1, c2 } = geo;
+    return { x: (a.x + 3 * c1.x + 3 * c2.x + b.x) / 8, y: (a.y + 3 * c1.y + 3 * c2.y + b.y) / 8 };
+  }
+  return { x: (geo.a.x + geo.b.x) / 2, y: (geo.a.y + geo.b.y) / 2 };
+}
+
 export const snap = (v: number, size: number, enabled: boolean) => (enabled && size > 0 ? Math.round(v / size) * size : v);
 
 export function boundingBox(nodes: Rect[]): Rect | undefined {
