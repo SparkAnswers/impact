@@ -236,6 +236,19 @@ export function midpoint(geo: EdgeGeometry): Point {
   return { x: (geo.a.x + geo.b.x) / 2, y: (geo.a.y + geo.b.y) / 2 };
 }
 
+export const MIN_ZOOM = 0.2;
+export const MAX_ZOOM = 4;
+
+/**
+ * Zoom a viewport by `factor` keeping the canvas point under the pointer (px, py in panel pixels) fixed.
+ * Zoom is clamped to MIN_ZOOM..MAX_ZOOM and rounded to 3 decimals.
+ */
+export function zoomAt(vp: { x: number; y: number; zoom: number }, px: number, py: number, factor: number) {
+  const zoom = Math.round(Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, vp.zoom * factor)) * 1000) / 1000;
+  const k = zoom / vp.zoom;
+  return { x: px - (px - vp.x) * k, y: py - (py - vp.y) * k, zoom };
+}
+
 export const snap = (v: number, size: number, enabled: boolean) => (enabled && size > 0 ? Math.round(v / size) * size : v);
 
 export function boundingBox(nodes: Rect[]): Rect | undefined {

@@ -1,4 +1,5 @@
 import React from 'react';
+import { css } from '@emotion/css';
 import { isIconName, type GrafanaTheme2 } from '@grafana/data';
 import { Icon } from '@grafana/ui';
 import type { FlowNode, NodeStyle, ResolvedSide } from '../types';
@@ -18,6 +19,9 @@ export interface NodeViewProps {
   ports?: ResolvedSide[];
   /** Enter / leave tween (data-driven diagrams) */
   opacity?: number;
+  /** A link applies to this node: pointer cursor and a hover glow */
+  linked?: boolean;
+  onClick?: (node: FlowNode) => void;
   onPointerDown?: (e: React.PointerEvent<SVGGElement>, node: FlowNode) => void;
   onDoubleClick?: (node: FlowNode) => void;
   onPortPointerDown?: (e: React.PointerEvent<SVGCircleElement>, node: FlowNode, side: ResolvedSide) => void;
@@ -49,6 +53,8 @@ export const NodeView: React.FC<NodeViewProps> = ({
   selected,
   editing,
   opacity,
+  linked,
+  onClick,
   onPointerDown,
   onDoubleClick,
   onPortPointerDown,
@@ -83,12 +89,16 @@ export const NodeView: React.FC<NodeViewProps> = ({
   const clipId = `${uid}-clip-${n.id}`;
   const r = circle ? Math.min(n.w, n.h) / 2 : 0;
 
+  const linkClass = linked ? css({ cursor: 'pointer', '&:hover': { filter: `drop-shadow(0 0 5px ${accent})` } }) : undefined;
+
   return (
     <g
       transform={`translate(${n.x},${n.y})`}
       opacity={opacity !== undefined && opacity < 1 ? opacity : undefined}
-      style={{ cursor: editing ? 'grab' : 'default' }}
+      className={linkClass}
+      style={{ cursor: editing ? 'grab' : linked ? 'pointer' : 'default' }}
       onPointerDown={onPointerDown ? (e) => onPointerDown(e, n) : undefined}
+      onClick={onClick ? () => onClick(n) : undefined}
       onDoubleClick={onDoubleClick ? () => onDoubleClick(n) : undefined}
       data-testid={`flow-node-${n.id}`}
       aria-label={n.label}

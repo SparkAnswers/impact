@@ -3,7 +3,8 @@ import type { GrafanaTheme2 } from '@grafana/data';
 import { Input } from '@grafana/ui';
 import { applyBinding, formatValue, type FieldValue } from '../lib/data';
 import { groupPalette } from '../lib/datadriven';
-import { boundingBox, edgeGeometry, hitNode, nearestSide, portOffsets, snap, uniqueId } from '../lib/geometry';
+import { edgeGeometry, hitNode, nearestSide, portOffsets, snap, uniqueId, zoomAt } from '../lib/geometry';
+import { groupSegments } from '../lib/groups';
 import {
   DEFAULT_EDGE,
   DEFAULT_NODE,
@@ -12,6 +13,7 @@ import {
   type FlowNode,
   type FlowOptions,
   type FlowSelection,
+  type LinkTrigger,
   type Point,
   type ResolvedSide,
   type Viewport,
@@ -39,6 +41,13 @@ export interface FlowCanvasProps {
   opacity?: Map<string, number>;
   /** Draw a faint container around every node group */
   groupBoxes?: boolean;
+  /** View mode: Ctrl/⌘ + wheel (plain wheel in view-panel mode) zooms, drag pans, double-click on the canvas fits */
+  zoomEnabled?: boolean;
+  /** Link for a node (view mode only); undefined = no link */
+  linkFor?: (node: FlowNode) => string | undefined;
+  linkTrigger?: LinkTrigger;
+  onOpenLink?: (href: string) => void;
+  onFit?: () => void;
   onViewport: (vp: Viewport) => void;
   onSelect: (sel?: FlowSelection) => void;
   /** Transient update while dragging (no undo entry) */
@@ -68,8 +77,33 @@ const colorOf = (theme: GrafanaTheme2, c: string | undefined, fallback: string) 
 const sanitizeId = (s: string) => s.replace(/[^a-zA-Z0-9_-]/g, '');
 
 export const FlowCanvas: React.FC<FlowCanvasProps> = (props) => {
-  const { diagram, width, height, theme, options, fields, editing, tool, selection, viewport, animate, uid, opacity, groupBoxes, onViewport, onSelect, onDraft, onCommit, onTool } =
-    props;
+  const {
+    diagram,
+    width,
+    height,
+    theme,
+    options,
+    fields,
+    editing,
+    tool,
+    selection,
+    viewport,
+    animate,
+    uid,
+    opacity,
+    groupBoxes,
+    zoomEnabled,
+    linkFor,
+    linkTrigger = 'off',
+    onOpenLink,
+    onFit,
+    onViewport,
+    onSelect,
+    onDraft,
+    onCommit,
+    onTool,
+  } = props;
+  const viewZoom = !editing && !!zoomEnabled;
   const svgRef = useRef<SVGSVGElement>(null);
   const dragRef = useRef<Drag | undefined>(undefined);
   const draftRef = useRef<FlowDiagram>(diagram);
@@ -113,26 +147,23 @@ export const FlowCanvas: React.FC<FlowCanvasProps> = (props) => {
 
   const markers = useMemo(() => resolved.filter((r) => r.edge.arrow).map((r) => ({ id: r.markerId!, color: r.color })), [resolved]);
 
-  // Faint rounded containers per node group (data-driven diagrams with a group field).
+  // Faint rounded containers per node group, one per layer segment so boxes never cover other groups' nodes.
+  const fontSize = options.appearance.fontSize || 12;
   const groups = useMemo(() => {
     if (!groupBoxes) {
       return [];
     }
-    const byGroup = new Map<string, FlowNode[]>();
-    for (const n of diagram.nodes) {
-      if (n.group) {
-        (byGroup.get(n.group) ?? byGroup.set(n.group, []).get(n.group)!).push(n);
-      }
+    const names = Array.from(new Set(diagram.nodes.map((n) => n.group).filter((g): g is string => !!g)));
+    if (!names.length) {
+      return [];
     }
-    const colors = groupPalette(Array.from(byGroup.keys()), theme);
-    const pad = 14;
-    return Array.from(byGroup.entries())
-      .sort(([a], [b]) => (a < b ? -1 : 1))
-      .map(([name, nodes]) => {
-        const box = boundingBox(nodes)!;
-        return { name, x: box.x - pad, y: box.y - pad - 10, w: box.w + pad * 2, h: box.h + pad * 2 + 10, color: colorOf(theme, colors.get(name), 'blue') };
-      });
-  }, [groupBoxes, diagram.nodes, theme]);
+    const colors = groupPalette(names, theme);
+    const labelH = fontSize + 4;
+    const nodeGap = options.data?.nodeGap ?? 24;
+    const groupGap = options.data?.groupBoxes === false ? 0 : fontSize + 10;
+    const pad = Math.min(14, Math.max(4, Math.floor((nodeGap + groupGap - labelH) / 2)));
+    return groupSegments(diagram.nodes, options.data?.layout ?? 'lr', pad, labelH).map((seg) => ({ ...seg, color: colorOf(theme, colors.get(seg.group), 'blue') }));
+  }, [groupBoxes, diagram.nodes, theme, fontSize, options.data?.nodeGap, options.data?.groupBoxes, options.data?.layout]);
 
   const nodeOpacity = (id: string) => opacity?.get(`node:${id}`);
   const edgeOpacity = (e: FlowEdge) => {
@@ -183,23 +214,27 @@ export const FlowCanvas: React.FC<FlowCanvasProps> = (props) => {
   }, [viewport]);
   useEffect(() => {
     const el = svgRef.current;
-    if (!el || !editing) {
+    if (!el || (!editing && !viewZoom)) {
       return;
     }
     const onWheel = (e: WheelEvent) => {
+      if (!editing) {
+        // View mode: plain wheel keeps scrolling the dashboard; Ctrl/⌘ + wheel (also trackpad pinch) zooms,
+        // and so does the plain wheel when the panel is viewed on its own (view panel / fullscreen).
+        const alone = /[?&]viewPanel=/.test(window.location.search);
+        if (!(e.ctrlKey || e.metaKey || alone)) {
+          return;
+        }
+      }
       e.preventDefault();
       const rect = el.getBoundingClientRect();
-      const px = e.clientX - rect.left;
-      const py = e.clientY - rect.top;
-      const vp = viewportRef.current;
-      const factor = Math.exp(-e.deltaY * 0.0015);
-      const zoom = Math.min(4, Math.max(0.2, vp.zoom * factor));
-      const k = zoom / vp.zoom;
-      onViewport({ x: px - (px - vp.x) * k, y: py - (py - vp.y) * k, zoom: Math.round(zoom * 1000) / 1000 });
+      // Pinch gestures arrive as Ctrl + wheel with small deltas; scale them up a bit.
+      const factor = Math.exp(-e.deltaY * (e.ctrlKey ? 0.004 : 0.0015));
+      onViewport(zoomAt(viewportRef.current, e.clientX - rect.left, e.clientY - rect.top, factor));
     };
     el.addEventListener('wheel', onWheel, { passive: false });
     return () => el.removeEventListener('wheel', onWheel);
-  }, [editing, onViewport]);
+  }, [editing, viewZoom, onViewport]);
 
   // ---- helpers ------------------------------------------------------------------------------------
   const capture = (e: React.PointerEvent) => {
@@ -254,6 +289,10 @@ export const FlowCanvas: React.FC<FlowCanvasProps> = (props) => {
   // ---- pointer handlers --------------------------------------------------------------------------
   const onBackgroundDown = (e: React.PointerEvent<SVGSVGElement>) => {
     if (!editing) {
+      if (viewZoom && (e.button === 0 || e.button === 1)) {
+        dragRef.current = { type: 'pan', start: { x: e.clientX, y: e.clientY }, orig: viewport };
+        capture(e);
+      }
       return;
     }
     if (e.button === 1 || spaceRef.current || (e.button === 0 && e.altKey)) {
@@ -275,6 +314,7 @@ export const FlowCanvas: React.FC<FlowCanvasProps> = (props) => {
 
   const onNodeDown = (e: React.PointerEvent<SVGGElement>, node: FlowNode) => {
     if (!editing) {
+      e.stopPropagation();
       return;
     }
     e.stopPropagation();
@@ -438,10 +478,39 @@ export const FlowCanvas: React.FC<FlowCanvasProps> = (props) => {
     }
   };
 
+  const hrefOf = (node: FlowNode) => (!editing && linkTrigger !== 'off' && linkFor ? linkFor(node) : undefined);
+
   const onNodeDoubleClick = (node: FlowNode) => {
     if (editing) {
       setRenaming({ id: node.id, value: node.label });
+      return;
     }
+    if (linkTrigger === 'dblclick') {
+      const href = hrefOf(node);
+      if (href) {
+        onOpenLink?.(href);
+      }
+    }
+  };
+
+  const onNodeClick = (node: FlowNode) => {
+    if (!editing && linkTrigger === 'click') {
+      const href = hrefOf(node);
+      if (href) {
+        onOpenLink?.(href);
+      }
+    }
+  };
+
+  const onCanvasDoubleClick = (e: React.MouseEvent<SVGSVGElement>) => {
+    if (!viewZoom || !onFit) {
+      return;
+    }
+    const target = e.target as Element;
+    if (target.closest?.('[data-testid^="flow-node-"]') || target.closest?.('[data-testid^="flow-edge-"]')) {
+      return;
+    }
+    onFit();
   };
 
   const finishRename = (commit: boolean) => {
@@ -466,9 +535,8 @@ export const FlowCanvas: React.FC<FlowCanvasProps> = (props) => {
   const selectedEdge = selection?.kind === 'edge' ? resolved.find((r) => r.edge.id === selection.id) : undefined;
   const renamingNode = renaming ? nodeMap.get(renaming.id) : undefined;
   const fontFamily = theme.typography.fontFamily;
-  const fontSize = options.appearance.fontSize || 12;
   const minimal = options.appearance.nodeStyle === 'minimal';
-  const cursor = tool === 'addNode' ? 'copy' : tool === 'addEdge' ? 'crosshair' : undefined;
+  const cursor = editing ? (tool === 'addNode' ? 'copy' : tool === 'addEdge' ? 'crosshair' : undefined) : viewZoom ? 'grab' : undefined;
 
   return (
     <svg
@@ -476,11 +544,12 @@ export const FlowCanvas: React.FC<FlowCanvasProps> = (props) => {
       width={width}
       height={height}
       viewBox={`0 0 ${width} ${height}`}
-      style={{ display: 'block', fontFamily, cursor, touchAction: editing ? 'none' : undefined, background: bg === 'transparent' ? 'transparent' : undefined }}
+      style={{ display: 'block', fontFamily, cursor, touchAction: editing || viewZoom ? 'none' : undefined, background: bg === 'transparent' ? 'transparent' : undefined }}
       onPointerDown={onBackgroundDown}
       onPointerMove={onMove}
       onPointerUp={onUp}
       onPointerCancel={onUp}
+      onDoubleClick={onCanvasDoubleClick}
       data-testid="flow-canvas"
     >
       <Defs uid={uid} markers={markers} />
@@ -504,13 +573,15 @@ export const FlowCanvas: React.FC<FlowCanvasProps> = (props) => {
       <g transform={`translate(${viewport.x} ${viewport.y}) scale(${viewport.zoom})`}>
         {groups.length > 0 && (
           <g data-testid="flow-groups" style={{ pointerEvents: 'none' }}>
-            {groups.map((g) => (
-              <g key={g.name}>
+            {groups.map((g, i) => (
+              <g key={`${g.group}:${i}`} data-testid={`flow-group-${g.group}`}>
                 <rect x={g.x} y={g.y} width={g.w} height={g.h} rx={12} fill={g.color} opacity={0.07} />
                 <rect x={g.x} y={g.y} width={g.w} height={g.h} rx={12} fill="none" stroke={g.color} opacity={0.35} strokeDasharray="4 3" />
-                <text x={g.x + 10} y={g.y + fontSize + 2} fill={g.color} fontSize={fontSize - 1} fontWeight={600} opacity={0.9} style={{ userSelect: 'none' }}>
-                  {g.name}
-                </text>
+                {g.first && (
+                  <text x={g.x + 10} y={g.y + fontSize + 2} fill={g.color} fontSize={fontSize - 1} fontWeight={600} opacity={0.9} style={{ userSelect: 'none' }}>
+                    {g.group}
+                  </text>
+                )}
               </g>
             ))}
           </g>
@@ -550,6 +621,8 @@ export const FlowCanvas: React.FC<FlowCanvasProps> = (props) => {
                 selected={isSel || pendingFrom === n.id}
                 editing={editing}
                 opacity={nodeOpacity(n.id)}
+                linked={!!hrefOf(n)}
+                onClick={onNodeClick}
                 onPointerDown={onNodeDown}
                 onDoubleClick={onNodeDoubleClick}
                 onPortPointerDown={onPortDown}

@@ -43,6 +43,8 @@ export interface FlowNode {
   valueFormat?: string;
   /** Group name (data-driven diagrams only; drives the group colour and group boxes) */
   group?: string;
+  /** Per-node link (manual: beats the Links template; data: a data link from the node frame) */
+  link?: string;
 }
 
 export interface EdgeParticles {
@@ -151,7 +153,24 @@ export interface DataOptions {
   overrides: Record<string, NodeOverride>;
 }
 
+export type LinkTarget = 'same' | 'new';
+export type LinkTrigger = 'dblclick' | 'click' | 'off';
+
+export interface LinkOptions {
+  /** URL template; supports dashboard variables and ${node.id|label|group|value|status} tokens */
+  nodeUrl: string;
+  target: LinkTarget;
+  trigger: LinkTrigger;
+}
+
+export interface InteractionOptions {
+  /** View mode: Ctrl/⌘ + wheel (or plain wheel in view-panel mode) zooms, drag pans, double-click fits */
+  zoom: boolean;
+}
+
 export interface FlowOptions {
+  interaction?: InteractionOptions;
+  links?: LinkOptions;
   appearance: {
     background: BackgroundStyle;
     nodeStyle: NodeStyle;
@@ -251,7 +270,12 @@ export const DEFAULT_DATA_OPTIONS: DataOptions = {
 export const MAX_DATA_NODES = 400;
 export const MAX_DATA_EDGES = 1500;
 
+export const DEFAULT_LINKS: LinkOptions = { nodeUrl: '', target: 'same', trigger: 'dblclick' };
+export const DEFAULT_INTERACTION: InteractionOptions = { zoom: true };
+
 export const DEFAULT_OPTIONS: FlowOptions = {
+  interaction: DEFAULT_INTERACTION,
+  links: DEFAULT_LINKS,
   appearance: {
     background: 'dots',
     nodeStyle: 'cards',

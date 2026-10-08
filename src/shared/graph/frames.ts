@@ -55,6 +55,8 @@ export interface GraphNode {
   valueField?: Field;
   /** True when the node came from a node frame rather than from an edge endpoint */
   explicit: boolean;
+  /** First standard data link configured on the node id field (href), when any */
+  link?: string;
 }
 
 export interface Graph {
@@ -298,8 +300,10 @@ function tableNodes(frame: DataFrame, series: DataFrame[], names: FieldNames, c:
       continue;
     }
     const prev = c.nodes.get(id);
+    const link = idf.getLinks?.({ valueRowIndex: i })?.[0]?.href;
     const node: GraphNode = {
       id,
+      link: link ?? prev?.link,
       label: (label ? str(label.values[i]) : undefined) ?? prev?.label,
       group: (group ? str(group.values[i]) : undefined) ?? prev?.group,
       status: statusOf(status, i) ?? prev?.status,

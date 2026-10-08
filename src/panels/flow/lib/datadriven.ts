@@ -98,6 +98,9 @@ export function buildDataDiagram(graph: Graph, positions: Map<string, Point>, op
     if (fv) {
       node.valueField = key;
     }
+    if (n.link) {
+      node.link = n.link;
+    }
     return node;
   });
 

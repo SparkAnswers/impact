@@ -277,3 +277,51 @@ describe('FlowPanel data-driven mode', () => {
     expect(onOptionsChange).not.toHaveBeenCalled();
   });
 });
+
+describe('FlowPanel links and view-mode zoom', () => {
+  const diagramWithLink = () => {
+    const d = createExampleDiagram();
+    d.nodes[0].link = '/own?id=${node.id}';
+    return d;
+  };
+
+  it('opens the node link template on double-click in a new tab, URL-encoding tokens', () => {
+    const open = jest.spyOn(window, 'open').mockImplementation(() => null);
+    renderPanel({ links: { nodeUrl: '/d/impact-gauge?var-node=${node.id}&l=${node.label}', target: 'new', trigger: 'dblclick' } });
+    fireEvent.doubleClick(screen.getByTestId('flow-node-grid'));
+    expect(open).toHaveBeenCalledWith('/d/impact-gauge?var-node=grid&l=Grid%20import', '_blank', 'noopener,noreferrer');
+    open.mockRestore();
+  });
+
+  it('prefers a manual node link, honours the click trigger and never fires in design mode', () => {
+    const open = jest.spyOn(window, 'open').mockImplementation(() => null);
+    renderPanel({ diagram: diagramWithLink(), links: { nodeUrl: '/d/t?n=${node.id}', target: 'new', trigger: 'click' } });
+    fireEvent.click(screen.getByTestId('flow-node-solar'));
+    expect(open).toHaveBeenLastCalledWith('/own?id=solar', '_blank', 'noopener,noreferrer');
+    fireEvent.doubleClick(screen.getByTestId('flow-node-grid'));
+    expect(open).toHaveBeenCalledTimes(1); // dblclick is not the trigger
+    open.mockClear();
+    renderPanel({ diagram: diagramWithLink(), layout: { ...DEFAULT_OPTIONS.layout, editMode: true }, links: { nodeUrl: '/d/t?n=${node.id}', target: 'new', trigger: 'click' } });
+    fireEvent.click(screen.getAllByTestId('flow-node-solar').at(-1)!);
+    expect(open).not.toHaveBeenCalled();
+    open.mockRestore();
+  });
+
+  it('zooms around the panel centre with the floating controls and fits again on double-click', () => {
+    renderPanel();
+    const chip = () => screen.getByTestId('flow-zoom-controls').textContent;
+    const before = chip();
+    fireEvent.click(screen.getByLabelText('Zoom in'));
+    expect(chip()).not.toBe(before);
+    const g = screen.getByTestId('flow-canvas').querySelector(':scope > g[transform]')!;
+    const zoomed = g.getAttribute('transform');
+    fireEvent.doubleClick(screen.getByTestId('flow-canvas'));
+    expect(g.getAttribute('transform')).not.toBe(zoomed);
+    expect(chip()).toBe(before);
+  });
+
+  it('hides the controls and ignores wheel/drag when Zoom and pan is off', () => {
+    renderPanel({ interaction: { zoom: false } });
+    expect(screen.queryByTestId('flow-zoom-controls')).not.toBeInTheDocument();
+  });
+});

@@ -12,6 +12,8 @@ const ANIMATION = ['Animation'];
 const LAYOUT = ['Layout'];
 const DIAGRAM = ['Diagram'];
 const DATA = ['Data'];
+const INTERACTION = ['Interaction'];
+const LINKS = ['Links'];
 const DATA_FIELDS = ['Data', 'Edge and node fields'];
 
 const D = DEFAULT_OPTIONS.data;
@@ -336,6 +338,49 @@ export const plugin = new PanelPlugin<FlowOptions>(FlowPanel)
         category: DATA_FIELDS,
         defaultValue: D.nodeValueField,
         showIf: isData,
+      })
+      .addBooleanSwitch({
+        path: 'interaction.zoom',
+        name: 'Zoom and pan',
+        description:
+          'View mode: Ctrl/⌘ + wheel (or trackpad pinch) zooms around the pointer, plain wheel zooms when the panel is viewed on its own, drag pans, double-click on the canvas fits. Zoom is kept for the session only; a small +/−/fit control appears bottom-right on hover',
+        category: INTERACTION,
+        defaultValue: DEFAULT_OPTIONS.interaction?.zoom ?? true,
+      })
+      .addTextInput({
+        path: 'links.nodeUrl',
+        name: 'Node link',
+        description: 'URL template opened from a node. Dashboard variables plus ${node.id}, ${node.label}, ${node.group}, ${node.value} and ${node.status} (URL-encoded). Beats data links on the node id field; a manual node’s own Link beats this',
+        category: LINKS,
+        defaultValue: DEFAULT_OPTIONS.links?.nodeUrl ?? '',
+        settings: { placeholder: '/d/dashboard?var-node=${node.id}' },
+      })
+      .addRadio({
+        path: 'links.target',
+        name: 'Open in',
+        description: 'Same tab keeps dashboard navigation in the app; New tab opens a new window',
+        category: LINKS,
+        defaultValue: DEFAULT_OPTIONS.links?.target ?? 'same',
+        settings: {
+          options: [
+            { value: 'same', label: 'Same tab' },
+            { value: 'new', label: 'New tab' },
+          ],
+        },
+      })
+      .addRadio({
+        path: 'links.trigger',
+        name: 'Trigger',
+        description: 'What opens a node link. Links only fire while Edit layout is off',
+        category: LINKS,
+        defaultValue: DEFAULT_OPTIONS.links?.trigger ?? 'dblclick',
+        settings: {
+          options: [
+            { value: 'dblclick', label: 'Double-click' },
+            { value: 'click', label: 'Click' },
+            { value: 'off', label: 'Off' },
+          ],
+        },
       })
       .addCustomEditor<{}, Record<string, NodeOverride>>({
         id: 'flow-overrides',

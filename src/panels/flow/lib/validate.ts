@@ -79,6 +79,9 @@ function validateNode(raw: unknown, i: number, errors: string[]): FlowNode | und
   if (isStr(raw.valueFormat) && raw.valueFormat) {
     node.valueFormat = cleanText(raw.valueFormat, 60);
   }
+  if (isStr(raw.link) && raw.link) {
+    node.link = cleanText(raw.link, 2000);
+  }
   return node;
 }
 

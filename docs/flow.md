@@ -91,6 +91,13 @@ configured name.
 - **Top N edges by value** (default 200) keeps the busiest edges. Diagrams are always capped at
   400 nodes / 1500 edges; a notice in the panel corner says when something was cut.
 
+### Group boxes
+
+Nodes of the same group are kept contiguous inside every layer, in one global group order, with a
+little extra room between groups. A group box is drawn **per layer segment** (one rounded rectangle
+for the group's nodes in each layer, same colour, labelled once on the first segment), so a group
+that spans pods and claims gets two boxes and never covers nodes of other groups in between.
+
 ### Overrides
 
 With `Data + manual overrides` and **Layout → Edit layout** on, dragging a node stores its position
@@ -188,6 +195,24 @@ sum by (id, status) (
 Set **Node value field** to a name that does not exist (for example `none`) so the constant `1` is not
 shown as a node value.
 
+## Zoom, pan and links in view mode
+
+With **Interaction → Zoom and pan** on (default), viewers can explore a diagram without entering
+design mode: **Ctrl/⌘ + wheel** (or a trackpad pinch) zooms around the pointer, a plain wheel zooms
+when the panel is viewed on its own (view panel / fullscreen) and scrolls the dashboard otherwise,
+**drag** pans, **double-click** on empty canvas fits the diagram again, and a small **+ / − / fit**
+control appears bottom-right when hovering the panel. The zoom is kept for the session only; the
+saved viewport is never changed outside design mode.
+
+**Links → Node link** is a URL template opened from a node: dashboard variables are interpolated
+and the node tokens `${node.id}`, `${node.label}`, `${node.group}`, `${node.value}` and
+`${node.status}` are URL-encoded, e.g. `/d/impact-gauge?var-node=${node.id}`. **Open in** picks
+same tab (in-app navigation for relative links) or a new tab; **Trigger** is double-click (default),
+click or off. Standard data links configured on the node frame's id field are used when no template
+is set; a manual node's own **Link** (Inspector → Data) beats the template. Linked nodes show a
+pointer cursor and a hover glow; links never fire while **Edit layout** is on. Only `http(s)` and
+relative URLs are opened.
+
 ## Designing a diagram
 
 1. Edit the panel and turn on **Layout → Edit layout**. A floating toolbar appears inside the panel
@@ -243,6 +268,10 @@ shown as a node value.
 | Data → Top N edges by value | Keep only the busiest N edges (0 = all; hard cap 400 nodes / 1500 edges). |
 | Data → Edge and node fields | Source, Target, Value, Secondary value, Label, Source group, Target group field / label names for edge frames; Node id, label, group, status, value field names for node frames. Empty value fields mean "first numeric field"; a name that matches nothing means "no value". |
 | Data → Node overrides | Inspector for data nodes (overrides mode): label, shape, icon, status, colour, position; clear one node or reset all. |
+| Interaction → Zoom and pan | View-mode zoom (Ctrl/⌘ + wheel, pinch, plain wheel in view-panel mode), drag to pan, double-click to fit, floating +/−/fit control. Session only. |
+| Links → Node link | URL template with dashboard variables and `${node.id|label|group|value|status}` tokens. |
+| Links → Open in | `Same tab` or `New tab`. |
+| Links → Trigger | `Double-click` (default), `Click` or `Off`. Links only fire when Edit layout is off. |
 | Standard options / Overrides | Unit, decimals, min/max, thresholds, colour scheme and display name of the bound fields. |
 
 ## Diagram JSON
@@ -251,7 +280,8 @@ shown as a node value.
 {
   "nodes": [
     { "id": "src", "label": "Source", "x": 40, "y": 120, "w": 140, "h": 52, "shape": "card",
-      "icon": "bolt", "status": "ok", "valueField": "source_kw", "valueFormat": "${value}" }
+      "icon": "bolt", "status": "ok", "valueField": "source_kw", "valueFormat": "${value}",
+      "link": "/d/site?var-source=${node.id}" }
   ],
   "edges": [
     { "id": "e1", "from": "src", "to": "hub", "fromSide": "auto", "toSide": "auto",

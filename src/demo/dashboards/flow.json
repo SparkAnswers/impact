@@ -3162,6 +3162,114 @@
         },
         "demoData": "whenNoData"
       }
+    },
+    {
+      "id": 14,
+      "type": "sparkanswers-impact-flow-panel",
+      "title": "Zoom, pan and links (Ctrl+wheel / drag / double-click = fit · double-click a node opens the gauge demo)",
+      "gridPos": {
+        "x": 0,
+        "y": 69,
+        "w": 24,
+        "h": 12
+      },
+      "datasource": {
+        "type": "grafana-testdata-datasource",
+        "uid": "${DS_TESTDATA}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-testdata-datasource",
+            "uid": "${DS_TESTDATA}"
+          },
+          "scenarioId": "csv_content",
+          "csvContent": "source,target,value,source_group,target_group\ngateway,auth,420,edge,core\ngateway,catalog,380,edge,core\ngateway,orders,210,edge,core\nauth,users-db,150,core,data\ncatalog,search,260,core,core\ncatalog,catalog-db,180,core,data\norders,payments,120,core,core\norders,inventory,160,core,core\norders,orders-db,140,core,data\ninventory,events,70,core,async\npayments,events,40,core,async\nevents,notifier,35,async,async\n"
+        },
+        {
+          "refId": "N",
+          "datasource": {
+            "type": "grafana-testdata-datasource",
+            "uid": "${DS_TESTDATA}"
+          },
+          "scenarioId": "csv_content",
+          "csvContent": "id,label,status,value\ngateway,API gateway,ok,42\nauth,Auth,ok,12\ncatalog,Catalog,warn,31\nsearch,Search,ok,9\norders,Orders,ok,18\npayments,Payments,error,7\ninventory,Inventory,ok,14\nevents,Event bus,ok,22\nnotifier,Notifier,ok,3\nusers-db,Users DB,ok,2\ncatalog-db,Catalog DB,ok,4\norders-db,Orders DB,ok,3\n"
+        }
+      ],
+      "options": {
+        "appearance": {
+          "background": "dots",
+          "nodeStyle": "cards",
+          "fontSize": 12,
+          "edgeColor": "blue",
+          "particleSpeed": 1
+        },
+        "animation": {
+          "enabled": true,
+          "speed": 1,
+          "reducedMotion": "system"
+        },
+        "layout": {
+          "editMode": false,
+          "gridSize": 20,
+          "snap": true,
+          "autoFit": true
+        },
+        "diagram": {
+          "nodes": [],
+          "edges": [],
+          "viewport": {
+            "x": 0,
+            "y": 0,
+            "zoom": 1
+          },
+          "grid": {
+            "show": true,
+            "size": 20,
+            "snap": true
+          }
+        },
+        "data": {
+          "source": "data",
+          "sourceField": "source",
+          "targetField": "target",
+          "valueField": "",
+          "value2Field": "",
+          "labelField": "label",
+          "sourceGroupField": "source_group",
+          "targetGroupField": "target_group",
+          "nodeIdField": "id",
+          "nodeLabelField": "label",
+          "nodeGroupField": "group",
+          "nodeStatusField": "status",
+          "nodeValueField": "",
+          "valueMap": "speed",
+          "value2Map": "color",
+          "showEdgeValues": false,
+          "topN": 200,
+          "layout": "lr",
+          "layerGap": 120,
+          "nodeGap": 24,
+          "groupBoxes": true,
+          "overrides": {}
+        },
+        "interaction": {
+          "zoom": true
+        },
+        "links": {
+          "nodeUrl": "/d/impact-gauge?var-node=${node.id}",
+          "target": "new",
+          "trigger": "dblclick"
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "decimals": 0
+        },
+        "overrides": []
+      }
     }
   ]
 }

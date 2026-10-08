@@ -1,26 +1,32 @@
 import React, { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
 import { css } from '@emotion/css';
 import type { DataFrame, GrafanaTheme2, PanelProps } from '@grafana/data';
+import { locationService } from '@grafana/runtime';
 import { Button, usePanelContext, useStyles2, useTheme2 } from '@grafana/ui';
 import { DemoBadge, edgeTable, useDemoFrames, type DemoGenerator } from '../../shared/demo';
 import { useMotionAllowed } from '../../shared/motion';
 import { ReducedMotionHint } from '../../shared/ReducedMotionHint';
 import { FlowCanvas } from './components/FlowCanvas';
 import { Toolbar, type Tool } from './components/Toolbar';
-import { indexFields } from './lib/data';
+import { ZoomControls } from './components/ZoomControls';
+import { formatValue, indexFields } from './lib/data';
 import { buildDataDiagram, mergeOverrides, nodeSize, overridesFromMove, shortLabel } from './lib/datadriven';
 import { createExampleDiagram } from './lib/example';
 import { extractGraph } from './lib/frames';
-import { fitViewport } from './lib/geometry';
+import { fitViewport, zoomAt } from './lib/geometry';
+import { openLink, resolveNodeLink } from './lib/links';
 import { layoutGraph, nodeSetKey, type LayoutOptions } from './lib/layout';
 import { diffFade, emptyFade, fadeFrame, type FadeState } from './lib/transitions';
 import { emptyUndo, pushUndo, redo, undo, type UndoState } from './lib/undo';
 import { normalizeDiagram } from './lib/validate';
 import {
   DEFAULT_DATA_OPTIONS,
+  DEFAULT_INTERACTION,
+  DEFAULT_LINKS,
   type DataOptions,
   type DiagramSource,
   type FlowDiagram,
+  type FlowNode,
   type FlowOptions,
   type FlowSelection,
   type Point,
@@ -64,7 +70,7 @@ const getStyles = (theme: GrafanaTheme2) => ({
   }),
   notice: css({
     position: 'absolute',
-    right: 8,
+    left: 8,
     bottom: 6,
     fontSize: 11,
     color: theme.colors.warning.text,
@@ -201,8 +207,15 @@ export const FlowPanel: React.FC<PanelProps<FlowOptions>> = ({
   // Aspect is quantised so small resizes do not trigger a re-layout.
   const aspect = width > 0 && height > 0 ? Math.round((width / height) * 4) / 4 : undefined;
   const layoutOpts = useMemo<LayoutOptions>(
-    () => ({ direction: dataOpts.layout, layerGap: Math.max(20, dataOpts.layerGap), nodeGap: Math.max(4, dataOpts.nodeGap), aspect }),
-    [dataOpts.layout, dataOpts.layerGap, dataOpts.nodeGap, aspect]
+    () => ({
+      direction: dataOpts.layout,
+      layerGap: Math.max(20, dataOpts.layerGap),
+      nodeGap: Math.max(4, dataOpts.nodeGap),
+      // Room between groups in a layer for the group boxes and their label.
+      groupGap: dataOpts.groupBoxes ? fontSize + 10 : 0,
+      aspect,
+    }),
+    [dataOpts.layout, dataOpts.layerGap, dataOpts.nodeGap, dataOpts.groupBoxes, fontSize, aspect]
   );
   // Positions are only recomputed when the node set (or the layout options) change, so refreshes do not reshuffle.
   const layoutKey = graph ? nodeSetKey(graph.nodes, layoutOpts) : '';
@@ -335,6 +348,7 @@ export const FlowPanel: React.FC<PanelProps<FlowOptions>> = ({
     setPrevEditing(editing);
     setSelectionState(undefined);
     setTool('select');
+    setUserViewport(false);
   }
   // Ignore a selection whose element has disappeared.
   const selection = useMemo(() => {
@@ -347,8 +361,10 @@ export const FlowPanel: React.FC<PanelProps<FlowOptions>> = ({
 
   // Viewport: editing uses the stored viewport (persisted, debounced); viewing auto-fits unless disabled.
   const autoFit = options.layout?.autoFit !== false;
+  // Editing uses the live viewport; view mode fits (or, manual without Fit to panel, uses the saved viewport)
+  // until the user zooms or pans, which is kept for the session only.
   const effectiveViewport = useMemo<Viewport>(() => {
-    if (isData ? editing && userViewport : editing || !autoFit) {
+    if (userViewport || (editing && !isData) || (!editing && !isData && !autoFit)) {
       return viewport;
     }
     return editing ? fitBelowChrome(diagram.nodes, width, height) : fitViewport(diagram.nodes, width, height);
@@ -421,7 +437,25 @@ export const FlowPanel: React.FC<PanelProps<FlowOptions>> = ({
     setSelection(undefined);
   }, [selection, commit, setSelection, diagram, isData]);
 
-  const fit = useCallback(() => setViewport(fitBelowChrome(diagram.nodes, width, height)), [diagram.nodes, width, height, setViewport]);
+  const fit = useCallback(() => {
+    if (editing) {
+      setViewport(fitBelowChrome(diagram.nodes, width, height));
+    } else {
+      // Back to the reactive fitted view (follows resizes and data changes again).
+      setUserViewport(false);
+      setViewportState(fitViewport(diagram.nodes, width, height));
+    }
+  }, [editing, diagram.nodes, width, height, setViewport]);
+  const zoomBy = useCallback((factor: number) => setViewport(zoomAt(effectiveViewport, width / 2, height / 2, factor)), [effectiveViewport, width, height, setViewport]);
+  const zoomEnabled = (options.interaction ?? DEFAULT_INTERACTION).zoom !== false;
+
+  // Node links (view mode only).
+  const links = useMemo(() => ({ ...DEFAULT_LINKS, ...(options.links ?? {}) }), [options.links]);
+  const linkFor = useCallback(
+    (node: FlowNode) => resolveNodeLink(node, links, formatValue(node.valueField ? fields.get(node.valueField) : undefined, node.valueFormat), replaceVariables, isData),
+    [links, fields, replaceVariables, isData]
+  );
+  const onOpenLink = useCallback((href: string) => openLink(href, links.target, (path) => locationService.push(path)), [links.target]);
   const toggleGrid = useCallback(() => {
     if (isData) {
       return;
@@ -489,6 +523,11 @@ export const FlowPanel: React.FC<PanelProps<FlowOptions>> = ({
         uid={uid}
         opacity={fadeOpacity}
         groupBoxes={isData && dataOpts.groupBoxes}
+        zoomEnabled={zoomEnabled}
+        linkFor={linkFor}
+        linkTrigger={links.trigger}
+        onOpenLink={onOpenLink}
+        onFit={fit}
         onViewport={setViewport}
         onSelect={setSelection}
         onDraft={setDraft}
@@ -526,6 +565,7 @@ export const FlowPanel: React.FC<PanelProps<FlowOptions>> = ({
           </span>
         </>
       )}
+      {(zoomEnabled || editing) && !empty && <ZoomControls zoom={effectiveViewport.zoom} onZoomIn={() => zoomBy(1.25)} onZoomOut={() => zoomBy(0.8)} onFit={fit} pinned={editing} />}
       <ReducedMotionHint animationEnabled={animationEnabled} preference={options.animation?.reducedMotion} width={width} />
       {/* Below the design-mode toolbar and mode chip while editing. */}
       <div className={styles.badgeWrap} style={editing ? { top: 28 } : undefined}>
@@ -540,7 +580,7 @@ export const FlowPanel: React.FC<PanelProps<FlowOptions>> = ({
         </div>
       )}
       {notices.length > 0 && !empty && (
-        <span className={styles.notice} data-testid="flow-notice">
+        <span className={styles.notice} style={editing ? { bottom: 30 } : undefined} data-testid="flow-notice">
           {notices.join(' · ')}
         </span>
       )}

@@ -28,7 +28,7 @@
       },
       "options": {
         "mode": "markdown",
-        "content": "**Flow Designer** draws node/edge diagrams with glowing edges and travelling particles. Nodes show the last value of a bound field (unit and decimals from standard options); edges can map a field to particle speed, colour (via thresholds) or width. Edit a panel and turn on *Layout → Edit layout* to drag nodes, draw edges and reshape curves."
+        "content": "**Flow Designer** draws node/edge diagrams with glowing edges and travelling particles. Nodes show the last value of a bound field (unit and decimals from standard options); edges can map a field to particle speed, colour (via thresholds) or width. Edit a panel and turn on *Layout \u2192 Edit layout* to drag nodes, draw edges and reshape curves."
       }
     },
     {
@@ -2565,7 +2565,7 @@
     {
       "id": 8,
       "type": "sparkanswers-impact-flow-panel",
-      "title": "Microservice call graph (12 nodes, request rate → speed, status from a node frame)",
+      "title": "Microservice call graph (12 nodes, request rate \u2192 speed, status from a node frame)",
       "gridPos": {
         "x": 0,
         "y": 32,
@@ -2665,7 +2665,7 @@
     {
       "id": 9,
       "type": "sparkanswers-impact-flow-panel",
-      "title": "Host → pod → PVC → PV → storage class (bytes → width, namespace groups)",
+      "title": "Host \u2192 pod \u2192 PVC \u2192 PV \u2192 storage class (bytes \u2192 width, namespace groups)",
       "gridPos": {
         "x": 12,
         "y": 32,
@@ -2756,7 +2756,7 @@
     {
       "id": 10,
       "type": "sparkanswers-impact-flow-panel",
-      "title": "Radial: hub in the middle (value → colour via thresholds)",
+      "title": "Radial: hub in the middle (value \u2192 colour via thresholds)",
       "gridPos": {
         "x": 0,
         "y": 45,
@@ -2985,8 +2985,8 @@
     {
       "id": 12,
       "type": "sparkanswers-impact-flow-panel",
-      "title": "No query · demo data",
-      "description": "This panel's query returns no data (TestData 'No data points'; an empty target list would be replaced by a default random walk). Diagram source = Data and Data → Demo data = When no data (the default) build a generated 12-node service graph through the normal field pipeline, with a 'Demo data' badge. Add a query with source/target rows and the real result takes over; set Demo data to Off to see the empty state instead.",
+      "title": "No query \u00b7 demo data",
+      "description": "This panel's query returns no data (TestData 'No data points'; an empty target list would be replaced by a default random walk). Diagram source = Data and Data \u2192 Demo data = When no data (the default) build a generated 12-node service graph through the normal field pipeline, with a 'Demo data' badge. Add a query with source/target rows and the real result takes over; set Demo data to Off to see the empty state instead.",
       "gridPos": {
         "x": 0,
         "y": 57,
@@ -3077,7 +3077,7 @@
     {
       "id": 13,
       "type": "sparkanswers-impact-flow-panel",
-      "title": "Fresh panel · manual source, empty diagram, no query",
+      "title": "Fresh panel \u00b7 manual source, empty diagram, no query",
       "description": "Exactly what a newly added Flow Designer looks like: Diagram source = Manual, nothing drawn, no data. With Demo data on, the generated graph stands in (laid out as in Data mode) with a one-line hint until you load the example, draw a diagram, or switch the source to Data. Turning on Edit layout shows the real empty canvas.",
       "gridPos": {
         "x": 12,
@@ -3161,6 +3161,114 @@
           "overrides": {}
         },
         "demoData": "whenNoData"
+      }
+    },
+    {
+      "id": 14,
+      "type": "sparkanswers-impact-flow-panel",
+      "title": "Zoom, pan and links (Ctrl+wheel / drag / double-click = fit \u00b7 double-click a node opens the gauge demo)",
+      "gridPos": {
+        "x": 0,
+        "y": 69,
+        "w": 24,
+        "h": 12
+      },
+      "datasource": {
+        "type": "grafana-testdata-datasource",
+        "uid": "impact-testdata"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-testdata-datasource",
+            "uid": "impact-testdata"
+          },
+          "scenarioId": "csv_content",
+          "csvContent": "source,target,value,source_group,target_group\ngateway,auth,420,edge,core\ngateway,catalog,380,edge,core\ngateway,orders,210,edge,core\nauth,users-db,150,core,data\ncatalog,search,260,core,core\ncatalog,catalog-db,180,core,data\norders,payments,120,core,core\norders,inventory,160,core,core\norders,orders-db,140,core,data\ninventory,events,70,core,async\npayments,events,40,core,async\nevents,notifier,35,async,async\n"
+        },
+        {
+          "refId": "N",
+          "datasource": {
+            "type": "grafana-testdata-datasource",
+            "uid": "impact-testdata"
+          },
+          "scenarioId": "csv_content",
+          "csvContent": "id,label,status,value\ngateway,API gateway,ok,42\nauth,Auth,ok,12\ncatalog,Catalog,warn,31\nsearch,Search,ok,9\norders,Orders,ok,18\npayments,Payments,error,7\ninventory,Inventory,ok,14\nevents,Event bus,ok,22\nnotifier,Notifier,ok,3\nusers-db,Users DB,ok,2\ncatalog-db,Catalog DB,ok,4\norders-db,Orders DB,ok,3\n"
+        }
+      ],
+      "options": {
+        "appearance": {
+          "background": "dots",
+          "nodeStyle": "cards",
+          "fontSize": 12,
+          "edgeColor": "blue",
+          "particleSpeed": 1
+        },
+        "animation": {
+          "enabled": true,
+          "speed": 1,
+          "reducedMotion": "system"
+        },
+        "layout": {
+          "editMode": false,
+          "gridSize": 20,
+          "snap": true,
+          "autoFit": true
+        },
+        "diagram": {
+          "nodes": [],
+          "edges": [],
+          "viewport": {
+            "x": 0,
+            "y": 0,
+            "zoom": 1
+          },
+          "grid": {
+            "show": true,
+            "size": 20,
+            "snap": true
+          }
+        },
+        "data": {
+          "source": "data",
+          "sourceField": "source",
+          "targetField": "target",
+          "valueField": "",
+          "value2Field": "",
+          "labelField": "label",
+          "sourceGroupField": "source_group",
+          "targetGroupField": "target_group",
+          "nodeIdField": "id",
+          "nodeLabelField": "label",
+          "nodeGroupField": "group",
+          "nodeStatusField": "status",
+          "nodeValueField": "",
+          "valueMap": "speed",
+          "value2Map": "color",
+          "showEdgeValues": false,
+          "topN": 200,
+          "layout": "lr",
+          "layerGap": 120,
+          "nodeGap": 24,
+          "groupBoxes": true,
+          "overrides": {}
+        },
+        "interaction": {
+          "zoom": true
+        },
+        "links": {
+          "nodeUrl": "/d/impact-gauge?var-node=${node.id}",
+          "target": "new",
+          "trigger": "dblclick"
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "decimals": 0
+        },
+        "overrides": []
       }
     }
   ]

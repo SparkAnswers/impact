@@ -235,6 +235,9 @@ export const InspectorEditor: React.FC<Props> = ({ value, onChange, context }) =
           <InlineField label="Template" labelWidth={LW} grow tooltip="Optional text with ${value} placeholder, e.g. 'Load ${value}'">
             <Input value={node.valueFormat ?? ''} placeholder="${value}" onChange={(e) => patchNode({ valueFormat: e.currentTarget.value || undefined })} />
           </InlineField>
+          <InlineField label="Link" labelWidth={LW} grow tooltip="URL opened on this node (see Links options for trigger and tab). Overrides the Links template; supports ${node.id} tokens and dashboard variables">
+            <Input value={node.link ?? ''} placeholder="/d/dashboard?var-x=${node.id}" onChange={(e) => patchNode({ link: e.currentTarget.value || undefined })} />
+          </InlineField>
           <div className={s.section}>Geometry</div>
           <Stack direction="row" gap={0.5}>
             {(['x', 'y', 'w', 'h'] as const).map((k) => (

@@ -29,6 +29,8 @@ export interface LayoutOptions {
   layerGap: number;
   /** Distance between neighbouring nodes in a layer, in canvas px */
   nodeGap: number;
+  /** Extra distance between neighbouring nodes of *different* groups in a layer (room for group boxes) */
+  groupGap?: number;
   /**
    * Width / height of the panel. When set, the layer gap is stretched (up to 4x) so the diagram's aspect
    * approaches the panel's; a 2 → 1 → 17 fan-out otherwise becomes a thin tall strip after fit-to-panel.
@@ -222,9 +224,13 @@ export function layeredLayout(nodes: LayoutNode[], edges: LayoutEdge[], opts: La
   // Main axis = along the flow (x for left-to-right), cross axis = within a layer.
   const main = (n: LayoutNode) => (horizontal ? n.w : n.h);
   const cross = (n: LayoutNode) => (horizontal ? n.h : n.w);
+  const groupGap = opts.groupGap ?? 0;
+  // Gap after node i of a layer: the node gap, plus the group gap when the next node belongs to another group.
+  const gapAfter = (layer: string[], i: number) =>
+    i >= layer.length - 1 ? 0 : opts.nodeGap + ((groups.get(layer[i]) ?? '') !== (groups.get(layer[i + 1]) ?? '') ? groupGap : 0);
   const extents = layers.map((layer) => {
     const items = layer.map((id) => size.get(id)!);
-    const length = items.reduce((s, n) => s + cross(n), 0) + Math.max(0, items.length - 1) * opts.nodeGap;
+    const length = items.reduce((s, n, i) => s + cross(n) + gapAfter(layer, i), 0);
     const thickness = items.reduce((m, n) => Math.max(m, main(n)), 0);
     return { length, thickness };
   });
@@ -240,13 +246,13 @@ export function layeredLayout(nodes: LayoutNode[], edges: LayoutEdge[], opts: La
   layers.forEach((layer, li) => {
     const { length, thickness } = extents[li];
     let crossPos = (tallest - length) / 2;
-    for (const id of layer) {
+    layer.forEach((id, i) => {
       const n = size.get(id)!;
       // Centre each node on the layer's main axis so mixed widths still align.
       const m = mainPos + (thickness - main(n)) / 2;
       positions.set(id, horizontal ? { x: Math.round(m), y: Math.round(crossPos) } : { x: Math.round(crossPos), y: Math.round(m) });
-      crossPos += cross(n) + opts.nodeGap;
-    }
+      crossPos += cross(n) + gapAfter(layer, i);
+    });
     mainPos += thickness + layerGap;
   });
   return { positions, ranks };
@@ -343,7 +349,7 @@ export function layoutGraph(nodes: LayoutNode[], edges: LayoutEdge[], opts: Layo
 
 /** Signature of the node set (used to decide whether a re-layout is needed). */
 export const nodeSetKey = (nodes: Array<{ id: string }>, opts: LayoutOptions) =>
-  `${opts.direction}|${opts.layerGap}|${opts.nodeGap}|${opts.aspect ?? ''}|${nodes
+  `${opts.direction}|${opts.layerGap}|${opts.nodeGap}|${opts.groupGap ?? ''}|${opts.aspect ?? ''}|${nodes
     .map((n) => n.id)
     .sort()
     .join('\n')}`;
