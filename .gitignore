@@ -53,3 +53,7 @@ out/
 mockups/node_modules/
 mockups/**/*-video/
 provisioning/datasources/local-*.yaml
+
+# Local agent files, kept out of the repo
+CLAUDE.md
+.claude/
