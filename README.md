@@ -161,6 +161,8 @@ Five demo dashboards ship with the stack: `Impact showcase` (one of everything),
 **Developing the plugin?** All builds run in Docker; nothing calls npm on the host.
 `make dev` runs webpack in watch mode with livereload next to `docker compose up`.
 
+Grafana serves plugin JavaScript with a one-hour browser cache keyed on the plugin version. After a rebuild, hard-reload the dashboard (Ctrl+Shift+R, or Cmd+Shift+R on a Mac) or use a private window, otherwise you keep looking at the previous bundle.
+
 ## Architecture
 
 ```
