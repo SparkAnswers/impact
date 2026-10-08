@@ -11,8 +11,9 @@ rows are windowed so only the visible slice is rendered.
 
 The panel works on either shape of data. With **no query at all** it still renders: *Data > Demo data*
 defaults to *When no data*, which feeds a generated device table through the same field pipeline (unit,
-thresholds, mappings, overrides) and marks the panel with a "Demo data" pill. Add a query (or set the
-option to *Off*) to switch to real data.
+thresholds, mappings, overrides) and marks the panel with a "Demo data" pill (in the footer's right
+half when the footer is on, otherwise in a small band above the header so no column title is covered).
+Add a query (or set the option to *Off*) to switch to real data.
 
 **Table input (one row per entity)** - a single frame where each row is an entity, for example a CSV,
 SQL or logs-to-table result. Column roles are auto-detected and can be fixed in the _Columns_ options:

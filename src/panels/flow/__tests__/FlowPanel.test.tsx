@@ -1,11 +1,12 @@
 import React from 'react';
-import { act, fireEvent, render, screen } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { FieldType, LoadingState, applyFieldOverrides, createTheme, getDefaultTimeRange, toDataFrame, type PanelProps } from '@grafana/data';
-import { FlowPanel } from '../FlowPanel';
+import { FLOW_DEMO_HINT, FLOW_NO_DATA_MESSAGE, FlowPanel } from '../FlowPanel';
 import { createExampleDiagram } from '../lib/example';
 import { DEFAULT_OPTIONS, type FlowOptions } from '../types';
 
 const theme = createTheme();
+const EMPTY = { nodes: [], edges: [], viewport: { x: 0, y: 0, zoom: 1 }, grid: { show: true, size: 20, snap: true } };
 
 // jsdom has no PointerEvent; React's onPointer* handlers need `button`/`pointerId` on the event.
 if (typeof window.PointerEvent === 'undefined') {
@@ -74,10 +75,36 @@ describe('FlowPanel', () => {
 
   it('renders an empty state with a load-example action', () => {
     const onOptionsChange = jest.fn();
-    renderPanel({ diagram: { nodes: [], edges: [], viewport: { x: 0, y: 0, zoom: 1 }, grid: { show: true, size: 20, snap: true } } }, onOptionsChange);
+    renderPanel({ diagram: EMPTY, demoData: 'off' }, onOptionsChange);
+    expect(screen.getByText(FLOW_NO_DATA_MESSAGE)).toBeInTheDocument();
+    expect(screen.queryByTestId('impact-demo-badge')).not.toBeInTheDocument();
     fireEvent.click(screen.getByText('Load example diagram'));
     expect(onOptionsChange).toHaveBeenCalledTimes(1);
     expect(onOptionsChange.mock.calls[0][0].diagram.nodes).toHaveLength(10);
+  });
+
+  it('shows the generated graph (data layout) for an empty manual diagram when demo data is on', () => {
+    const onOptionsChange = jest.fn();
+    renderPanel({ diagram: EMPTY }, onOptionsChange); // demoData defaults to "when no data"; the series carry no edges
+    expect(screen.getByTestId('impact-demo-badge')).toBeInTheDocument();
+    expect(screen.getByTestId('flow-demo-hint')).toHaveTextContent(FLOW_DEMO_HINT);
+    expect(screen.getByTestId('flow-node-api-gateway')).toBeInTheDocument();
+    expect(screen.getAllByTestId(/^flow-node-/).length).toBe(12);
+    // Loading the example still writes the manual diagram.
+    fireEvent.click(screen.getByText('Load example diagram'));
+    expect(onOptionsChange).toHaveBeenCalledTimes(1);
+    expect(onOptionsChange.mock.calls[0][0].diagram.nodes).toHaveLength(10);
+  });
+
+  it('never feeds generated values to a drawn diagram and not while designing an empty one', () => {
+    renderPanel({ demoData: 'always' });
+    expect(screen.queryByTestId('impact-demo-badge')).not.toBeInTheDocument();
+    expect(screen.getByText('Solar array')).toBeInTheDocument();
+    cleanup();
+    renderPanel({ diagram: EMPTY, layout: { ...DEFAULT_OPTIONS.layout, editMode: true } });
+    expect(screen.queryByTestId('impact-demo-badge')).not.toBeInTheDocument();
+    expect(screen.getByText('Load example diagram')).toBeInTheDocument();
+    expect(screen.queryAllByTestId(/^flow-node-/)).toHaveLength(0);
   });
 
   it('shows the toolbar in edit mode and persists a node drag with snapping', () => {
@@ -178,11 +205,34 @@ describe('FlowPanel data-driven mode', () => {
     expect(x('db')).toBeGreaterThan(x('api'));
   });
 
-  it('shows a hint when the frames carry no edges', () => {
-    const options: FlowOptions = { ...DEFAULT_OPTIONS, data: { ...DEFAULT_OPTIONS.data, source: 'data', sourceField: 'nope' } };
+  it('shows a hint when the frames carry no edges and demo data is off', () => {
+    const options: FlowOptions = { ...DEFAULT_OPTIONS, demoData: 'off', data: { ...DEFAULT_OPTIONS.data, source: 'data', sourceField: 'nope' } };
     const { onOptionsChange } = renderPanel(options);
     expect(screen.getByTestId('flow-data-empty')).toHaveTextContent('nope');
+    expect(screen.queryByTestId('impact-demo-badge')).not.toBeInTheDocument();
     expect(onOptionsChange).not.toHaveBeenCalled();
+  });
+
+  it('renders the generated service graph with a badge when the frames carry no edges (default demo mode)', () => {
+    const options: FlowOptions = { ...DEFAULT_OPTIONS, data: { ...DEFAULT_OPTIONS.data, source: 'data', sourceField: 'nope', showEdgeValues: true } };
+    renderPanel(options);
+    expect(screen.queryByTestId('flow-data-empty')).not.toBeInTheDocument();
+    expect(screen.getByTestId('impact-demo-badge')).toBeInTheDocument();
+    expect(screen.queryByTestId('flow-demo-hint')).not.toBeInTheDocument();
+    expect(screen.getAllByTestId(/^flow-node-/).length).toBe(12);
+    // Values go through the field pipeline: the generator's unit is kept.
+    expect(screen.getAllByText(/req\/s/).length).toBeGreaterThan(0);
+  });
+
+  it('prefers real edges over demo data in "when no data" mode and ignores them in "always"', () => {
+    renderData({ sourceField: 'source' });
+    expect(screen.queryByTestId('impact-demo-badge')).not.toBeInTheDocument();
+    expect(screen.getAllByTestId(/^flow-node-/).length).toBe(4);
+    cleanup();
+    const options: FlowOptions = { ...DEFAULT_OPTIONS, demoData: 'always', data: { ...DEFAULT_OPTIONS.data, source: 'data' } };
+    renderPanel(options);
+    expect(screen.getByTestId('impact-demo-badge')).toBeInTheDocument();
+    expect(screen.getAllByTestId(/^flow-node-/).length).toBe(12);
   });
 
   it('persists a drag as a node override in "Data + manual overrides" mode and applies it', () => {

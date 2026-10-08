@@ -144,7 +144,7 @@ export const BarsTable: React.FC<Props> = ({ model, options, width, height, anim
 
   return (
     <div
-      className={cx(styles.root, background === 'solid' && styles.rootSolid)}
+      className={cx(styles.root, background === 'solid' && styles.rootSolid, options.showFooter && styles.rootFooter)}
       style={{ width, height, ...cssVars }}
       data-testid="impact-bars"
       data-background={background}

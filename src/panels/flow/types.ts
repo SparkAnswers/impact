@@ -1,3 +1,4 @@
+import type { DemoMode } from '../../shared/demo';
 import type { MotionPreference } from '../../shared/motion';
 
 /**
@@ -173,6 +174,11 @@ export interface FlowOptions {
   };
   diagram: FlowDiagram;
   data: DataOptions;
+  /**
+   * Built-in generated service graph. Data modes: replaces the query result when it yields no edges (or
+   * always). Manual mode: an empty diagram shows the generated graph (data layout) until one is drawn.
+   */
+  demoData?: DemoMode;
 }
 
 /** Selection shared between the panel and the inspector option editor via panel instance state. */
@@ -257,4 +263,5 @@ export const DEFAULT_OPTIONS: FlowOptions = {
   layout: { editMode: false, gridSize: 20, snap: true, autoFit: true },
   diagram: EMPTY_DIAGRAM,
   data: DEFAULT_DATA_OPTIONS,
+  demoData: 'whenNoData',
 };

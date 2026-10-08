@@ -34,8 +34,16 @@ export const getStyles = (theme: GrafanaTheme2) => {
       lineHeight: 1.3,
       color: theme.colors.text.primary,
       overflow: 'hidden',
+      // The panel renders the "Demo data" pill (18 px tall, 6 px from the top) as the next sibling of this
+      // root; reserve a band for it so it does not cover the right-most column header.
+      '&:has(+ [data-testid="impact-demo-badge"])': { paddingTop: 24 },
     }),
     rootSolid: css({ background: 'var(--pb-bg)' }),
+    /** With the footer on, the pill sits in the footer's right half (where "Refreshed ..." would be) instead. */
+    rootFooter: css({
+      '&:has(+ [data-testid="impact-demo-badge"])': { paddingTop: 0 },
+      '& + [data-testid="impact-demo-badge"]': { top: 'auto', bottom: 3, right: theme.spacing(1) },
+    }),
     /** Sticky header fill: opaque (Panel / Solid colour) or frosted (Transparent). */
     headerSolid: css({
       '& th': { background: 'var(--pb-bg)' },

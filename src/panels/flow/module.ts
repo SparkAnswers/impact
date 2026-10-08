@@ -1,3 +1,4 @@
+import { DEMO_MODE_CHOICES } from '../../shared/demo';
 import { MOTION_PREFERENCE_CHOICES, MOTION_PREFERENCE_DESCRIPTION } from '../../shared/motion';
 import { PanelPlugin, type SelectableValue } from '@grafana/data';
 import { FlowPanel } from './FlowPanel';
@@ -149,6 +150,15 @@ export const plugin = new PanelPlugin<FlowOptions>(FlowPanel)
             { value: 'overrides', label: 'Data + manual overrides' },
           ],
         },
+      })
+      .addRadio({
+        path: 'demoData',
+        name: 'Demo data',
+        description:
+          'Built-in generated service graph (12 nodes) so the panel looks right with no query. When no data: used when Diagram source is Data and the query yields no edges, or in Manual mode while the diagram is empty. Always: ignores the query in the data modes. Off: never.',
+        category: DATA,
+        defaultValue: DEFAULT_OPTIONS.demoData,
+        settings: { options: DEMO_MODE_CHOICES },
       })
       .addRadio({
         path: 'data.layout',

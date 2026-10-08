@@ -2981,6 +2981,187 @@
         },
         "overrides": []
       }
+    },
+    {
+      "id": 12,
+      "type": "sparkanswers-impact-flow-panel",
+      "title": "No query · demo data",
+      "description": "This panel's query returns no data (TestData 'No data points'; an empty target list would be replaced by a default random walk). Diagram source = Data and Data → Demo data = When no data (the default) build a generated 12-node service graph through the normal field pipeline, with a 'Demo data' badge. Add a query with source/target rows and the real result takes over; set Demo data to Off to see the empty state instead.",
+      "gridPos": {
+        "x": 0,
+        "y": 57,
+        "w": 12,
+        "h": 12
+      },
+      "datasource": {
+        "type": "grafana-testdata-datasource",
+        "uid": "${DS_TESTDATA}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-testdata-datasource",
+            "uid": "${DS_TESTDATA}"
+          },
+          "scenarioId": "no_data_points"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "decimals": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "appearance": {
+          "background": "dots",
+          "nodeStyle": "cards",
+          "fontSize": 12,
+          "edgeColor": "blue",
+          "particleSpeed": 1
+        },
+        "animation": {
+          "enabled": true,
+          "speed": 1,
+          "reducedMotion": "system"
+        },
+        "layout": {
+          "editMode": false,
+          "gridSize": 20,
+          "snap": true,
+          "autoFit": true
+        },
+        "diagram": {
+          "nodes": [],
+          "edges": [],
+          "viewport": {
+            "x": 0,
+            "y": 0,
+            "zoom": 1
+          },
+          "grid": {
+            "show": true,
+            "size": 20,
+            "snap": true
+          }
+        },
+        "data": {
+          "source": "data",
+          "sourceField": "source",
+          "targetField": "target",
+          "valueField": "",
+          "value2Field": "",
+          "labelField": "label",
+          "sourceGroupField": "source_group",
+          "targetGroupField": "target_group",
+          "nodeIdField": "id",
+          "nodeLabelField": "label",
+          "nodeGroupField": "group",
+          "nodeStatusField": "status",
+          "nodeValueField": "",
+          "valueMap": "speed",
+          "value2Map": "color",
+          "showEdgeValues": true,
+          "topN": 200,
+          "layout": "lr",
+          "layerGap": 120,
+          "nodeGap": 24,
+          "groupBoxes": true,
+          "overrides": {}
+        },
+        "demoData": "whenNoData"
+      }
+    },
+    {
+      "id": 13,
+      "type": "sparkanswers-impact-flow-panel",
+      "title": "Fresh panel · manual source, empty diagram, no query",
+      "description": "Exactly what a newly added Flow Designer looks like: Diagram source = Manual, nothing drawn, no data. With Demo data on, the generated graph stands in (laid out as in Data mode) with a one-line hint until you load the example, draw a diagram, or switch the source to Data. Turning on Edit layout shows the real empty canvas.",
+      "gridPos": {
+        "x": 12,
+        "y": 57,
+        "w": 12,
+        "h": 12
+      },
+      "datasource": {
+        "type": "grafana-testdata-datasource",
+        "uid": "${DS_TESTDATA}"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-testdata-datasource",
+            "uid": "${DS_TESTDATA}"
+          },
+          "scenarioId": "no_data_points"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "options": {
+        "appearance": {
+          "background": "dots",
+          "nodeStyle": "cards",
+          "fontSize": 12,
+          "edgeColor": "blue",
+          "particleSpeed": 1
+        },
+        "animation": {
+          "enabled": true,
+          "speed": 1,
+          "reducedMotion": "system"
+        },
+        "layout": {
+          "editMode": false,
+          "gridSize": 20,
+          "snap": true,
+          "autoFit": true
+        },
+        "diagram": {
+          "nodes": [],
+          "edges": [],
+          "viewport": {
+            "x": 0,
+            "y": 0,
+            "zoom": 1
+          },
+          "grid": {
+            "show": true,
+            "size": 20,
+            "snap": true
+          }
+        },
+        "data": {
+          "source": "manual",
+          "sourceField": "source",
+          "targetField": "target",
+          "valueField": "",
+          "value2Field": "",
+          "labelField": "label",
+          "sourceGroupField": "source_group",
+          "targetGroupField": "target_group",
+          "nodeIdField": "id",
+          "nodeLabelField": "label",
+          "nodeGroupField": "group",
+          "nodeStatusField": "status",
+          "nodeValueField": "",
+          "valueMap": "speed",
+          "value2Map": "color",
+          "showEdgeValues": true,
+          "topN": 200,
+          "layout": "lr",
+          "layerGap": 120,
+          "nodeGap": 24,
+          "groupBoxes": true,
+          "overrides": {}
+        },
+        "demoData": "whenNoData"
+      }
     }
   ]
 }

@@ -1,7 +1,8 @@
 import React, { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
 import { css } from '@emotion/css';
-import type { GrafanaTheme2, PanelProps } from '@grafana/data';
+import type { DataFrame, GrafanaTheme2, PanelProps } from '@grafana/data';
 import { Button, usePanelContext, useStyles2, useTheme2 } from '@grafana/ui';
+import { DemoBadge, edgeTable, useDemoFrames, type DemoGenerator } from '../../shared/demo';
 import { useMotionAllowed } from '../../shared/motion';
 import { ReducedMotionHint } from '../../shared/ReducedMotionHint';
 import { FlowCanvas } from './components/FlowCanvas';
@@ -15,7 +16,22 @@ import { layoutGraph, nodeSetKey, type LayoutOptions } from './lib/layout';
 import { diffFade, emptyFade, fadeFrame, type FadeState } from './lib/transitions';
 import { emptyUndo, pushUndo, redo, undo, type UndoState } from './lib/undo';
 import { normalizeDiagram } from './lib/validate';
-import { DEFAULT_DATA_OPTIONS, type DataOptions, type FlowDiagram, type FlowOptions, type FlowSelection, type Point, type Viewport } from './types';
+import {
+  DEFAULT_DATA_OPTIONS,
+  type DataOptions,
+  type DiagramSource,
+  type FlowDiagram,
+  type FlowOptions,
+  type FlowSelection,
+  type Point,
+  type Viewport,
+} from './types';
+
+/** Demo data: one edge table (12-node service graph, `source`/`target`/`value`), built through the data pipeline. */
+const demoGenerator: DemoGenerator = () => [edgeTable()];
+
+export const FLOW_NO_DATA_MESSAGE = 'Needs edge rows with source, target and value, or draw a diagram';
+export const FLOW_DEMO_HINT = 'Showing a generated graph. Load the example, draw your own, or set Diagram source to Data.';
 
 /** Design-mode chrome: floating toolbar + badge at the top, status chip at the bottom. */
 const CHROME_TOP = 44;
@@ -72,6 +88,27 @@ const getStyles = (theme: GrafanaTheme2) => ({
     padding: '1px 6px',
     pointerEvents: 'none',
   }),
+  badgeWrap: css({
+    position: 'absolute',
+    inset: 0,
+    pointerEvents: 'none',
+  }),
+  demoHint: css({
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 6,
+    display: 'flex',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: theme.spacing(1),
+    fontSize: 11,
+    color: theme.colors.text.secondary,
+    textAlign: 'center',
+    padding: theme.spacing(0, 1),
+    pointerEvents: 'none',
+    '& > *': { pointerEvents: 'auto' },
+  }),
   empty: css({
     position: 'absolute',
     inset: 0,
@@ -88,21 +125,51 @@ const getStyles = (theme: GrafanaTheme2) => ({
   }),
 });
 
-export const FlowPanel: React.FC<PanelProps<FlowOptions>> = ({ options, onOptionsChange, data, width, height, replaceVariables }) => {
+export const FlowPanel: React.FC<PanelProps<FlowOptions>> = ({
+  options,
+  onOptionsChange,
+  data,
+  width,
+  height,
+  replaceVariables,
+  fieldConfig,
+  timeZone,
+  timeRange,
+}) => {
   const theme = useTheme2();
   const styles = useStyles2(getStyles);
   const uid = useId().replace(/[^a-zA-Z0-9]/g, '');
   const panelContext = usePanelContext();
   const editing = !!options.layout?.editMode;
   const dataOpts: DataOptions = useMemo(() => ({ ...DEFAULT_DATA_OPTIONS, ...(options.data ?? {}) }), [options.data]);
-  const dataMode = dataOpts.source;
-  const isData = dataMode !== 'manual';
+  /** The source the user chose; `dataMode` below may differ when the demo graph stands in for an empty manual diagram. */
+  const chosenMode: DiagramSource = dataOpts.source;
   const fontSize = options.appearance?.fontSize || 12;
   const animationEnabled = options.animation?.enabled !== false;
   const animate = useMotionAllowed(animationEnabled, options.animation?.reducedMotion);
 
   const stored = options.diagram;
   const manualDiagram = useMemo(() => normalizeDiagram(stored), [stored]);
+  const manualEmpty = manualDiagram.nodes.length === 0;
+
+  // ---- demo data --------------------------------------------------------------------------------
+  // Data modes: the generated edge table replaces the query result when it yields no edges (or always).
+  // Manual mode: only while the diagram is empty and not being designed, so a fresh panel shows a living
+  // graph instead of a blank canvas; a drawn diagram never gets generated values.
+  const demoEligible = chosenMode !== 'manual' || (manualEmpty && !editing);
+  const hasEdges = useCallback((series: DataFrame[]) => extractGraph(series, dataOpts).edges.length > 0, [dataOpts]);
+  const { frames, isDemo } = useDemoFrames(data, demoEligible ? options.demoData : 'off', demoGenerator, {
+    fieldConfig,
+    replaceVariables,
+    theme,
+    timeZone,
+    timeRange,
+    isUsable: hasEdges,
+  });
+  /** Manual mode showing the generated graph through the data pipeline. */
+  const demoFallback = chosenMode === 'manual' && isDemo;
+  const dataMode: DiagramSource = demoFallback ? 'data' : chosenMode;
+  const isData = dataMode !== 'manual';
   const [draft, setDraft] = useState<FlowDiagram | undefined>();
   const [history, setHistory] = useState<UndoState<FlowDiagram>>(emptyUndo);
   const [tool, setTool] = useState<Tool>('select');
@@ -125,7 +192,12 @@ export const FlowPanel: React.FC<PanelProps<FlowOptions>> = ({ options, onOption
   }
 
   // ---- data-driven diagram -------------------------------------------------------------------------
-  const graph = useMemo(() => (isData ? extractGraph(data.series, { ...dataOpts, topN: dataOpts.topN }) : undefined), [isData, data.series, dataOpts]);
+  // The generated edge table always has `source` / `target` / `value` columns, whatever the field options say.
+  const extractOpts = useMemo(
+    () => (isDemo ? { ...dataOpts, sourceField: 'source', targetField: 'target', valueField: 'value', value2Field: '' } : dataOpts),
+    [isDemo, dataOpts]
+  );
+  const graph = useMemo(() => (isData ? extractGraph(frames, extractOpts) : undefined), [isData, frames, extractOpts]);
   // Aspect is quantised so small resizes do not trigger a re-layout.
   const aspect = width > 0 && height > 0 ? Math.round((width / height) * 4) / 4 : undefined;
   const layoutOpts = useMemo<LayoutOptions>(
@@ -202,20 +274,28 @@ export const FlowPanel: React.FC<PanelProps<FlowOptions>> = ({ options, onOption
     [options, onOptionsChange]
   );
 
-  const commit = useCallback(
+  const commitManual = useCallback(
     (next: FlowDiagram) => {
       setDraft(undefined);
+      setHistory((h) => pushUndo(h, manualDiagram));
+      emit({ ...next, viewport });
+    },
+    [emit, viewport, manualDiagram]
+  );
+
+  const commit = useCallback(
+    (next: FlowDiagram) => {
       if (isData) {
+        setDraft(undefined);
         // Data-driven: only node moves are kept, and only as overrides (when enabled).
         if (dataMode === 'overrides' && derived) {
           onOptionsChange({ ...options, data: { ...dataOpts, overrides: overridesFromMove(dataOpts.overrides, derived, next) } });
         }
         return;
       }
-      setHistory((h) => pushUndo(h, manualDiagram));
-      emit({ ...next, viewport });
+      commitManual(next);
     },
-    [emit, viewport, manualDiagram, isData, dataMode, derived, onOptionsChange, options, dataOpts]
+    [commitManual, isData, dataMode, derived, onOptionsChange, options, dataOpts]
   );
 
   const doUndo = useCallback(() => {
@@ -298,7 +378,7 @@ export const FlowPanel: React.FC<PanelProps<FlowOptions>> = ({ options, onOption
     };
   }, [viewport, editing, emit, manualDiagram, isData]);
 
-  const dataFields = useMemo(() => indexFields(data.series, theme), [data.series, theme]);
+  const dataFields = useMemo(() => indexFields(frames, theme), [frames, theme]);
   const fields = useMemo(() => {
     if (!built) {
       return dataFields;
@@ -349,7 +429,8 @@ export const FlowPanel: React.FC<PanelProps<FlowOptions>> = ({ options, onOption
     commit({ ...diagram, grid: { ...diagram.grid, show: !diagram.grid.show } });
   }, [commit, diagram, isData]);
   const lock = useCallback(() => onOptionsChange({ ...options, layout: { ...options.layout, editMode: false } }), [options, onOptionsChange]);
-  const loadExample = useCallback(() => commit(createExampleDiagram()), [commit]);
+  // Always writes the manual diagram, also while the generated graph stands in for an empty one.
+  const loadExample = useCallback(() => commitManual(createExampleDiagram()), [commitManual]);
 
   const onKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
     if (!editing || e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
@@ -446,6 +527,18 @@ export const FlowPanel: React.FC<PanelProps<FlowOptions>> = ({ options, onOption
         </>
       )}
       <ReducedMotionHint animationEnabled={animationEnabled} preference={options.animation?.reducedMotion} width={width} />
+      {/* Below the design-mode toolbar and mode chip while editing. */}
+      <div className={styles.badgeWrap} style={editing ? { top: 28 } : undefined}>
+        <DemoBadge visible={isDemo} width={width} />
+      </div>
+      {demoFallback && !empty && (
+        <div className={styles.demoHint} data-testid="flow-demo-hint">
+          <span>{FLOW_DEMO_HINT}</span>
+          <Button size="sm" fill="text" variant="secondary" onClick={loadExample}>
+            Load example diagram
+          </Button>
+        </div>
+      )}
       {notices.length > 0 && !empty && (
         <span className={styles.notice} data-testid="flow-notice">
           {notices.join(' · ')}
@@ -454,6 +547,7 @@ export const FlowPanel: React.FC<PanelProps<FlowOptions>> = ({ options, onOption
       {empty && !isData && (
         <div className={styles.empty}>
           <div>{editing ? 'Click "Add node" in the toolbar to start, or load the example diagram.' : 'No diagram yet. Turn on "Edit layout" in the Layout options to design one.'}</div>
+          <div>{FLOW_NO_DATA_MESSAGE}</div>
           <Button size="sm" variant="secondary" onClick={loadExample}>
             Load example diagram
           </Button>

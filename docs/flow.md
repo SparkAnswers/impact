@@ -26,6 +26,14 @@ values and to drive edges:
 Several queries with aliases that match the node/edge field names is the simplest setup. See the
 demo dashboard (`provisioning/dashboards/impact/flow.json`) which binds six random-walk series.
 
+With **no query at all** the panel still shows something: *Data > Demo data* defaults to *When no
+data*. In the data-driven modes it feeds a generated 12-node service graph (edge rows `source`,
+`target`, `value` in requests per second) through the same field pipeline whenever the query yields no
+edges, marked with a "Demo data" pill. In *Manual* mode an **empty** diagram shows that same graph
+(laid out as in Data mode) with a one-line hint until you load the example, draw nodes, or switch
+*Diagram source* to *Data*; a drawn diagram never receives generated values, and design mode always
+shows the real canvas. Set the option to *Off* to get the plain empty state instead.
+
 ## Data-driven diagrams
 
 Set **Data → Diagram source** to `Data` and the diagram builds itself from the query results: edges
@@ -225,6 +233,7 @@ shown as a node value.
 | Diagram → Inspector | Properties of the selected node or edge (see above). Manual source only. |
 | Diagram → Import / export JSON | Full diagram JSON with validation, example loader and clear. Manual source only. |
 | Data → Diagram source | `Manual` (default), `Data` (built from the query results) or `Data + manual overrides` (built from data, dragged / tweaked nodes persist). |
+| Data → Demo data | Built-in generated service graph (12 nodes, edge rows `source` / `target` / `value`). *When no data* (default): used in the data modes when the query yields no edges, and in Manual mode while the diagram is empty (and not being designed). *Always*: ignores the query in the data modes. *Off*: never; the empty state says "Needs edge rows with source, target and value, or draw a diagram". A "Demo data" pill marks generated data. |
 | Data → Layout direction | `Left to right`, `Top to bottom` (layered) or `Radial`. |
 | Data → Layer gap / Node gap | Spacing between layers and between nodes in a layer, in canvas pixels. |
 | Data → Value drives | What the edge value controls: particle speed, colour (thresholds / colour scheme of the value field), width, or nothing. |
