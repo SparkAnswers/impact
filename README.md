@@ -154,6 +154,16 @@ Full option references with data expectations and tips: [docs/flow.md](https://g
 
 Five demo dashboards ship with the stack: `Impact showcase` (one of everything), `Impact Flow Designer demo`, `Impact Gauge demo`, `Impact Flow River demo` and `Impact Status Bars demo`.
 
+### Demo dashboards on any Grafana (no provisioning needed)
+
+The same five dashboards are bundled inside the plugin. On a Grafana where the `provisioning/` folder is not mounted (Kubernetes, a managed instance, a plain `docker run`), open **More apps -> Impact** and click **Install all demos**, or **Install demo** on a single panel card. The Gallery then:
+
+1. finds a TestData data source (any `grafana-testdata-datasource`) or creates one named "Impact demo data";
+2. finds or creates the "Impact" folder;
+3. saves the dashboards there (same uids `impact-*`, existing copies are overwritten) and shows an **Open** link.
+
+Permissions: saving dashboards needs the Editor role; creating the TestData data source (only when the instance has none) needs an organisation Admin. The Gallery says which permission is missing when a step is refused. Each card also has a **Data shape** section with the query shape the panel expects and copy-ready Prometheus-style and TestData examples.
+
 ---
 
 ## Development

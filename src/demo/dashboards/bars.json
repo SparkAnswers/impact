@@ -1,0 +1,835 @@
+{
+  "uid": "impact-bars",
+  "title": "Impact Status Bars demo",
+  "tags": [
+    "impact",
+    "demo"
+  ],
+  "timezone": "browser",
+  "schemaVersion": 41,
+  "version": 1,
+  "editable": true,
+  "graphTooltip": 0,
+  "refresh": "10s",
+  "time": {
+    "from": "now-15m",
+    "to": "now"
+  },
+  "templating": {
+    "list": []
+  },
+  "annotations": {
+    "list": []
+  },
+  "links": [],
+  "panels": [
+    {
+      "id": 1,
+      "type": "sparkanswers-impact-bars-panel",
+      "title": "Device status · bar style per row",
+      "description": "Twelve devices from a CSV table. The 'style' column chooses the bar per row; 'status' is mapped to text, colour and icon with value mappings; 'trend' feeds the sparkline row.",
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 24,
+        "h": 14
+      },
+      "datasource": {
+        "type": "grafana-testdata-datasource",
+        "uid": "${DS_TESTDATA}"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-testdata-datasource",
+            "uid": "${DS_TESTDATA}"
+          },
+          "refId": "A",
+          "scenarioId": "csv_content",
+          "csvContent": "name,progress,status,style,version,channel,updated,trend\nEdge Gateway,,warn,sweep,5.1.31,Official,2026-10-07T09:58:00Z,\nPerimeter Firewall,,warn,sweep,5.1.21,Early Access,2026-10-07T10:00:00Z,\nCore Router,42,ok,percent,5.2.0,Official,2026-10-07T09:56:00Z,\nCore Switch,78,warn,percent,7.0.50,Official,2026-10-07T09:49:00Z,\nLobby Access Point,94,crit,percent,6.6.77,Release Candidate,2026-10-07T09:00:00Z,\nRack UPS A,70,ok,segmented,1.4.2,Official,2026-10-07T09:59:30Z,\nBackup Store,61,updating,striped,3.9.1,Early Access,2026-10-07T10:00:00Z,\nGrid Import/Export,-2.4,ok,bidirectional,,Power,2026-10-07T09:59:55Z,\nBattery Charger,1.6,warn,bidirectional,,Power,2026-10-07T09:59:55Z,\nDistribution Router,56,ok,sparkline,4.1.9,Official,2026-10-07T09:59:00Z,30;38;35;52;46;60;49;64;58;70;62;56\nHypervisor Memory,16,ok,stacked,,Host,2026-10-07T09:59:50Z,\nController Appliance,,updating,pill,3.2.12,Official,2026-10-07T09:57:00Z,\n"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "convertFieldType",
+          "options": {
+            "conversions": [
+              {
+                "targetField": "updated",
+                "destinationType": "time"
+              }
+            ]
+          }
+        }
+      ],
+      "options": {
+        "barStyle": "percent",
+        "colorMode": "thresholds",
+        "showCheckbox": true,
+        "showStatusDot": true,
+        "defaultSortField": "",
+        "labelPosition": "right",
+        "trackWidth": 150,
+        "trackHeight": 6,
+        "radius": 3,
+        "animationSpeed": 1.6,
+        "sweepWidth": 38,
+        "segments": 10,
+        "density": "comfortable",
+        "showFooter": true,
+        "stackFields": [
+          "progress"
+        ]
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "min": 0,
+          "max": 100,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "#EAB839",
+                "value": 70
+              },
+              {
+                "color": "red",
+                "value": 90
+              }
+            ]
+          },
+          "color": {
+            "mode": "thresholds"
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "status"
+            },
+            "properties": [
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "ok": {
+                        "text": "Healthy",
+                        "color": "green",
+                        "icon": "check-circle",
+                        "index": 0
+                      },
+                      "warn": {
+                        "text": "Degraded",
+                        "color": "orange",
+                        "icon": "exclamation-triangle",
+                        "index": 1
+                      },
+                      "crit": {
+                        "text": "Critical",
+                        "color": "red",
+                        "icon": "times-circle",
+                        "index": 2
+                      },
+                      "updating": {
+                        "text": "Updating…",
+                        "color": "blue",
+                        "icon": "info-circle",
+                        "index": 3
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "version"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Version"
+              },
+              {
+                "id": "noValue",
+                "value": "—"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "channel"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Channel"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": 2,
+      "type": "sparkanswers-impact-bars-panel",
+      "title": "Time series input · one row per series with sparklines",
+      "description": "Several random walks reduced to one row each (last value), the series itself drawn as the sparkline. A field override switches one row to the segmented style.",
+      "gridPos": {
+        "x": 0,
+        "y": 14,
+        "w": 12,
+        "h": 9
+      },
+      "datasource": {
+        "type": "grafana-testdata-datasource",
+        "uid": "${DS_TESTDATA}"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-testdata-datasource",
+            "uid": "${DS_TESTDATA}"
+          },
+          "refId": "A",
+          "scenarioId": "random_walk",
+          "alias": "Edge Gateway",
+          "startValue": 35,
+          "spread": 4,
+          "noise": 1,
+          "min": 0,
+          "max": 100
+        },
+        {
+          "datasource": {
+            "type": "grafana-testdata-datasource",
+            "uid": "${DS_TESTDATA}"
+          },
+          "refId": "B",
+          "scenarioId": "random_walk",
+          "alias": "Core Switch",
+          "startValue": 62,
+          "spread": 4,
+          "noise": 1,
+          "min": 0,
+          "max": 100
+        },
+        {
+          "datasource": {
+            "type": "grafana-testdata-datasource",
+            "uid": "${DS_TESTDATA}"
+          },
+          "refId": "C",
+          "scenarioId": "random_walk",
+          "alias": "Lobby Access Point",
+          "startValue": 88,
+          "spread": 4,
+          "noise": 1,
+          "min": 0,
+          "max": 100
+        },
+        {
+          "datasource": {
+            "type": "grafana-testdata-datasource",
+            "uid": "${DS_TESTDATA}"
+          },
+          "refId": "D",
+          "scenarioId": "random_walk",
+          "alias": "Backup Store",
+          "startValue": 50,
+          "spread": 4,
+          "noise": 1,
+          "min": 0,
+          "max": 100
+        },
+        {
+          "datasource": {
+            "type": "grafana-testdata-datasource",
+            "uid": "${DS_TESTDATA}"
+          },
+          "refId": "E",
+          "scenarioId": "random_walk",
+          "alias": "Rack UPS A",
+          "startValue": 20,
+          "spread": 4,
+          "noise": 1,
+          "min": 0,
+          "max": 100
+        },
+        {
+          "datasource": {
+            "type": "grafana-testdata-datasource",
+            "uid": "${DS_TESTDATA}"
+          },
+          "refId": "F",
+          "scenarioId": "random_walk",
+          "alias": "Distribution Router",
+          "startValue": 73,
+          "spread": 4,
+          "noise": 1,
+          "min": 0,
+          "max": 100
+        }
+      ],
+      "transformations": [],
+      "options": {
+        "barStyle": "sparkline",
+        "colorMode": "thresholds",
+        "reducer": "lastNotNull",
+        "defaultSortField": "value",
+        "defaultSortDesc": true,
+        "trackWidth": 120,
+        "showCheckbox": false
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "min": 0,
+          "max": 100,
+          "decimals": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "#EAB839",
+                "value": 70
+              },
+              {
+                "color": "red",
+                "value": 90
+              }
+            ]
+          },
+          "color": {
+            "mode": "thresholds"
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Rack UPS A"
+            },
+            "properties": [
+              {
+                "id": "custom.barStyle",
+                "value": "segmented"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": 3,
+      "type": "sparkanswers-impact-bars-panel",
+      "title": "Stacked · multiple value fields in one bar",
+      "description": "Used / cached / free memory stacked in one bar with a mini legend. Segment colours come from the field colour of each stack field; the status dot follows the 'used' thresholds.",
+      "gridPos": {
+        "x": 12,
+        "y": 14,
+        "w": 12,
+        "h": 9
+      },
+      "datasource": {
+        "type": "grafana-testdata-datasource",
+        "uid": "${DS_TESTDATA}"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-testdata-datasource",
+            "uid": "${DS_TESTDATA}"
+          },
+          "refId": "A",
+          "scenarioId": "csv_content",
+          "csvContent": "host,used,cached,free\nHypervisor 1,48,27,25\nHypervisor 2,71,12,17\nBuild Server,22,40,38\nDatabase Primary,83,9,8\n"
+        }
+      ],
+      "transformations": [],
+      "options": {
+        "barStyle": "stacked",
+        "nameField": "host",
+        "valueField": "used",
+        "stackFields": [
+          "used",
+          "cached",
+          "free"
+        ],
+        "extraFields": [],
+        "showStatusDot": true,
+        "trackWidth": 180,
+        "trackHeight": 8,
+        "showFooter": false
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "min": 0,
+          "max": 100,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "#EAB839",
+                "value": 70
+              },
+              {
+                "color": "red",
+                "value": 90
+              }
+            ]
+          },
+          "color": {
+            "mode": "thresholds"
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "used"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "blue"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "cached"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "purple"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "free"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#3a3f49"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": 4,
+      "type": "sparkanswers-impact-bars-panel",
+      "title": "Bidirectional · centred at zero",
+      "description": "Negative values (export) grow left of the zero line, positive values (import) grow right. Min/Max set the symmetric range.",
+      "gridPos": {
+        "x": 0,
+        "y": 23,
+        "w": 12,
+        "h": 8
+      },
+      "datasource": {
+        "type": "grafana-testdata-datasource",
+        "uid": "${DS_TESTDATA}"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-testdata-datasource",
+            "uid": "${DS_TESTDATA}"
+          },
+          "refId": "A",
+          "scenarioId": "csv_content",
+          "csvContent": "circuit,power,status\nGrid Import/Export,-2.4,ok\nBattery Charger,1.6,warn\nSolar Array,-5.2,ok\nHeat Pump,3.1,ok\nVehicle Charger,7.4,crit\n"
+        }
+      ],
+      "transformations": [],
+      "options": {
+        "barStyle": "bidirectional",
+        "negativeColor": "green",
+        "positiveColor": "orange",
+        "labelPosition": "right",
+        "trackWidth": 160,
+        "showCheckbox": false,
+        "showFooter": false,
+        "fillGradient": false
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "kwatt",
+          "min": -8,
+          "max": 8,
+          "decimals": 1,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "#EAB839",
+                "value": 70
+              },
+              {
+                "color": "red",
+                "value": 90
+              }
+            ]
+          },
+          "color": {
+            "mode": "thresholds"
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "status"
+            },
+            "properties": [
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "ok": {
+                        "text": "Healthy",
+                        "color": "green",
+                        "icon": "check-circle",
+                        "index": 0
+                      },
+                      "warn": {
+                        "text": "Degraded",
+                        "color": "orange",
+                        "icon": "exclamation-triangle",
+                        "index": 1
+                      },
+                      "crit": {
+                        "text": "Critical",
+                        "color": "red",
+                        "icon": "times-circle",
+                        "index": 2
+                      },
+                      "updating": {
+                        "text": "Updating…",
+                        "color": "blue",
+                        "icon": "info-circle",
+                        "index": 3
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": 5,
+      "type": "sparkanswers-impact-bars-panel",
+      "title": "Compact · gradient fill, flat bars, light-theme friendly",
+      "description": "Dense rows, thin flat bars coloured by a two-stop gradient from min to max, value label on the left, animation off.",
+      "gridPos": {
+        "x": 12,
+        "y": 23,
+        "w": 12,
+        "h": 8
+      },
+      "datasource": {
+        "type": "grafana-testdata-datasource",
+        "uid": "${DS_TESTDATA}"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-testdata-datasource",
+            "uid": "${DS_TESTDATA}"
+          },
+          "refId": "A",
+          "scenarioId": "csv_content",
+          "csvContent": "name,progress,status,updated\nEdge Gateway,42,ok,2026-10-07T09:56:00Z\nCore Switch,78,warn,2026-10-07T09:49:00Z\nLobby Access Point,94,crit,2026-10-07T09:00:00Z\nRack UPS A,70,ok,2026-10-07T09:59:30Z\nBackup Store,61,updating,2026-10-07T10:00:00Z\nDistribution Router,56,ok,2026-10-07T09:59:00Z\nController Appliance,12,ok,2026-10-07T09:57:00Z\n"
+        }
+      ],
+      "transformations": [
+        {
+          "id": "convertFieldType",
+          "options": {
+            "conversions": [
+              {
+                "targetField": "updated",
+                "destinationType": "time"
+              }
+            ]
+          }
+        }
+      ],
+      "options": {
+        "barStyle": "percent",
+        "colorMode": "gradient",
+        "gradientFrom": "green",
+        "gradientTo": "red",
+        "fillGradient": false,
+        "density": "compact",
+        "showHeader": true,
+        "showFooter": false,
+        "showStatusDot": true,
+        "showCheckbox": false,
+        "labelPosition": "left",
+        "trackHeight": 4,
+        "radius": 2,
+        "trackWidth": 200,
+        "defaultSortField": "name",
+        "animate": false
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "min": 0,
+          "max": 100,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "#EAB839",
+                "value": 70
+              },
+              {
+                "color": "red",
+                "value": 90
+              }
+            ]
+          },
+          "color": {
+            "mode": "thresholds"
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "status"
+            },
+            "properties": [
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "ok": {
+                        "text": "Healthy",
+                        "color": "green",
+                        "icon": "check-circle",
+                        "index": 0
+                      },
+                      "warn": {
+                        "text": "Degraded",
+                        "color": "orange",
+                        "icon": "exclamation-triangle",
+                        "index": 1
+                      },
+                      "crit": {
+                        "text": "Critical",
+                        "color": "red",
+                        "icon": "times-circle",
+                        "index": 2
+                      },
+                      "updating": {
+                        "text": "Updating…",
+                        "color": "blue",
+                        "icon": "info-circle",
+                        "index": 3
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": 6,
+      "type": "sparkanswers-impact-bars-panel",
+      "title": "Transparent background",
+      "description": "Grafana \"Transparent background\" panel option plus Table > Background = Transparent: the dashboard shows through and the sticky header is a frosted blur. Scroll the rows under the header.",
+      "transparent": true,
+      "gridPos": {
+        "x": 0,
+        "y": 31,
+        "w": 24,
+        "h": 8
+      },
+      "datasource": {
+        "type": "grafana-testdata-datasource",
+        "uid": "${DS_TESTDATA}"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-testdata-datasource",
+            "uid": "${DS_TESTDATA}"
+          },
+          "refId": "A",
+          "scenarioId": "csv_content",
+          "csvContent": "name,progress,status,style,version,channel,updated,trend\nEdge Gateway,,warn,sweep,5.1.31,Official,2026-10-07T09:58:00Z,\nPerimeter Firewall,,warn,sweep,5.1.21,Early Access,2026-10-07T10:00:00Z,\nCore Router,42,ok,percent,5.2.0,Official,2026-10-07T09:56:00Z,\nCore Switch,78,warn,percent,7.0.50,Official,2026-10-07T09:49:00Z,\nLobby Access Point,94,crit,percent,6.6.77,Release Candidate,2026-10-07T09:00:00Z,\nRack UPS A,70,ok,segmented,1.4.2,Official,2026-10-07T09:59:30Z,\nBackup Store,61,updating,striped,3.9.1,Early Access,2026-10-07T10:00:00Z,\nGrid Import/Export,-2.4,ok,bidirectional,,Power,2026-10-07T09:59:55Z,\nBattery Charger,1.6,warn,bidirectional,,Power,2026-10-07T09:59:55Z,\nDistribution Router,56,ok,sparkline,4.1.9,Official,2026-10-07T09:59:00Z,30;38;35;52;46;60;49;64;58;70;62;56\nHypervisor Memory,16,ok,stacked,,Host,2026-10-07T09:59:50Z,\nController Appliance,,updating,pill,3.2.12,Official,2026-10-07T09:57:00Z,\n"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "min": 0,
+          "max": 100,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "#EAB839",
+                "value": 70
+              },
+              {
+                "color": "red",
+                "value": 90
+              }
+            ]
+          },
+          "color": {
+            "mode": "thresholds"
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "status"
+            },
+            "properties": [
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "ok": {
+                        "text": "Healthy",
+                        "color": "green",
+                        "icon": "check-circle",
+                        "index": 0
+                      },
+                      "warn": {
+                        "text": "Degraded",
+                        "color": "orange",
+                        "icon": "exclamation-triangle",
+                        "index": 1
+                      },
+                      "crit": {
+                        "text": "Critical",
+                        "color": "red",
+                        "icon": "times-circle",
+                        "index": 2
+                      },
+                      "updating": {
+                        "text": "Updating…",
+                        "color": "blue",
+                        "icon": "info-circle",
+                        "index": 3
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "version"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Version"
+              },
+              {
+                "id": "noValue",
+                "value": "—"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "channel"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Channel"
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "barStyle": "percent",
+        "colorMode": "thresholds",
+        "background": "transparent",
+        "showCheckbox": true,
+        "showStatusDot": true,
+        "density": "compact",
+        "showFooter": true,
+        "trackWidth": 150,
+        "stackFields": [
+          "progress"
+        ]
+      }
+    }
+  ]
+}
