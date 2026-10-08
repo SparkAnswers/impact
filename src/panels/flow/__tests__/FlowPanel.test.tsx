@@ -140,8 +140,8 @@ describe('FlowPanel data-driven mode', () => {
       theme,
     });
 
-  function renderData(partial: Partial<FlowOptions['data']> = {}, onOptionsChange = jest.fn(), layout = DEFAULT_OPTIONS.layout) {
-    const options: FlowOptions = { ...DEFAULT_OPTIONS, layout, data: { ...DEFAULT_OPTIONS.data, source: 'data', ...partial } };
+  function renderData(partial: Partial<FlowOptions['data']> = {}, onOptionsChange = jest.fn(), layout = DEFAULT_OPTIONS.layout, diagram = DEFAULT_OPTIONS.diagram) {
+    const options: FlowOptions = { ...DEFAULT_OPTIONS, layout, diagram, data: { ...DEFAULT_OPTIONS.data, source: 'data', ...partial } };
     const props = {
       id: 1,
       data: { series: edgeFrame(), state: LoadingState.Done, timeRange: getDefaultTimeRange() },
@@ -205,6 +205,13 @@ describe('FlowPanel data-driven mode', () => {
     renderData({ source: 'overrides', overrides: { db: { x: 999, y: 7, color: 'red' } } });
     const moved = screen.getAllByTestId('flow-node-db').at(-1)!;
     expect(moved.getAttribute('transform')).toBe('translate(999,7)');
+  });
+
+  it('ignores the saved manual viewport in data modes and fits the diagram', () => {
+    renderData({ source: 'overrides' }, jest.fn(), { ...DEFAULT_OPTIONS.layout, editMode: true }, { ...DEFAULT_OPTIONS.diagram, viewport: { x: 500, y: 500, zoom: 0.3 } });
+    const chip = screen.getByText(/nodes · 4 edges|3 edges/);
+    expect(chip).not.toHaveTextContent('30%');
+    expect(screen.getAllByTestId(/^flow-node-/).length).toBe(4);
   });
 
   it('does not persist drags in plain "Data" mode', () => {

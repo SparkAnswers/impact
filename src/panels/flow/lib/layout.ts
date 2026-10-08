@@ -291,7 +291,11 @@ export function radialLayout(nodes: LayoutNode[], edges: LayoutEdge[], opts: Lay
   const maxW = sorted.reduce((m, n) => Math.max(m, n.w), 0);
   const maxH = sorted.reduce((m, n) => Math.max(m, n.h), 0);
   positions.set(hub.id, { x: -hub.w / 2, y: -hub.h / 2 });
-  let radius = 0;
+  // Rings are ellipses: the horizontal radius is driven by node widths (nodes sit side by side at the top and
+  // bottom), the vertical one by node heights (nodes stack at the sides). The ellipse then follows the panel
+  // aspect so fit-to-panel can use most of the area instead of shrinking a tall circle.
+  let rx = 0;
+  let ry = 0;
   // Order ring nodes by their parent's angle so spokes do not cross.
   const angle = new Map<string, number>([[hub.id, 0]]);
   for (let r = 1; r <= maxRank + 1; r++) {
@@ -299,24 +303,30 @@ export function radialLayout(nodes: LayoutNode[], edges: LayoutEdge[], opts: Lay
     if (!ring || !ring.length) {
       continue;
     }
-    // Ring needs enough circumference for every node (widest side) plus a gap; a bit extra since chords are
-    // shorter than arcs.
-    const needed = (ring.length * (Math.max(maxW, maxH) + opts.nodeGap) * 1.08) / (2 * Math.PI);
-    radius = Math.max(radius + opts.layerGap + maxW / 2, needed);
-    const parentAngle = (n: LayoutNode) => {
-      const parents = Array.from(adj.get(n.id) ?? []).filter((p) => (ranks.get(p) ?? Infinity) === r - 1);
+    const n = ring.length;
+    // 1.08: chords are shorter than arcs.
+    let nx = Math.max(rx + maxW + opts.nodeGap, (n * (maxW + opts.nodeGap) * 1.08) / (2 * Math.PI), rx + opts.layerGap);
+    let ny = Math.max(ry + maxH + opts.nodeGap, (n * (maxH + opts.nodeGap) * 1.08) / (2 * Math.PI), ry + opts.layerGap * 0.5);
+    if (opts.aspect && opts.aspect > 0) {
+      nx = Math.max(nx, ny * opts.aspect);
+      ny = Math.max(ny, nx / opts.aspect);
+    }
+    rx = nx;
+    ry = ny;
+    const parentAngle = (nd: LayoutNode) => {
+      const parents = Array.from(adj.get(nd.id) ?? []).filter((p) => (ranks.get(p) ?? Infinity) === r - 1);
       if (!parents.length) {
         return Infinity;
       }
       return parents.reduce((s, p) => s + (angle.get(p) ?? 0), 0) / parents.length;
     };
-    const ordered = ring.map((n) => ({ n, a: parentAngle(n) })).sort((a, b) => a.a - b.a || byId(a.n, b.n));
+    const ordered = ring.map((nd) => ({ n: nd, a: parentAngle(nd) })).sort((a, b) => a.a - b.a || byId(a.n, b.n));
     // Stagger alternate rings by half a step so nodes of neighbouring rings are not radially aligned.
     const stagger = r % 2 === 0 ? 0.5 : 0;
     ordered.forEach((item, i) => {
       const a = ((i + stagger) / ordered.length) * Math.PI * 2 - Math.PI / 2;
       angle.set(item.n.id, a);
-      positions.set(item.n.id, { x: Math.round(Math.cos(a) * radius - item.n.w / 2), y: Math.round(Math.sin(a) * radius - item.n.h / 2) });
+      positions.set(item.n.id, { x: Math.round(Math.cos(a) * rx - item.n.w / 2), y: Math.round(Math.sin(a) * ry - item.n.h / 2) });
     });
   }
   return { positions, ranks };

@@ -91,8 +91,19 @@ describe('layout', () => {
     expect(positions.get('hub')).toEqual({ x: -70, y: -26 });
     expect(ranks.get('far')).toBe(2);
     expect(overlaps(nodes, positions)).toBe(false);
-    const r = (id: string) => Math.hypot(positions.get(id)!.x + 70, positions.get(id)!.y + 26);
-    expect(r('far')).toBeGreaterThan(r('leaf3'));
+    // Ring 2 lies outside ring 1 (vertically, the single far node sits at the bottom of its ring).
+    const cy = (id: string) => Math.abs(positions.get(id)!.y + 26);
+    for (let i = 0; i < 10; i++) {
+      expect(cy('far')).toBeGreaterThan(cy(`leaf${i}`));
+    }
+    // Wide panel: the rings become ellipses that follow the aspect, still without overlaps.
+    const wide = radialLayout(nodes, edges, { ...opts, direction: 'radial', aspect: 2.5 }).positions;
+    expect(overlaps(nodes, wide)).toBe(false);
+    const xs = Array.from(wide.values()).map((p) => p.x);
+    const ys = Array.from(wide.values()).map((p) => p.y);
+    const w = Math.max(...xs) - Math.min(...xs) + 140;
+    const h = Math.max(...ys) - Math.min(...ys) + 52;
+    expect(w / h).toBeGreaterThan(1.8);
     expect(layoutGraph(nodes, edges, { ...opts, direction: 'radial' }).positions.get('hub')).toEqual({ x: -70, y: -26 });
   });
 

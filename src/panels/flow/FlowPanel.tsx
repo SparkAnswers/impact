@@ -17,6 +17,16 @@ import { emptyUndo, pushUndo, redo, undo, type UndoState } from './lib/undo';
 import { normalizeDiagram } from './lib/validate';
 import { DEFAULT_DATA_OPTIONS, type DataOptions, type FlowDiagram, type FlowOptions, type FlowSelection, type Point, type Viewport } from './types';
 
+/** Design-mode chrome: floating toolbar + badge at the top, status chip at the bottom. */
+const CHROME_TOP = 44;
+const CHROME_BOTTOM = 28;
+
+/** Fit the nodes into the area not covered by the design-mode toolbar and chips. */
+function fitBelowChrome(nodes: FlowDiagram['nodes'], width: number, height: number): Viewport {
+  const vp = fitViewport(nodes, width, Math.max(1, height - CHROME_TOP - CHROME_BOTTOM));
+  return { ...vp, y: vp.y + CHROME_TOP };
+}
+
 const getStyles = (theme: GrafanaTheme2) => ({
   wrap: css({
     position: 'relative',
@@ -175,14 +185,13 @@ export const FlowPanel: React.FC<PanelProps<FlowOptions>> = ({ options, onOption
   const diagram = isData ? (frame?.diagram ?? derived ?? manualDiagram) : manualDiagram;
   const fadeOpacity = isData ? frame?.opacity : undefined;
 
-  // Design mode on a data diagram: start from a fitted view (and re-fit when the node set changes).
-  const [fittedKey, setFittedKey] = useState('');
-  const wantFit = isData && editing && derived ? layoutKey : '';
-  if (fittedKey !== wantFit) {
-    setFittedKey(wantFit);
-    if (wantFit && derived) {
-      setViewportState(fitViewport(derived.nodes, width, height));
-    }
+  // Data modes never use the saved manual viewport: the view is fitted (and follows resizes and node-set
+  // changes) until the user pans or zooms in this session.
+  const [userViewport, setUserViewport] = useState(false);
+  const [prevIsData, setPrevIsData] = useState(isData);
+  if (prevIsData !== isData) {
+    setPrevIsData(isData);
+    setUserViewport(false);
   }
 
   const emit = useCallback(
@@ -259,15 +268,16 @@ export const FlowPanel: React.FC<PanelProps<FlowOptions>> = ({ options, onOption
   // Viewport: editing uses the stored viewport (persisted, debounced); viewing auto-fits unless disabled.
   const autoFit = options.layout?.autoFit !== false;
   const effectiveViewport = useMemo<Viewport>(() => {
-    if (editing || !autoFit) {
+    if (isData ? editing && userViewport : editing || !autoFit) {
       return viewport;
     }
-    return fitViewport(diagram.nodes, width, height);
-  }, [editing, autoFit, viewport, diagram.nodes, width, height]);
+    return editing ? fitBelowChrome(diagram.nodes, width, height) : fitViewport(diagram.nodes, width, height);
+  }, [isData, userViewport, editing, autoFit, viewport, diagram.nodes, width, height]);
 
   const viewportTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const setViewport = useCallback((vp: Viewport) => {
     setViewportState(vp);
+    setUserViewport(true);
   }, []);
   useEffect(() => {
     if (!editing || isData) {
@@ -331,7 +341,7 @@ export const FlowPanel: React.FC<PanelProps<FlowOptions>> = ({ options, onOption
     setSelection(undefined);
   }, [selection, commit, setSelection, diagram, isData]);
 
-  const fit = useCallback(() => setViewport(fitViewport(diagram.nodes, width, height)), [diagram.nodes, width, height, setViewport]);
+  const fit = useCallback(() => setViewport(fitBelowChrome(diagram.nodes, width, height)), [diagram.nodes, width, height, setViewport]);
   const toggleGrid = useCallback(() => {
     if (isData) {
       return;
