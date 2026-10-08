@@ -3,6 +3,7 @@
   "type": "app",
   "name": "Impact",
   "id": "sparkanswers-impact-app",
+  "autoEnabled": true,
   "info": {
     "keywords": [
       "panel",

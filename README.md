@@ -55,7 +55,7 @@ Impact is not yet signed by Grafana Labs, so Grafana has to be told to allow it.
    GF_PLUGINS_ALLOW_LOADING_UNSIGNED_PLUGINS=sparkanswers-impact-app,sparkanswers-impact-flow-panel,sparkanswers-impact-gauge-panel,sparkanswers-impact-river-panel,sparkanswers-impact-bars-panel
    ```
 
-4. Restart Grafana, then enable the app under **Administration -> Plugins -> Impact**. The four panels appear in the visualization picker under the "Impact" prefix.
+4. Restart Grafana. The app enables itself on first load and the four panels appear in the visualization picker under the "Impact" prefix.
 
 **Docker one-liner** against the official image, installing straight from a release zip:
 
@@ -70,7 +70,7 @@ Grafana Cloud does not accept unsigned plugins; that needs the catalog listing, 
 
 ## Configuration
 
-All panels use the standard field options (unit, decimals, min/max, thresholds, colour scheme, value mappings, overrides) for every number they display, so nothing is hard-coded to a particular unit. Free-text labels accept dashboard variables. Each panel has an **Animation** toggle; animation also pauses automatically in hidden tabs and for users who prefer reduced motion.
+All panels use the standard field options (unit, decimals, min/max, thresholds, colour scheme, value mappings, overrides) for every number they display, so nothing is hard-coded to a particular unit. Free-text labels accept dashboard variables. Each panel has an **Animation** toggle; animation also pauses automatically in hidden tabs and for users who prefer reduced motion, unless the panel's *Reduced motion* option is set to *Always animate*.
 
 ### Flow Designer
 
