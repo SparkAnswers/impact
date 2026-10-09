@@ -1,7 +1,7 @@
 import { layeredLayout, radialLayout, type LayoutNode } from '../lib/layout';
 import { MAX_ZOOM, MIN_ZOOM, zoomAt } from '../lib/geometry';
 import { groupSegments, segmentsOverlap } from '../lib/groups';
-import { fillLinkTemplate, resolveNodeLink, safeHref } from '../lib/links';
+import { currentVariable, fillLinkTemplate, resolveNodeLink, resolveNodeVariable, safeHref, variableQuery } from '../lib/links';
 import type { FlowNode } from '../types';
 
 describe('zoomAt', () => {
@@ -56,6 +56,27 @@ describe('links', () => {
     expect(resolveNodeLink(data, { ...links, nodeUrl: '' }, undefined, vars, true)).toBe('/from-field?already=encoded');
     expect(resolveNodeLink(data, { ...links, trigger: 'off' }, undefined, vars, true)).toBeUndefined();
     expect(resolveNodeLink({ ...node, link: undefined }, { ...links, nodeUrl: '' }, undefined, vars, false)).toBeUndefined();
+  });
+});
+
+describe('variable action', () => {
+  const node = { id: 'api', label: 'API & gateway', x: 0, y: 0, w: 1, h: 1, shape: 'card' as const, group: 'edge' };
+  const vars = (s: string) => s.replace('$env', 'prod').replace('${service}', 'api');
+
+  it('resolves name and an unencoded value from the template, with other variables filled', () => {
+    const links = { nodeUrl: '', target: 'same' as const, trigger: 'dblclick' as const, action: 'variable' as const, variable: '$service', variableValue: '${node.label}/$env' };
+    expect(resolveNodeVariable(node, links, undefined, vars)).toEqual({ name: 'service', value: 'API & gateway/prod' });
+    expect(resolveNodeVariable(node, { ...links, variableValue: '' }, undefined, vars)).toEqual({ name: 'service', value: 'api' });
+    expect(resolveNodeVariable(node, { ...links, variable: ' ' }, undefined, vars)).toBeUndefined();
+    expect(resolveNodeVariable(node, { ...links, action: 'link' }, undefined, vars)).toBeUndefined();
+    expect(resolveNodeVariable(node, { ...links, trigger: 'off' }, undefined, vars)).toBeUndefined();
+    expect(variableQuery('service', 'api')).toEqual({ 'var-service': 'api' });
+  });
+
+  it('reads the current value through the interpolator and treats an unknown variable as unset', () => {
+    expect(currentVariable('service', vars)).toBe('api');
+    expect(currentVariable('nothing', vars)).toBeUndefined();
+    expect(currentVariable('', vars)).toBeUndefined();
   });
 });
 

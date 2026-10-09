@@ -16,7 +16,8 @@ import { buildDataDiagram, mergeOverrides, nodeSize, overridesFromMove, shortLab
 import { createExampleDiagram } from './lib/example';
 import { extractGraph } from './lib/frames';
 import { fitViewport, zoomAt } from './lib/geometry';
-import { openLink, resolveNodeLink } from './lib/links';
+import { currentVariable, openLink, resolveNodeLink, resolveNodeVariable, variableName, variableQuery } from './lib/links';
+import { VariableChip } from './components/VariableChip';
 import type { GroupHints } from './lib/groups';
 import { layoutGraph, nodeSetKey, type LayoutOptions, type LayoutResult } from './lib/layout';
 import { diffFade, emptyFade, fadeFrame, type FadeState } from './lib/transitions';
@@ -465,6 +466,21 @@ export const FlowPanel: React.FC<PanelProps<FlowOptions>> = ({
     [links, fields, replaceVariables, isData]
   );
   const onOpenLink = useCallback((href: string) => openLink(href, links.target, (path) => locationService.push(path)), [links.target]);
+  // Node click sets a dashboard variable (action `variable`): every query on the page that uses it follows.
+  const onNodeAction = useCallback(
+    (node: FlowNode) => {
+      const v = resolveNodeVariable(node, links, formatValue(node.valueField ? fields.get(node.valueField) : undefined, node.valueFormat), replaceVariables);
+      if (!v) {
+        return false;
+      }
+      locationService.partial(variableQuery(v.name, v.value));
+      return true;
+    },
+    [links, fields, replaceVariables]
+  );
+  const varName = links.action === 'variable' ? variableName(links) : '';
+  const varValue = varName ? currentVariable(varName, replaceVariables) : undefined;
+  const clearVariable = useCallback(() => locationService.partial(variableQuery(varName, links.variableClear ?? '')), [varName, links.variableClear]);
   const toggleGrid = useCallback(() => {
     if (isData) {
       return;
@@ -537,6 +553,7 @@ export const FlowPanel: React.FC<PanelProps<FlowOptions>> = ({
         linkFor={linkFor}
         linkTrigger={links.trigger}
         onOpenLink={onOpenLink}
+        onNodeAction={onNodeAction}
         onFit={fit}
         onViewport={setViewport}
         onSelect={setSelection}
@@ -581,6 +598,7 @@ export const FlowPanel: React.FC<PanelProps<FlowOptions>> = ({
       <div className={styles.badgeWrap} style={editing ? { top: 28 } : undefined}>
         <DemoBadge visible={isDemo} width={width} />
       </div>
+      {varName && varValue !== undefined && !editing && <VariableChip name={varName} value={varValue} onClear={clearVariable} width={width} />}
       {demoFallback && !empty && (
         <div className={styles.demoHint} data-testid="flow-demo-hint">
           <span>{FLOW_DEMO_HINT}</span>

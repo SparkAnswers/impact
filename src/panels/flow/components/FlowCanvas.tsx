@@ -49,6 +49,8 @@ export interface FlowCanvasProps {
   linkFor?: (node: FlowNode) => string | undefined;
   linkTrigger?: LinkTrigger;
   onOpenLink?: (href: string) => void;
+  /** Runs on the link trigger before the link; returning true consumes the click (e.g. sets a variable). */
+  onNodeAction?: (node: FlowNode) => boolean;
   onFit?: () => void;
   onViewport: (vp: Viewport) => void;
   onSelect: (sel?: FlowSelection) => void;
@@ -99,6 +101,7 @@ export const FlowCanvas: React.FC<FlowCanvasProps> = (props) => {
     linkFor,
     linkTrigger = 'off',
     onOpenLink,
+    onNodeAction,
     onFit,
     onViewport,
     onSelect,
@@ -492,6 +495,9 @@ export const FlowCanvas: React.FC<FlowCanvasProps> = (props) => {
       return;
     }
     if (linkTrigger === 'dblclick') {
+      if (onNodeAction?.(node)) {
+        return;
+      }
       const href = hrefOf(node);
       if (href) {
         onOpenLink?.(href);
@@ -501,6 +507,9 @@ export const FlowCanvas: React.FC<FlowCanvasProps> = (props) => {
 
   const onNodeClick = (node: FlowNode) => {
     if (!editing && linkTrigger === 'click') {
+      if (onNodeAction?.(node)) {
+        return;
+      }
       const href = hrefOf(node);
       if (href) {
         onOpenLink?.(href);

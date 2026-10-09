@@ -164,12 +164,21 @@ export interface DataOptions {
 
 export type LinkTarget = 'same' | 'new';
 export type LinkTrigger = 'dblclick' | 'click' | 'off';
+/** What a node click does: open the URL template, or set a dashboard variable so every query on the page follows. */
+export type LinkAction = 'link' | 'variable';
 
 export interface LinkOptions {
   /** URL template; supports dashboard variables and ${node.id|label|group|value|status} tokens */
   nodeUrl: string;
   target: LinkTarget;
   trigger: LinkTrigger;
+  action?: LinkAction;
+  /** Dashboard variable name (without `$`) set by a node click when action is `variable` */
+  variable?: string;
+  /** Value template for the variable; supports the `${node.*}` tokens (not URL-encoded) */
+  variableValue?: string;
+  /** Value written by the chip's clear button (empty, or `$__all` for query variables with All) */
+  variableClear?: string;
 }
 
 export interface InteractionOptions {
@@ -290,7 +299,7 @@ export const DEFAULT_IMAGE_SIZE = 24;
 export const MIN_IMAGE_SIZE = 12;
 export const MAX_IMAGE_SIZE = 64;
 
-export const DEFAULT_LINKS: LinkOptions = { nodeUrl: '', target: 'same', trigger: 'dblclick' };
+export const DEFAULT_LINKS: LinkOptions = { nodeUrl: '', target: 'same', trigger: 'dblclick', action: 'link', variable: '', variableValue: '${node.id}', variableClear: '' };
 export const DEFAULT_INTERACTION: InteractionOptions = { zoom: true };
 
 export const DEFAULT_OPTIONS: FlowOptions = {

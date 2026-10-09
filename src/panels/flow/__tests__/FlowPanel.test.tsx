@@ -1,6 +1,7 @@
 import React from 'react';
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { FieldType, LoadingState, applyFieldOverrides, createTheme, getDefaultTimeRange, toDataFrame, type PanelProps } from '@grafana/data';
+import { locationService } from '@grafana/runtime';
 import { FLOW_DEMO_HINT, FLOW_NO_DATA_MESSAGE, FlowPanel } from '../FlowPanel';
 import { createExampleDiagram } from '../lib/example';
 import { DEFAULT_OPTIONS, type FlowOptions } from '../types';
@@ -37,7 +38,7 @@ function makeSeries() {
   });
 }
 
-function renderPanel(partial: Partial<FlowOptions> = {}, onOptionsChange = jest.fn()) {
+function renderPanel(partial: Partial<FlowOptions> = {}, onOptionsChange = jest.fn(), replaceVariables: (v: string) => string = (v) => v) {
   const options: FlowOptions = { ...DEFAULT_OPTIONS, ...partial, diagram: partial.diagram ?? createExampleDiagram() };
   const props = {
     id: 1,
@@ -48,7 +49,7 @@ function renderPanel(partial: Partial<FlowOptions> = {}, onOptionsChange = jest.
     onOptionsChange,
     fieldConfig: { defaults: {}, overrides: [] },
     onFieldConfigChange: jest.fn(),
-    replaceVariables: (v: string) => v,
+    replaceVariables,
     width: 800,
     height: 500,
     transparent: false,
@@ -323,5 +324,21 @@ describe('FlowPanel links and view-mode zoom', () => {
   it('hides the controls and ignores wheel/drag when Zoom and pan is off', () => {
     renderPanel({ interaction: { zoom: false } });
     expect(screen.queryByTestId('flow-zoom-controls')).not.toBeInTheDocument();
+  });
+});
+
+describe('variable action', () => {
+  it('shows the chip for the current value, clears it, and sets the variable on node double-click', () => {
+    const partial = jest.spyOn(locationService, 'partial').mockImplementation(() => undefined);
+    const vars = (s: string) => s.replace('${service}', 'battery');
+    const { container } = renderPanel({ links: { nodeUrl: '', target: 'same', trigger: 'dblclick', action: 'variable', variable: 'service', variableValue: '${node.id}', variableClear: '' } }, jest.fn(), vars);
+    expect(screen.getByTestId('flow-variable-chip')).toHaveTextContent('service = battery');
+    fireEvent.click(screen.getByRole('button', { name: 'Clear service' }));
+    expect(partial).toHaveBeenLastCalledWith({ 'var-service': '' });
+    const solar = container.querySelector('[aria-label="Solar array"]');
+    expect(solar).not.toBeNull();
+    fireEvent.doubleClick(solar!);
+    expect(partial).toHaveBeenLastCalledWith({ 'var-service': 'solar' });
+    partial.mockRestore();
   });
 });

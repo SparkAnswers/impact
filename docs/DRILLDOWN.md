@@ -1,6 +1,6 @@
 # Drill-down and pruning (design proposal)
 
-Status: proposal, not built. Mock-up: `mockups/drilldown/index.html`.
+Status: section 1 (variable action + chip) is built; sections 2 and 3 are proposals. Mock-up: `mockups/drilldown/index.html`.
 
 Big data-driven graphs (100+ nodes) are only useful if the reader can cut them down to the part that matters.
 This note proposes three mechanisms that stay data-shape agnostic (anything that produces source, target, value
@@ -72,6 +72,6 @@ and the variable action.
 
 ## Order of work
 
-1. Variable action + chip (small, high value, no new UI concepts).
+1. Variable action + chip: done (Links > Node click = Set variable).
 2. Prune rules + hidden list + context menu (pure functions first, then the menu).
 3. Focus mode with breadcrumbs (builds on the same filter function).

@@ -230,6 +230,12 @@ is set; a manual node's own **Link** (Inspector → Data) beats the template. Li
 pointer cursor and a hover glow; links never fire while **Edit layout** is on. Only `http(s)` and
 relative URLs are opened.
 
+**Node click as a filter.** Set **Links → Node click** to *Set variable* and name a dashboard variable: the
+link trigger (double-click by default) writes the node id (or any `${node.*}` template) into `$name`, so every
+query on the dashboard that uses the variable re-runs for that node, including this panel's own. A chip in the
+panel's top-left corner shows `name = value` with a clear button. Use a Text box variable for free-form ids, or a
+Query/Custom variable with *Include All* and set *Clear value* to `$__all`.
+
 ## Designing a diagram
 
 1. Edit the panel and turn on **Layout → Edit layout**. A floating toolbar appears inside the panel
@@ -304,6 +310,8 @@ result is the same wherever you start from; what survives is the drawn diagram, 
 | Data → Edge and node fields | Source, Target, Value, Secondary value, Label, Source group, Target group field / label names for edge frames; Node id, label, group, status, value, image field names for node frames. Empty value fields mean "first numeric field"; a name that matches nothing means "no value". |
 | Data → Node overrides | Inspector for data nodes (overrides mode): label, shape, icon, image URL, status, colour, position; clear one node or reset all. |
 | Interaction → Zoom and pan | View-mode zoom (Ctrl/⌘ + wheel, pinch, plain wheel in view-panel mode), drag to pan, double-click to fit, floating +/−/fit control. Session only. |
+| Links → Node click | `Open link` (the URL template) or `Set variable`: the click writes the node into a dashboard variable, so every query on the page that uses `$name` follows; a chip in the panel's corner shows the current value and clears it. |
+| Links → Variable / Value / Clear value | Variable name (without `$`), value template with the `${node.*}` tokens (default `${node.id}`, not URL-encoded), and what the clear button writes (empty for a Text box variable, `$__all` for Query/Custom variables with All). |
 | Links → Node link | URL template with dashboard variables and `${node.id|label|group|value|status}` tokens. |
 | Links → Open in | `Same tab` or `New tab`. |
 | Links → Trigger | `Double-click` (default), `Click` or `Off`. Links only fire when Edit layout is off. |

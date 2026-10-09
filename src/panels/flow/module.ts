@@ -385,6 +385,46 @@ export const plugin = new PanelPlugin<FlowOptions>(FlowPanel)
         category: INTERACTION,
         defaultValue: DEFAULT_OPTIONS.interaction?.zoom ?? true,
       })
+      .addRadio({
+        path: 'links.action',
+        name: 'Node click',
+        description: 'Open link: the URL template below. Set variable: write the node into a dashboard variable so every query on the page that uses it follows the click; a chip in the panel shows and clears it',
+        category: LINKS,
+        defaultValue: DEFAULT_OPTIONS.links?.action ?? 'link',
+        settings: {
+          options: [
+            { value: 'link', label: 'Open link' },
+            { value: 'variable', label: 'Set variable' },
+          ],
+        },
+      })
+      .addTextInput({
+        path: 'links.variable',
+        name: 'Variable',
+        description: 'Name of the dashboard variable to set (without $). A Text box or Custom variable works best; a Query variable needs the value to be one of its options',
+        category: LINKS,
+        defaultValue: DEFAULT_OPTIONS.links?.variable ?? '',
+        settings: { placeholder: 'service' },
+        showIf: (o) => o.links?.action === 'variable',
+      })
+      .addTextInput({
+        path: 'links.variableValue',
+        name: 'Value',
+        description: 'Value written to the variable: ${node.id} (default), ${node.label}, ${node.group}, ${node.value}, ${node.status}, plus other dashboard variables',
+        category: LINKS,
+        defaultValue: DEFAULT_OPTIONS.links?.variableValue ?? '${node.id}',
+        settings: { placeholder: '${node.id}' },
+        showIf: (o) => o.links?.action === 'variable',
+      })
+      .addTextInput({
+        path: 'links.variableClear',
+        name: 'Clear value',
+        description: 'What the chip’s clear button writes: empty for a Text box variable, $__all for a Query or Custom variable that includes All',
+        category: LINKS,
+        defaultValue: DEFAULT_OPTIONS.links?.variableClear ?? '',
+        settings: { placeholder: '' },
+        showIf: (o) => o.links?.action === 'variable',
+      })
       .addTextInput({
         path: 'links.nodeUrl',
         name: 'Node link',
@@ -392,6 +432,7 @@ export const plugin = new PanelPlugin<FlowOptions>(FlowPanel)
         category: LINKS,
         defaultValue: DEFAULT_OPTIONS.links?.nodeUrl ?? '',
         settings: { placeholder: '/d/dashboard?var-node=${node.id}' },
+        showIf: (o) => o.links?.action !== 'variable',
       })
       .addRadio({
         path: 'links.target',
