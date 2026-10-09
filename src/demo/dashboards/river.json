@@ -175,7 +175,7 @@
       "id": 2,
       "type": "sparkanswers-impact-river-panel",
       "title": "Three channels auto-bound to A / B / C",
-      "description": "Three random-walk queries, three stacked horizontal channels with different colour presets.",
+      "description": "Three random-walk queries, three stacked horizontal channels with different colour presets and trails (0.6 short, 0.86, 0.95 long): each trail value is faded on its own layer.",
       "gridPos": {
         "x": 0,
         "y": 14,
@@ -271,7 +271,7 @@
             "particles": {
               "count": 900,
               "speed": 1,
-              "trail": 0.9,
+              "trail": 0.6,
               "width": 1.5,
               "color": "white"
             },
@@ -325,7 +325,7 @@
             "particles": {
               "count": 900,
               "speed": 1,
-              "trail": 0.9,
+              "trail": 0.86,
               "width": 1.5,
               "color": "byValue"
             },
@@ -379,7 +379,7 @@
             "particles": {
               "count": 900,
               "speed": 1,
-              "trail": 0.9,
+              "trail": 0.95,
               "width": 1.5,
               "color": "fixed",
               "fixedColor": "#ffe08a"

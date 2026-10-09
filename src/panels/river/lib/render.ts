@@ -384,6 +384,167 @@ export function trailKeep(trail: number, dt: number): number {
   return Math.pow(t, Math.max(0.001, dt * 60));
 }
 
+/** Trail used when a channel has no particle options. */
+const DEFAULT_TRAIL = 0.9;
+
+/** Normalised trail value: clamped like `trailKeep` and rounded to 2 decimals so near-equal trails share a layer. */
+export function trailKey(trail: number | undefined): number {
+  const t = typeof trail === 'number' && Number.isFinite(trail) ? trail : DEFAULT_TRAIL;
+  return Math.round(Math.max(0, Math.min(0.995, t)) * 100) / 100;
+}
+
+export interface TrailLayerSpec {
+  /** Effective trail (rounded to 2 decimals) shared by every member of the layer. */
+  trail: number;
+  /** Indexes into the input array, in input order. */
+  channelIndexes: number[];
+}
+
+/**
+ * Groups channels (or ribbons, anything carrying `particles.trail`) by their effective trail value.
+ * Layers are ordered by the first channel that uses each trail, so compositing them in order keeps
+ * the channel order as far as a shared layer allows. One trail value = one layer.
+ */
+export function trailLayers(channels: ReadonlyArray<{ particles?: { trail?: number } }>): TrailLayerSpec[] {
+  const layers: TrailLayerSpec[] = [];
+  const byTrail = new Map<number, TrailLayerSpec>();
+  channels.forEach((c, i) => {
+    const trail = trailKey(c.particles?.trail);
+    let layer = byTrail.get(trail);
+    if (!layer) {
+      layer = { trail, channelIndexes: [] };
+      byTrail.set(trail, layer);
+      layers.push(layer);
+    }
+    layer.channelIndexes.push(i);
+  });
+  return layers;
+}
+
+/** Minimal offscreen canvas surface, so the layer set can be driven with a stub in tests. */
+export interface LayerCanvas {
+  width: number;
+  height: number;
+  getContext(kind: '2d'): CanvasRenderingContext2D | null;
+}
+
+export interface TrailLayer extends TrailLayerSpec {
+  canvas: LayerCanvas;
+  ctx: CanvasRenderingContext2D;
+}
+
+/**
+ * One offscreen particle canvas per distinct trail value. Canvases are created or resized only when the
+ * device size or the set of trail values changes; frames only fade, draw and composite.
+ */
+export class TrailLayerSet {
+  private layers: TrailLayer[] = [];
+  private readonly pool = new Map<number, TrailLayer>();
+  private deviceWidth = 0;
+  private deviceHeight = 0;
+  private dpr = 1;
+  /** CSS size, used by `fade` (contexts are scaled by dpr). */
+  private cssWidth = 0;
+  private cssHeight = 0;
+
+  constructor(private readonly createCanvas: () => LayerCanvas) {}
+
+  /** Current layers, in composite order. */
+  get all(): readonly TrailLayer[] {
+    return this.layers;
+  }
+
+  /**
+   * Makes the set match `specs` at the given device size. Returns false when no 2d context could be
+   * obtained (nothing is drawn then). Existing canvases are reused when neither their trail nor the
+   * size changed; every surviving layer is cleared so stale streaks never sit on new geometry.
+   */
+  ensure(specs: TrailLayerSpec[], cssWidth: number, cssHeight: number, dpr: number): boolean {
+    const dw = Math.round(cssWidth * dpr);
+    const dh = Math.round(cssHeight * dpr);
+    const resized = dw !== this.deviceWidth || dh !== this.deviceHeight || dpr !== this.dpr;
+    this.deviceWidth = dw;
+    this.deviceHeight = dh;
+    this.dpr = dpr;
+    this.cssWidth = cssWidth;
+    this.cssHeight = cssHeight;
+
+    const next: TrailLayer[] = [];
+    const keep = new Set<number>();
+    for (const spec of specs) {
+      let layer = this.pool.get(spec.trail);
+      if (!layer) {
+        const canvas = this.createCanvas();
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+          return false;
+        }
+        layer = { trail: spec.trail, channelIndexes: spec.channelIndexes, canvas, ctx };
+        this.pool.set(spec.trail, layer);
+        canvas.width = dw;
+        canvas.height = dh;
+      } else {
+        layer.channelIndexes = spec.channelIndexes;
+        if (resized) {
+          layer.canvas.width = dw;
+          layer.canvas.height = dh;
+        }
+      }
+      // Resizing resets the context state; a fresh transform + clear is cheap and keeps every path identical.
+      layer.ctx.setTransform(1, 0, 0, 1, 0, 0);
+      layer.ctx.clearRect(0, 0, dw, dh);
+      layer.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      next.push(layer);
+      keep.add(spec.trail);
+    }
+    for (const trail of Array.from(this.pool.keys())) {
+      if (!keep.has(trail)) {
+        this.release(trail);
+      }
+    }
+    this.layers = next;
+    return true;
+  }
+
+  /** Fades every layer by its own per-frame keep fraction. */
+  fade(dt: number) {
+    for (const layer of this.layers) {
+      const { ctx } = layer;
+      ctx.globalCompositeOperation = 'destination-in';
+      ctx.fillStyle = `rgba(0,0,0,${trailKeep(layer.trail, dt)})`;
+      ctx.fillRect(0, 0, this.cssWidth, this.cssHeight);
+      ctx.globalCompositeOperation = 'source-over';
+    }
+  }
+
+  /** Draws every layer onto `ctx` (device px, identity transform expected) in layer order. */
+  composite(ctx: CanvasRenderingContext2D) {
+    for (const layer of this.layers) {
+      ctx.drawImage(layer.canvas as unknown as CanvasImageSource, 0, 0);
+    }
+  }
+
+  /** Drops every canvas (unmount). */
+  dispose() {
+    for (const trail of Array.from(this.pool.keys())) {
+      this.release(trail);
+    }
+    this.layers = [];
+    this.deviceWidth = 0;
+    this.deviceHeight = 0;
+  }
+
+  private release(trail: number) {
+    const layer = this.pool.get(trail);
+    if (layer) {
+      // Zero-size canvases free their backing store immediately in every engine.
+      layer.canvas.width = 0;
+      layer.canvas.height = 0;
+      this.pool.delete(trail);
+    }
+  }
+}
+
 export interface NodePuck {
   x: number;
   y: number;

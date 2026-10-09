@@ -14,7 +14,7 @@ import { bindChannels, effectiveChannels, getNumericFields } from './lib/data';
 import { applyValueToken, displayFor, formatValue, isSafeImageUrl, legendFormatter, mapperFor } from './lib/format';
 import { buildNetwork, demoNetworkFrames, hasEdges, networkParticleCounts, spreadLabels } from './lib/network';
 import { pointAt } from './lib/path';
-import { ParticleSystem, allocateParticles, buildChannelGeometry, paintNodes, paintRibbon, trailKeep } from './lib/render';
+import { ParticleSystem, TrailLayerSet, allocateParticles, buildChannelGeometry, paintNodes, paintRibbon, trailLayers } from './lib/render';
 import { RIVER_PRESETS } from './presets';
 import { DEFAULT_NETWORK, DEFAULT_OPTIONS, MAX_TOTAL_PARTICLES, type RiverOptions, type Waypoint } from './types';
 
@@ -139,6 +139,16 @@ export const RiverPanel: React.FC<PanelProps<RiverOptions>> = (props) => {
   const onImage = options.background === 'image' && isSafeImageUrl(options.backgroundUrl);
   const styles = useStyles2(getStyles, onImage);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  // One offscreen particle canvas per distinct trail value, kept across renders and resized only when
+  // the device size or the set of trail values changes; released on unmount.
+  const layersRef = useRef<TrailLayerSet | null>(null);
+  useEffect(
+    () => () => {
+      layersRef.current?.dispose();
+      layersRef.current = null;
+    },
+    []
+  );
   const motionOn = useMotionAllowed(options.animate, options.reducedMotion);
   const [loadedBg, setLoadedBg] = useState<{ url: string; img: HTMLImageElement } | null>(null);
   const isNetwork = options.channelSource === 'network';
@@ -209,17 +219,11 @@ export const RiverPanel: React.FC<PanelProps<RiverOptions>> = (props) => {
     if (!ctx) {
       return;
     }
-    const mk = () => {
-      const c = document.createElement('canvas');
-      c.width = canvas.width;
-      c.height = canvas.height;
-      return c;
-    };
-    const staticLayer = mk();
-    const particleLayer = mk();
+    const staticLayer = document.createElement('canvas');
+    staticLayer.width = canvas.width;
+    staticLayer.height = canvas.height;
     const sx = staticLayer.getContext('2d');
-    const px = particleLayer.getContext('2d');
-    if (!sx || !px) {
+    if (!sx) {
       return;
     }
 
@@ -272,20 +276,29 @@ export const RiverPanel: React.FC<PanelProps<RiverOptions>> = (props) => {
     const systems = ribbons.map(
       (r, i) => new ParticleSystem(r, { count: counts[i], speedMultiplier: options.particleSpeedMultiplier * options.animationSpeed })
     );
-    px.scale(dpr, dpr);
+    // Particle layers: one offscreen canvas per distinct trail value (ribbons of one channel share its
+    // trail, so lanes land on the same layer; network links all use the shared network trail = one layer).
+    const layers = (layersRef.current ??= new TrailLayerSet(() => document.createElement('canvas')));
+    if (!layers.ensure(trailLayers(ribbons.map((r) => r.channel)), width, height, dpr)) {
+      return;
+    }
+    const targets: CanvasRenderingContext2D[] = new Array(systems.length);
+    for (const layer of layers.all) {
+      for (const i of layer.channelIndexes) {
+        targets[i] = layer.ctx;
+      }
+    }
 
     const compose = () => {
       ctx.setTransform(1, 0, 0, 1, 0, 0);
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       ctx.drawImage(staticLayer, 0, 0);
-      ctx.drawImage(particleLayer, 0, 0);
+      layers.composite(ctx);
     };
 
     const animate = motionOn && typeof requestAnimationFrame === 'function';
     if (!animate) {
-      for (const s of systems) {
-        s.drawStatic(px);
-      }
+      systems.forEach((s, i) => s.drawStatic(targets[i]));
       compose();
       return;
     }
@@ -299,14 +312,9 @@ export const RiverPanel: React.FC<PanelProps<RiverOptions>> = (props) => {
       }
       const dt = Math.min(0.05, (now - last) / 1000);
       last = now;
-      px.globalCompositeOperation = 'destination-in';
-      // one shared particle layer: the first channel's trail setting drives the fade
-      const trail = ribbons[0]?.channel.particles?.trail ?? 0.9;
-      px.fillStyle = `rgba(0,0,0,${trailKeep(trail, dt)})`;
-      px.fillRect(0, 0, width, height);
-      px.globalCompositeOperation = 'source-over';
-      for (const s of systems) {
-        s.step(px, dt);
+      layers.fade(dt);
+      for (let i = 0; i < systems.length; i++) {
+        systems[i].step(targets[i], dt);
       }
       compose();
       raf = requestAnimationFrame(frame);

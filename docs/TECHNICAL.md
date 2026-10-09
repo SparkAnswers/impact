@@ -91,7 +91,7 @@ dashboards are not touched when they load.
 | --- | --- |
 | Flow Designer | SVG. Edges are paths with a blurred halo filter; particles are circles advanced along `getPointAtLength` in one `requestAnimationFrame` loop. Design mode uses pointer capture for dragging, a viewport transform for pan/zoom, and an immutable undo stack (50 steps). The diagram is stored in panel options as JSON. |
 | Power Gauge | Canvas, devicePixelRatio aware. A single `drawGauge` pass paints threshold bands, the signed fill arc, ticks, the history chart, the marker and text. The marker value is eased with `requestAnimationFrame`. |
-| Flow River | Canvas. The centreline is a Catmull-Rom spline resampled by arc length; each sample carries tangent, normal, width and value. The ribbon is painted once to an offscreen canvas; particles live in `Float32Array`s and are drawn as streaks onto a layer that is faded every frame with `destination-in`. |
+| Flow River | Canvas. The centreline is a Catmull-Rom spline resampled by arc length; each sample carries tangent, normal, width and value. The ribbon is painted once to an offscreen canvas; particles live in `Float32Array`s and are drawn as streaks onto one offscreen layer per distinct trail value (channels grouped by trail rounded to 2 decimals, `trailLayers()`); each layer is faded every frame with `destination-in` at its own keep fraction, then the layers are composited over the ribbon in order. Layers are allocated or resized only when the device size or the set of trail values changes and are released on unmount. |
 | Status Bars | DOM. Bars are CSS (keyframes for sweep and stripes); sparklines are inline SVG; rows are windowed when there are more than 200. |
 
 All animation loops stop on unmount, pause while `document.hidden`, and fall back to a static render when
@@ -111,6 +111,6 @@ All animation loops stop on unmount, pause while `document.hidden`, and fall bac
 
 - Catalog submission and plugin signing.
 - Flow Designer: more auto-layout controls.
-- Flow River: per-channel trail layers, map tile backgrounds.
+- Flow River: map tile backgrounds.
 - Status Bars: row click actions through data links on every column.
 - Drill-down and pruning for data-driven graphs: see `docs/DRILLDOWN.md` (proposal with mock-up).

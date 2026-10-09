@@ -383,7 +383,7 @@ const ChannelCard: React.FC<CardProps> = ({ channel, index, total, seriesOptions
           <div className={styles.section}>Particles</div>
           <NumField label="Count" value={particles.count} min={0} max={20000} onChange={(count) => patch({ particles: { ...particles, count } })} />
           <NumField label="Speed" value={particles.speed} min={0} max={10} step={0.1} onChange={(speed) => patch({ particles: { ...particles, speed } })} />
-          <NumField label="Trail" tooltip="Trail persistence per frame (0.5 short, 0.95 long)." value={particles.trail} min={0} max={0.99} step={0.01} onChange={(trail) => patch({ particles: { ...particles, trail } })} />
+          <NumField label="Trail" tooltip="Trail persistence per frame for this channel (0.5 short, 0.95 long). Each distinct trail value gets its own particle layer, so channels never share a fade." value={particles.trail} min={0} max={0.99} step={0.01} onChange={(trail) => patch({ particles: { ...particles, trail } })} />
           <NumField label="Streak width" value={particles.width} min={0.2} max={6} step={0.1} onChange={(width) => patch({ particles: { ...particles, width } })} />
           <InlineField label="Streak colour" labelWidth={LABEL_WIDTH}>
             <RadioButtonGroup

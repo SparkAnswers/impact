@@ -134,7 +134,7 @@ Particle streamlines flowing along one or more channels, coloured by value. A si
 | Channel -> Direction        | `Forward`, `Reverse` or `By sign` (negative values flow backwards)                                |
 | Channel -> Width / Width from | Base width in pixels, optionally modulated by a second series or field                           |
 | Channel -> Scale            | `Turbo`, `Viridis`, `Inferno`, `Cool`, `Warm`, standard `Thresholds` or custom colour stops; auto or fixed domain |
-| Channel -> Particles        | Count, speed, trail persistence, streak width, colour (`White`, `By value`, fixed)                |
+| Channel -> Particles        | Count, speed, trail persistence (per channel, one fade layer per trail value), streak width, colour (`White`, `By value`, fixed) |
 | Channel -> Labels           | Text anchored at a position along the path                                                       |
 | Legend                      | Gradient legend with ticks in the field unit, corner placement                                    |
 | Title / Subtitle / Caption  | Free-text overlays; `{value}` is the latest value of the first channel                           |

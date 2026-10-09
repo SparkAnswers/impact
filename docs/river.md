@@ -23,7 +23,9 @@ newest at the end, and the caption shows the latest value.
 ### Several channels
 
 Add channels in **Channels** (each has its own path, data source, width, colour scale, particles and labels).
-A channel's **Speed** source decides where its values come from:
+Particle settings, including the trail, are honoured per channel: channels that share a trail value (rounded to
+two decimals) share one particle layer, and each distinct value gets a layer of its own, composited in channel
+order. A channel's **Speed** source decides where its values come from:
 
 | Mode   | Behaviour                                                                                     |
 | ------ | --------------------------------------------------------------------------------------------- |
@@ -165,7 +167,7 @@ result is the same wherever you start from; what survives is the background imag
 | Channel > Smoothing          | Gaussian window (in samples) applied to speed and width before drawing. 0 = auto (5% of the samples, min 3). |
 | Channel > Opacity            | Channel fill opacity.                                                                     |
 | Channel > Scale              | Colour preset, thresholds or custom stops; domain auto or fixed.                          |
-| Channel > Particles          | Count, speed, trail persistence, streak width and colour (White, By value, Fixed).        |
+| Channel > Particles          | Count, speed, trail persistence, streak width and colour (White, By value, Fixed). Trail is per channel: every distinct trail value is faded on its own particle layer, so a long-trail channel never bleeds into a short-trail one. |
 | Channel > Labels             | Text anchored at a position along the path (0..1), left / centre / right of the channel. Supports variables. |
 | Default colour scale         | Used by the automatic channel when the list is empty.                                     |
 | Show legend / Legend position| Gradient legend with formatted ticks and unit; corner placement.                          |
