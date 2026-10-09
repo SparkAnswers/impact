@@ -346,3 +346,38 @@ describe('isSafeHref', () => {
     expect(isSafeHref('\u0001https://example.org')).toBe(true);
   });
 });
+
+describe('series-valued extra columns', () => {
+  it('become sparklines whose text and sort value are the last point, formatted with the column unit', () => {
+    const trend = toDataFrame({ fields: [{ name: 'Time', type: FieldType.time, values: [1, 2, 3] }, { name: 'mem', type: FieldType.number, values: [1024, 2048, 4096] }] });
+    const frame = toDataFrame({
+      fields: [
+        { name: 'name', type: FieldType.string, values: ['a'] },
+        { name: 'cpu', type: FieldType.number, values: [12] },
+        { name: 'Memory', type: FieldType.frame, values: [trend], config: { unit: 'bytes', decimals: 0 } },
+      ],
+    });
+    const model = buildModel([frame], opts({ extraFields: ['Memory'] }), theme);
+    expect(model.extraColumns.map((c) => c.numeric)).toEqual([true]);
+    const cell = model.rows[0].extras[0];
+    expect(cell.series).toEqual([1024, 2048, 4096]);
+    expect(cell.numeric).toBe(4096);
+    expect(cell.text).toBe('4 KiB');
+  });
+
+  it('are picked up automatically as unused frame fields', () => {
+    const trend = toDataFrame({ fields: [{ name: 'v', type: FieldType.number, values: [1, 2] }] });
+    const frame = toDataFrame({
+      fields: [
+        { name: 'name', type: FieldType.string, values: ['a'] },
+        { name: 'cpu', type: FieldType.number, values: [12] },
+        { name: 'history', type: FieldType.frame, values: [trend] },
+        { name: 'other', type: FieldType.frame, values: [trend] },
+      ],
+    });
+    const model = buildModel([frame], opts({ sparklineField: 'history' }), theme);
+    expect(model.rows[0].sparkline).toEqual([1, 2]);
+    expect(model.extraColumns.map((c) => c.title)).toEqual(['other']);
+    expect(model.rows[0].extras[0].series).toEqual([1, 2]);
+  });
+});

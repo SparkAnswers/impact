@@ -286,6 +286,7 @@ export const getStyles = (theme: GrafanaTheme2) => {
       },
     }),
     spark: css({ display: 'block', flex: '0 0 auto' }),
+    sparkCell: css({ display: 'inline-flex', alignItems: 'center', gap: theme.spacing(0.75), verticalAlign: 'middle' }),
     pill: css({
       display: 'inline-flex',
       alignItems: 'center',

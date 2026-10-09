@@ -39,7 +39,12 @@ export interface ExtraCell {
   text: string;
   numeric?: number;
   color?: string;
+  /** Series-valued cell (array or nested frame): drawn as a sparkline, `text`/`numeric` are its last value. */
+  series?: number[];
 }
+
+/** Fields whose cells may hold a series (arrays, nested frames from Time series to table). */
+const seriesCapable = (f: Field) => f.type === FieldType.other || f.type === FieldType.frame;
 
 /** One resolved, scheme-checked data link of a cell. */
 export interface RowLink {
@@ -413,10 +418,14 @@ function buildFromTable(frame: DataFrame, frames: DataFrame[], options: BarsOpti
           (f.type === FieldType.string ||
             f.type === FieldType.number ||
             f.type === FieldType.time ||
-            f.type === FieldType.boolean)
+            f.type === FieldType.boolean ||
+            seriesCapable(f))
       );
 
-  const extraDisplays = extraFields.map((f) => displayFor(f, theme));
+  // Series cells are formatted as numbers (their last value) with the field's unit and decimals.
+  const extraDisplays = extraFields.map((f) =>
+    seriesCapable(f) ? getDisplayProcessor({ field: { ...f, type: FieldType.number, display: undefined }, theme }) : displayFor(f, theme)
+  );
   const nameDisplay = nameField ? displayFor(nameField, theme) : undefined;
   const valueDisplay = valueField ? displayFor(valueField, theme) : undefined;
   const stackDisplays = autoStack.map((f) => displayFor(f, theme));
@@ -475,6 +484,12 @@ function buildFromTable(frame: DataFrame, frames: DataFrame[], options: BarsOpti
 
     const extras: ExtraCell[] = extraFields.map((f, k) => {
       const raw = f.values[i];
+      const series = seriesCapable(f) ? parseSparkline(raw) : undefined;
+      if (series) {
+        const last = series[series.length - 1];
+        const d = extraDisplays[k](last);
+        return { text: formattedValueToString(d), numeric: last, color: d.color, series };
+      }
       const d = extraDisplays[k](raw);
       return {
         text: formattedValueToString(d),
@@ -519,7 +534,7 @@ function buildFromTable(frame: DataFrame, frames: DataFrame[], options: BarsOpti
     rows,
     extraColumns: extraFields.map((f) => ({
       title: getFieldDisplayName(f, frame, frames),
-      numeric: f.type === FieldType.number,
+      numeric: f.type === FieldType.number || seriesCapable(f),
     })),
     hasValue: !!valueField,
     hasStatus: !!statusField,

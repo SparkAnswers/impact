@@ -7,6 +7,7 @@ import type { BarRow, BarsModel, RowLink } from '../lib/rows';
 import { sortRows, type SortKey, type SortState } from '../lib/sort';
 import { DENSITY_ROW_HEIGHT, VIRTUALISE_THRESHOLD, type BarsOptions } from '../types';
 import { RowBar } from './RowBar';
+import { Sparkline } from './Sparkline';
 import { getStyles, type BarsStyles } from './styles';
 import { useTick } from './useMotion';
 
@@ -425,7 +426,19 @@ export const BarsTable: React.FC<Props> = ({ model, options, width, height, anim
             className={cx(c.numeric ? styles.num : styles.dim)}
             style={cell?.color && c.numeric ? { color: cell.color } : undefined}
           >
-            {cell ? linked(row.links.extras[idx], cell.text) : ''}
+            {cell
+              ? linked(
+                  row.links.extras[idx],
+                  cell.series ? (
+                    <span className={styles.sparkCell}>
+                      <Sparkline values={cell.series} color={cell.color ?? row.color} width={56} height={16} className={styles.spark} />
+                      <span>{cell.text}</span>
+                    </span>
+                  ) : (
+                    cell.text
+                  )
+                )
+              : ''}
           </td>
         );
       }
