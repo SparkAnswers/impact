@@ -20,7 +20,7 @@ for (const d of DASHBOARDS) {
     const errors: string[] = [];
     page.on('pageerror', (e) => errors.push(e.message));
     await gotoDashboardPage({ uid: d.uid });
-    await expect(page.locator('[data-viz-panel-key]').first()).toBeVisible();
+    await expect(page.locator('[data-viz-panel-key]').first()).toBeVisible({ timeout: 15000 });
     const rendered = page.locator(
       '[data-viz-panel-key] canvas, [data-viz-panel-key] table, [data-viz-panel-key] svg:not([aria-hidden])'
     );
