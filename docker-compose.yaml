@@ -57,7 +57,7 @@ services:
       - .:/plugin:ro
     working_dir: /plugin
     entrypoint: sh
-    command: -c "/app/bin/linux_amd64/plugincheck2 -config ./scripts/validator.yaml ./$$(ls *.zip | head -n1)"
+    command: -c "/app/bin/linux_amd64/plugincheck2 -config ./scripts/validator.yaml $${SOURCE_URI:+-sourceCodeUri $$SOURCE_URI} ./$$(ls *.zip | head -n1)"
     profiles: [tools]
 
   grafana:

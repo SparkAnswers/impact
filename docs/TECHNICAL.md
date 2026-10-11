@@ -39,7 +39,7 @@ mockups/                the approved static HTML mockups each panel was built fr
 | `make up` | builds, then starts `grafana/grafana:13.0.10` with `./dist` and `./provisioning` mounted |
 | `make dev` | webpack watch with livereload on port 35729 |
 | `make package` | `scripts/package.sh` -> `sparkanswers-impact-app-<version>.zip` |
-| `make validate` | `grafana/plugin-validator` against the zip |
+| `make validate` | `grafana/plugin-validator` against the zip, with the source at `SOURCE_URI` (default: the GitHub tag for this version, the same check the catalog review runs) |
 | `make image` | multi-stage `Dockerfile`, target `runtime`: Grafana with the plugin and dashboards baked in |
 
 The `Dockerfile` `build` stage runs typecheck, lint and tests before bundling, so `make image` and

@@ -213,7 +213,7 @@ make build       # production bundle -> ./dist
 make check       # typecheck + lint + jest
 make up          # Grafana 13 with the plugin and demo dashboards
 make dev         # webpack watch + livereload
-make validate    # Grafana plugin-validator against a zip of ./dist
+make validate    # Grafana plugin-validator: zip of ./dist + source at the version tag (SOURCE_URI=... to override)
 make package     # ./sparkanswers-impact-app-<version>.zip
 make image       # one-image demo: Grafana + Impact + dashboards
 ```

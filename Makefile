@@ -4,7 +4,8 @@
 #   make up           Grafana 13 at http://localhost:3000 with demo dashboards (builds first)
 #   make dev          webpack watch + livereload (use in a second terminal next to `make up`)
 #   make check        typecheck + lint + unit tests
-#   make validate     Grafana plugin-validator against a zip of ./dist
+#   make validate     Grafana plugin-validator against a zip of ./dist, with the source at SOURCE_URI
+#                     (default: the GitHub tag for this version, as the catalog review checks it)
 #   make package      ./sparkanswers-impact-app-<version>.zip
 #   make image        one-image demo: docker build --target runtime -t impact-grafana .
 #   make screenshots  capture README screenshots from the running stack (needs `make up`)
@@ -13,6 +14,8 @@
 SHELL := /bin/sh
 
 PLUGIN_ID := sparkanswers-impact-app
+VERSION   := $(shell sed -n 's/^  "version": "\(.*\)",/\1/p' package.json)
+SOURCE_URI ?= https://github.com/SparkAnswers/impact/tree/v$(VERSION)
 IMAGE_TAG ?= impact-grafana
 COMPOSE   ?= docker compose
 RUN       := $(COMPOSE) run --rm --no-deps
@@ -66,7 +69,7 @@ package: build
 > @$(MAKE) --no-print-directory fix-perms
 
 validate: package
-> $(RUN) validate
+> $(RUN) -e SOURCE_URI=$(SOURCE_URI) validate
 
 image:
 > docker build --target runtime -t $(IMAGE_TAG) .
