@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { GrafanaTheme2 } from '@grafana/data';
+import { locationService } from '@grafana/runtime';
 import { Input } from '@grafana/ui';
 import { applyBinding, formatValue, type FieldValue } from '../lib/data';
 import { groupPalette } from '../lib/datadriven';
@@ -230,7 +231,7 @@ export const FlowCanvas: React.FC<FlowCanvasProps> = (props) => {
       if (!editing) {
         // View mode: plain wheel keeps scrolling the dashboard; Ctrl/⌘ + wheel (also trackpad pinch) zooms,
         // and so does the plain wheel when the panel is viewed on its own (view panel / fullscreen).
-        const alone = /[?&]viewPanel=/.test(window.location.search);
+        const alone = locationService.getSearchObject().viewPanel != null;
         if (!(e.ctrlKey || e.metaKey || alone)) {
           return;
         }
