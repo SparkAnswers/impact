@@ -144,7 +144,7 @@ export const plugin = new PanelPlugin<FlowOptions>(FlowPanel)
         path: 'animation.particles',
         name: 'Particles',
         description:
-          'Animated: particles travel along the edges and disappear while the animation is paused (Animation off, Reduced motion). Static: paused particles stay in place. Hidden: no particles at all, the lightest option for big graphs',
+          'Animated: particles travel along the edges and disappear while the animation is paused (Animation off, Reduced motion). Static: particles never move, they mark the edges as fixed dots. Hidden: no particles at all, the lightest option for big graphs',
         category: ANIMATION,
         defaultValue: DEFAULT_OPTIONS.animation.particles,
         settings: {
@@ -462,7 +462,7 @@ export const plugin = new PanelPlugin<FlowOptions>(FlowPanel)
         path: 'interaction.zoom',
         name: 'Zoom and pan',
         description:
-          'View mode: Ctrl/⌘ + wheel (or trackpad pinch) zooms around the pointer, plain wheel zooms when the panel is viewed on its own, drag pans, double-click on the canvas fits. Zoom is kept for the session only and reset by a large panel resize; a small +/−/fit control appears bottom-right on hover',
+          'View mode: Ctrl/⌘ + wheel (or trackpad pinch) zooms around the pointer, plain wheel zooms when the panel is viewed on its own, drag pans, double-click a node or group label zooms onto it, double-click on empty canvas fits. Zoom is kept for the session only and reset by a large panel resize; a small +/−/fit control appears bottom-right on hover',
         category: INTERACTION,
         defaultValue: DEFAULT_OPTIONS.interaction?.zoom ?? true,
       })

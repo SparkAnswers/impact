@@ -66,6 +66,11 @@ export interface FlowCanvasProps {
   /** Whether the Collapse groups rule is on (labels the toggle; collapsed nodes are groups) */
   collapsed?: boolean;
   onFit?: () => void;
+  /**
+   * View mode: zoom the view onto a node or a group (double-click, or Zoom to… in the right-click menu). Called
+   * with the node id, or the group name.
+   */
+  onZoomTo?: (target: { node?: string; group?: string }) => void;
   onViewport: (vp: Viewport) => void;
   onSelect: (sel?: FlowSelection) => void;
   /** Transient update while dragging (no undo entry) */
@@ -131,6 +136,7 @@ export const FlowCanvas: React.FC<FlowCanvasProps> = (props) => {
     onPrune,
     collapsed,
     onFit,
+    onZoomTo,
     onViewport,
     onSelect,
     onDraft,
@@ -138,7 +144,8 @@ export const FlowCanvas: React.FC<FlowCanvasProps> = (props) => {
     onTool,
   } = props;
   const viewZoom = !editing && !!zoomEnabled;
-  const menuEnabled = !editing && !!onPrune;
+  const zoomTo = !editing && !!zoomEnabled && !!onZoomTo ? onZoomTo : undefined;
+  const menuEnabled = !editing && (!!onPrune || !!zoomTo);
   const [menu, setMenu] = useState<MenuTarget | undefined>();
   const closeMenu = useCallback(() => setMenu(undefined), []);
   const svgRef = useRef<SVGSVGElement>(null);
@@ -327,7 +334,9 @@ export const FlowCanvas: React.FC<FlowCanvasProps> = (props) => {
   // ---- pointer handlers --------------------------------------------------------------------------
   const onBackgroundDown = (e: React.PointerEvent<SVGSVGElement>) => {
     if (!editing) {
-      if (viewZoom && (e.button === 0 || e.button === 1)) {
+      // A group label takes its own double-click (zoom to group); pointer capture from a pan would redirect it.
+      const onLabel = !!(e.target as Element).closest?.('[data-testid^="flow-group-label-"]');
+      if (viewZoom && !onLabel && (e.button === 0 || e.button === 1)) {
         dragRef.current = { type: 'pan', start: { x: e.clientX, y: e.clientY }, orig: viewport };
         capture(e);
       }
@@ -530,8 +539,19 @@ export const FlowCanvas: React.FC<FlowCanvasProps> = (props) => {
       const href = hrefOf(node);
       if (href) {
         onOpenLink?.(href);
+        return;
       }
     }
+    // No link took the double-click: zoom onto the node (double-click on empty canvas fits again).
+    zoomTo?.({ node: node.id });
+  };
+
+  const onGroupDoubleClick = (e: React.MouseEvent<SVGTextElement>, group: string) => {
+    if (!zoomTo) {
+      return;
+    }
+    e.stopPropagation();
+    zoomTo({ group });
   };
 
   const onNodeClick = (node: FlowNode) => {
@@ -551,7 +571,7 @@ export const FlowCanvas: React.FC<FlowCanvasProps> = (props) => {
       return;
     }
     const target = e.target as Element;
-    if (target.closest?.('[data-testid^="flow-node-"]') || target.closest?.('[data-testid^="flow-edge-"]')) {
+    if (target.closest?.('[data-testid^="flow-node-"]') || target.closest?.('[data-testid^="flow-edge-"]') || target.closest?.('[data-testid^="flow-group-label-"]')) {
       return;
     }
     onFit();
@@ -578,11 +598,20 @@ export const FlowCanvas: React.FC<FlowCanvasProps> = (props) => {
   const hasGroups = diagram.nodes.some((n) => !!n.group);
 
   const renderMenuItems = () => {
-    if (!menu || !onPrune) {
+    if (!menu) {
       return null;
     }
+    const viewItems = zoomTo ? (
+      <MenuGroup key="view" label="View">
+        {menu.kind === 'node' && <MenuItem label="Zoom to node" icon="search-plus" onClick={() => zoomTo({ node: menu.node.id })} />}
+        {(menu.kind === 'group' || menu.node.group) && (
+          <MenuItem label={`Zoom to group ${menu.kind === 'group' ? menu.group : menu.node.group}`} icon="search-plus" onClick={() => zoomTo({ group: menu.kind === 'group' ? menu.group : menu.node.group! })} />
+        )}
+        {onFit && <MenuItem label="Fit to panel" icon="expand-arrows-alt" onClick={onFit} />}
+      </MenuGroup>
+    ) : null;
     const collapseItem =
-      hasGroups || collapsed ? (
+      onPrune && (hasGroups || collapsed) ? (
         <MenuItem
           key="collapse"
           label={collapsed ? 'Expand groups' : 'Collapse groups'}
@@ -594,10 +623,15 @@ export const FlowCanvas: React.FC<FlowCanvasProps> = (props) => {
       ) : null;
     if (menu.kind === 'group') {
       return (
-        <MenuGroup label={menu.group}>
-          <MenuItem label={`Hide group ${menu.group}`} icon="eye-slash" onClick={() => onPrune({ hideGroup: menu.group })} />
-          {collapseItem}
-        </MenuGroup>
+        <>
+          {onPrune && (
+            <MenuGroup label={menu.group}>
+              <MenuItem label={`Hide group ${menu.group}`} icon="eye-slash" onClick={() => onPrune({ hideGroup: menu.group })} />
+              {collapseItem}
+            </MenuGroup>
+          )}
+          {viewItems}
+        </>
       );
     }
     const node = menu.node;
@@ -607,11 +641,14 @@ export const FlowCanvas: React.FC<FlowCanvasProps> = (props) => {
     const href = linkFor?.(node);
     return (
       <>
-        <MenuGroup label={node.label}>
-          {!isGroupNode && <MenuItem label="Hide node" icon="eye-slash" onClick={() => onPrune({ hideNode: node.id })} />}
-          {node.group && <MenuItem label={`Hide group ${node.group}`} icon="eye-slash" onClick={() => onPrune({ hideGroup: node.group! })} />}
-          {collapseItem}
-        </MenuGroup>
+        {onPrune && (
+          <MenuGroup label={node.label}>
+            {!isGroupNode && <MenuItem label="Hide node" icon="eye-slash" onClick={() => onPrune({ hideNode: node.id })} />}
+            {node.group && <MenuItem label={`Hide group ${node.group}`} icon="eye-slash" onClick={() => onPrune({ hideGroup: node.group! })} />}
+            {collapseItem}
+          </MenuGroup>
+        )}
+        {viewItems}
         {(variable || href) && (
           <MenuGroup label="Go to">
             {variable && onSetVariable && <MenuItem label={`Set ${variable.name} = ${variable.value}`} icon="filter" onClick={() => onSetVariable(variable)} />}
@@ -698,6 +735,7 @@ export const FlowCanvas: React.FC<FlowCanvasProps> = (props) => {
                     style={{ userSelect: 'none', pointerEvents: menuEnabled ? 'auto' : undefined }}
                     data-testid={`flow-group-label-${g.group}`}
                     onContextMenu={menuEnabled ? (e) => onGroupContextMenu(e, g.group) : undefined}
+                    onDoubleClick={zoomTo ? (e) => onGroupDoubleClick(e, g.group) : undefined}
                   >
                     {g.group}
                   </text>

@@ -148,9 +148,9 @@ describe('FlowPanel', () => {
     raf.mockRestore();
   });
 
-  it('Particles = Static keeps them in place while paused; Hidden never draws them', () => {
+  it('Particles = Static draws them but never moves them; Hidden never draws them', () => {
     const raf = jest.spyOn(window, 'requestAnimationFrame');
-    renderPanel({ animation: { enabled: false, speed: 1, particles: 'static' } });
+    renderPanel({ animation: { enabled: true, speed: 1, particles: 'static' } });
     expect(screen.getByTestId('flow-particles').querySelectorAll('circle').length).toBeGreaterThan(0);
     expect(raf).not.toHaveBeenCalled();
     cleanup();
@@ -383,6 +383,30 @@ describe('FlowPanel links and view-mode zoom', () => {
     const again = chip();
     fireEvent.doubleClick(screen.getByTestId('flow-canvas'));
     expect(chip()).not.toBe(again);
+  });
+
+  it('double-click zooms onto a node, the menu offers Zoom to / Fit, and empty canvas fits again', () => {
+    renderPanel();
+    const chip = () => screen.getByTestId('flow-zoom-controls').textContent;
+    const fitted = chip();
+    fireEvent.doubleClick(screen.getByTestId('flow-node-solar'));
+    expect(chip()).toBe('200%'); // a single node: capped at 2×
+    fireEvent.doubleClick(screen.getByTestId('flow-canvas'));
+    expect(chip()).toBe(fitted);
+    // Right-click menu on a manual diagram: only the View section.
+    fireEvent.contextMenu(screen.getByTestId('flow-node-solar'), { clientX: 100, clientY: 100 });
+    expect(screen.queryByText('Hide node')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByText('Zoom to node'));
+    expect(chip()).toBe('200%');
+    fireEvent.contextMenu(screen.getByTestId('flow-node-solar'), { clientX: 100, clientY: 100 });
+    fireEvent.click(screen.getByText('Fit to panel'));
+    expect(chip()).toBe(fitted);
+    cleanup();
+    // Zoom and pan off: double-click does nothing and there is no menu.
+    renderPanel({ interaction: { zoom: false } });
+    fireEvent.doubleClick(screen.getByTestId('flow-node-solar'));
+    fireEvent.contextMenu(screen.getByTestId('flow-node-solar'), { clientX: 100, clientY: 100 });
+    expect(screen.queryByText('Zoom to node')).not.toBeInTheDocument();
   });
 
   it('hides the controls and ignores wheel/drag when Zoom and pan is off', () => {

@@ -121,7 +121,7 @@ Big graphs are only useful once the reader can cut them down. Two mechanisms, bo
 applied to the extracted graph before layout (so the visible part is laid out at full size):
 
 **Right-click menu (view mode).** Right-click a node or a group label to **Hide node**, **Hide group `name`**
-or toggle **Collapse groups**; when **Links → Node click** is *Set variable* the menu also offers
+or toggle **Collapse groups** (a **View** section zooms to the node or group, or fits the panel); when **Links → Node click** is *Set variable* the menu also offers
 **Set `$variable` = value**, and **Open link** appears whenever the node has a URL. Hidden items go into
 **Data → Prune → Hidden items**, where each can be restored, and a `hidden 12 · show` chip in the panel's
 top-left corner restores everything at once. Nothing is hidden on manual diagrams or while **Edit layout** is on.
@@ -242,8 +242,11 @@ shown as a node value.
 With **Interaction → Zoom and pan** on (default), viewers can explore a diagram without entering
 design mode: **Ctrl/⌘ + wheel** (or a trackpad pinch) zooms around the pointer, a plain wheel zooms
 when the panel is viewed on its own (view panel / fullscreen) and scrolls the dashboard otherwise,
-**drag** pans, **double-click** on empty canvas fits the diagram again, and a small **+ / − / fit**
-control appears bottom-right when hovering the panel (hover its percentage for the key hints). One
+**drag** pans, **double-click a node** zooms onto it (unless the double-click opens its link),
+**double-click a group label** zooms onto that group, **double-click** on empty canvas fits the diagram
+again, and a small **+ / − / fit** control appears bottom-right when hovering the panel (hover its
+percentage for the key hints). The right-click menu offers the same under **View** (Zoom to node, Zoom
+to group, Fit to panel), on every diagram, not only data-driven ones. One
 wheel notch is one +/− step (×1.25); the view zooms out to 5 %, so a map of several hundred nodes
 still fits. The zoom is kept for the session only and dropped when the panel size changes a lot
 (for example coming back from **View panel** to the dashboard), so the small panel fits again; the
@@ -319,7 +322,7 @@ result is the same wherever you start from; what survives is the drawn diagram, 
 | Animation → Animation | Enables the particle animation. Automatically static when the tab is hidden. |
 | Animation → Speed | Animation speed multiplier (shown when animation is on). |
 | Animation → Reduced motion | `Follow system setting` (default) pauses the particles when the operating system asks for reduced motion and shows a small pause icon in the panel corner; `Always animate` ignores that setting; `Never animate` keeps the panel static. |
-| Animation → Particles | `Animated` (default): particles travel along the edges and disappear while the animation is paused (Animation off, reduced motion), so nothing is left frozen on the lines. `Static`: paused particles stay in place as direction markers. `Hidden`: no particles at all, the lightest setting for big graphs. |
+| Animation → Particles | `Animated` (default): particles travel along the edges and disappear while the animation is paused (Animation off, reduced motion), so nothing is left frozen on the lines. `Static`: particles never move; they sit on the edges as fixed dots (the limit still applies). `Hidden`: no particles at all, the lightest setting for big graphs. |
 | Animation → Particle limit | Most particles drawn at once (default 400, 0 = no limit). Above it every edge's count is scaled down proportionally, never below one per edge; with more edges than the limit only the widest edges keep a single particle. Above 150 particles the glow filter is dropped, which is what keeps large maps smooth. Design mode shows "particles capped at N" in the status line when the cap is active. |
 | Layout → Edit layout | Design mode toggle: toolbar, dragging, drawing, pan and zoom inside the panel. Off by default. |
 | Layout → Grid size | Spacing of the background grid and of snapping, in canvas pixels. |
@@ -344,7 +347,7 @@ result is the same wherever you start from; what survives is the drawn diagram, 
 | Data → Prune → Hidden items | Nodes and groups hidden with the right-click menu; restore one or all. The `hidden N · show` chip does the same from the panel. |
 | Data → Edge and node fields | Source, Target, Value, Secondary value, Label, Source group, Target group field / label names for edge frames; Node id, label, group, status, value, image field names for node frames. Empty value fields mean "first numeric field"; a name that matches nothing means "no value". |
 | Data → Node overrides | Inspector for data nodes (overrides mode): label, shape, icon, image URL, status, colour, position; clear one node or reset all. |
-| Interaction → Zoom and pan | View-mode zoom (Ctrl/⌘ + wheel, pinch, plain wheel in view-panel mode), drag to pan, double-click to fit, floating +/−/fit control. Session only; a large panel resize goes back to the fitted view. |
+| Interaction → Zoom and pan | View-mode zoom (Ctrl/⌘ + wheel, pinch, plain wheel in view-panel mode), drag to pan, double-click a node / group label to zoom onto it, double-click empty canvas to fit, floating +/−/fit control and a View section in the right-click menu. Session only; a large panel resize goes back to the fitted view. |
 | Links → Node click | `Open link` (the URL template) or `Set variable`: the click writes the node into a dashboard variable, so every query on the page that uses `$name` follows; a chip in the panel's corner shows the current value and clears it. |
 | Links → Variable / Value / Clear value | Variable name (without `$`), value template with the `${node.*}` tokens (default `${node.id}`, not URL-encoded), and what the clear button writes (empty for a Text box variable, `$__all` for Query/Custom variables with All). |
 | Links → Node link | URL template with dashboard variables and `${node.id|label|group|value|status}` tokens. |

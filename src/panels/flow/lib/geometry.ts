@@ -283,12 +283,12 @@ export function boundingBox(nodes: Rect[]): Rect | undefined {
 }
 
 /** Viewport that fits all nodes inside width x height with padding. */
-export function fitViewport(nodes: Rect[], width: number, height: number, padding = 24) {
+export function fitViewport(nodes: Rect[], width: number, height: number, padding = 24, maxZoom = 2) {
   const box = boundingBox(nodes);
   if (!box || width <= 0 || height <= 0) {
     return { x: 0, y: 0, zoom: 1 };
   }
-  const zoom = Math.min(2, Math.max(MIN_ZOOM, Math.min((width - padding * 2) / Math.max(1, box.w), (height - padding * 2) / Math.max(1, box.h))));
+  const zoom = Math.min(maxZoom, Math.max(MIN_ZOOM, Math.min((width - padding * 2) / Math.max(1, box.w), (height - padding * 2) / Math.max(1, box.h))));
   return {
     x: (width - box.w * zoom) / 2 - box.x * zoom,
     y: (height - box.h * zoom) / 2 - box.y * zoom,

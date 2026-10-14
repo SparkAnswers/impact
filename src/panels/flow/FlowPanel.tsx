@@ -16,10 +16,10 @@ import { formatValue, indexFields } from './lib/data';
 import { buildDataDiagram, mergeOverrides, nodeSize, overridesFromMove, shortLabel } from './lib/datadriven';
 import { createExampleDiagram } from './lib/example';
 import { extractGraph } from './lib/frames';
-import { fitViewport, zoomAt } from './lib/geometry';
+import { fitViewport, MAX_ZOOM, zoomAt } from './lib/geometry';
 import { budgetParticles, DEFAULT_PARTICLE_LIMIT, particlesVisible } from './lib/particles';
 
-const ZOOM_HINT_VIEW = 'Ctrl + scroll (⌘ on Mac) or pinch to zoom at the pointer · drag to pan · double-click to fit';
+const ZOOM_HINT_VIEW = 'Ctrl + scroll (⌘ on Mac) or pinch to zoom at the pointer · drag to pan · double-click a node to zoom onto it, empty canvas to fit';
 const ZOOM_HINT_EDIT = 'Scroll to zoom at the pointer · Space, middle mouse or Alt + drag to pan';
 import { currentVariable, openLink, resolveNodeLink, resolveNodeVariable, variableName, variableQuery } from './lib/links';
 import { Chip, ChipRow } from './components/Chip';
@@ -481,6 +481,17 @@ export const FlowPanel: React.FC<PanelProps<FlowOptions>> = ({
     }
   }, [editing, diagram.nodes, width, height, setViewport]);
   const zoomBy = useCallback((factor: number) => setViewport(zoomAt(effectiveViewport, width / 2, height / 2, factor)), [effectiveViewport, width, height, setViewport]);
+  // Zoom onto a node or a group: fit its bounds with generous padding, never past 2× (a node) or MAX_ZOOM.
+  const zoomTo = useCallback(
+    (target: { node?: string; group?: string }) => {
+      const nodes = target.node ? diagram.nodes.filter((n) => n.id === target.node) : diagram.nodes.filter((n) => n.group === target.group);
+      if (!nodes.length) {
+        return;
+      }
+      setViewport(fitViewport(nodes, width, height, target.node ? Math.min(width, height) / 4 : 48, target.node ? 2 : MAX_ZOOM));
+    },
+    [diagram.nodes, width, height, setViewport]
+  );
   const zoomEnabled = (options.interaction ?? DEFAULT_INTERACTION).zoom !== false;
 
   // Particles: mode (animated / static / hidden) and the global cap, resolved to per-edge counts.
@@ -601,7 +612,7 @@ export const FlowPanel: React.FC<PanelProps<FlowOptions>> = ({
         tool={tool}
         selection={selection}
         viewport={effectiveViewport}
-        animate={animate}
+        animate={animate && particleMode === 'animated'}
         particleCounts={particleBudget.counts}
         uid={uid}
         opacity={fadeOpacity}
@@ -617,6 +628,7 @@ export const FlowPanel: React.FC<PanelProps<FlowOptions>> = ({
         onPrune={isData ? onPrune : undefined}
         collapsed={isData && !!pruneRules.collapseGroups}
         onFit={fit}
+        onZoomTo={zoomTo}
         onViewport={setViewport}
         onSelect={setSelection}
         onDraft={setDraft}
