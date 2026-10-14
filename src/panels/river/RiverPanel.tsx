@@ -7,6 +7,7 @@ import { DemoBadge, rollingMultiSeries, useDemoFrames, type DemoGenerator } from
 import { useMotionAllowed } from '../../shared/motion';
 import { useQuickStart } from '../../shared/presets';
 import { ReducedMotionHint } from '../../shared/ReducedMotionHint';
+import { Chip, ChipRow } from '../../shared/Chip';
 import { Legend } from './components/Legend';
 import { NodeEditor } from './components/NodeEditor';
 import { PathEditor } from './components/PathEditor';
@@ -34,6 +35,16 @@ const getStyles = (theme: GrafanaTheme2, onImage: boolean) => {
     root: css({ position: 'relative', overflow: 'hidden', fontFamily: theme.typography.fontFamily }),
     canvas: css({ position: 'absolute', left: 0, top: 0, display: 'block' }),
     overlay: css({ position: 'absolute', pointerEvents: 'none' }),
+    nodeHit: css({
+      position: 'absolute',
+      borderRadius: '50%',
+      border: 0,
+      padding: 0,
+      background: 'transparent',
+      cursor: 'pointer',
+      zIndex: 2,
+      '&:focus-visible': { outline: `2px solid ${theme.colors.primary.border}` },
+    }),
     title: css({
       left: 20,
       top: 14,
@@ -169,7 +180,27 @@ export const RiverPanel: React.FC<PanelProps<RiverOptions>> = (props) => {
   });
 
   const channels = useMemo(() => (isNetwork ? [] : effectiveChannels(options)), [isNetwork, options]);
-  const network = useMemo(() => (isNetwork ? buildNetwork(frames, networkOptions, width, height) : null), [isNetwork, frames, networkOptions, width, height]);
+  // Focus (session only): a stack of node ids, the last one shown with its chain. Cleared when the map mode goes.
+  const [focusStack, setFocusStack] = useState<string[]>([]);
+  const focusOn = useCallback((id: string) => setFocusStack((s) => (s[s.length - 1] === id ? s : [...s, id])), []);
+  const focusBack = useCallback(() => setFocusStack((s) => s.slice(0, -1)), []);
+  const focusClear = useCallback(() => setFocusStack([]), []);
+  const focusWanted = isNetwork && focusStack.length ? focusStack[focusStack.length - 1] : undefined;
+  const network = useMemo(
+    () => (isNetwork ? buildNetwork(frames, networkOptions, width, height, focusWanted) : null),
+    [isNetwork, frames, networkOptions, width, height, focusWanted]
+  );
+  // A focused node that left the data drops its crumb (and any deeper ones); derived state, settled during render.
+  if (focusWanted && network && network.focusId !== focusWanted) {
+    setFocusStack((s) => s.slice(0, Math.max(0, s.indexOf(focusWanted))));
+  }
+  const focusClicks = !!network && networkOptions.clickFocus !== false && !networkOptions.editNodes;
+  const onRootKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    if (e.key === 'Escape' && focusStack.length) {
+      focusClear();
+      e.preventDefault();
+    }
+  };
   const bound = useMemo(() => (network ? network.bound : bindChannels(channels, frames)), [network, channels, frames]);
   const geometries = useMemo(
     () => bound.map((b) => buildChannelGeometry(b, mapperFor(b, fieldConfig, theme), width, height, network ? 240 : 600)),
@@ -380,8 +411,33 @@ export const RiverPanel: React.FC<PanelProps<RiverOptions>> = (props) => {
   const titleHeight = (title ? 26 : 0) + (subtitle ? 16 : 0);
 
   return (
-    <div className={styles.root} style={{ width, height }} data-testid="river-panel">
+    <div className={styles.root} style={{ width, height }} data-testid="river-panel" tabIndex={focusStack.length ? 0 : undefined} onKeyDown={onRootKeyDown}>
       <canvas ref={canvasRef} className={styles.canvas} style={{ width, height }} />
+      {focusClicks
+        ? network!.nodes.map((n) => (
+            <button
+              key={`hit-${n.id}`}
+              type="button"
+              className={styles.nodeHit}
+              style={{ left: n.x - n.r - 4, top: n.y - n.r - 4, width: (n.r + 4) * 2, height: (n.r + 4) * 2 }}
+              aria-label={`Focus on ${n.label}`}
+              title={`Focus on ${n.label}`}
+              data-testid={`river-focus-node-${n.id}`}
+              onClick={() => focusOn(n.id)}
+            />
+          ))
+        : null}
+      {network?.focusId ? (
+        <ChipRow width={width} top={titleHeight ? titleHeight + 14 : undefined}>
+          <Chip
+            testId="river-focus-chip"
+            tooltip={`Only this node and its chain are shown (Network map → Focus). Back leaves the focus${focusStack.length > 1 ? ' one step' : ''}; Esc leaves it entirely`}
+            action={{ label: 'Back from the focus', text: 'back', onClick: focusBack }}
+          >
+            focus <b>{network.nodes.find((n) => n.id === network.focusId)?.label ?? network.focusId}</b> · {network.nodes.length} of {network.allNodes}
+          </Chip>
+        </ChipRow>
+      ) : null}
       {(title || subtitle) && (
         <div className={`${styles.overlay} ${styles.title}`}>
           {title ? <h1>{title}</h1> : null}

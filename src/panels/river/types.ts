@@ -1,3 +1,4 @@
+import type { FocusDirection } from '../../shared/graph/focus';
 import type { DemoMode } from '../../shared/demo';
 import type { LayoutDirection } from '../../shared/graph/layout';
 import type { MotionPreference } from '../../shared/motion';
@@ -123,6 +124,12 @@ export interface NetworkOptions {
   layoutDirection: LayoutDirection;
   /** Auto layout: space each layer's nodes evenly across the panel instead of keeping the layout's compact spacing. */
   spreadLayers?: boolean;
+  /** Clicking a node shows only that node and its chain (session only); a chip leads back. */
+  clickFocus?: boolean;
+  /** Focus: hops followed from the node, 0 = the whole chain */
+  focusHops?: number;
+  /** Focus: both ways, downstream only or upstream only */
+  focusDirection?: FocusDirection;
   layout: NetworkLayout;
   /** Draggable node handles on the panel. */
   editNodes: boolean;
@@ -221,6 +228,9 @@ export const DEFAULT_NETWORK: NetworkOptions = {
   nodeStatusField: 'status',
   placement: 'auto',
   spreadLayers: true,
+  clickFocus: true,
+  focusHops: 0,
+  focusDirection: 'both',
   layoutDirection: 'lr',
   layout: { positions: [], overrides: {} },
   editNodes: false,

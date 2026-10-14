@@ -1,9 +1,10 @@
 import React from 'react';
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { type DataFrame, FieldType, LoadingState, type PanelProps, getDefaultTimeRange, toDataFrame } from '@grafana/data';
 import { RIVER_NO_DATA_MESSAGE, RiverPanel } from '../RiverPanel';
 import { DEFAULT_OPTIONS, type RiverOptions, createChannel } from '../types';
 import { presetWaypoints } from '../lib/path';
+import { demoNetworkFrames } from '../lib/network';
 
 jest.mock('@grafana/runtime', () => ({
   PanelDataErrorView: ({ message }: { message?: string }) => <div data-testid="error-view">{message ?? 'No data'}</div>,
@@ -95,5 +96,31 @@ describe('RiverPanel', () => {
     render(<RiverPanel {...makeProps({ showLegend: false, captionValue: false }, series)} />);
     expect(screen.getByTestId('river-panel')).toBeInTheDocument();
     expect(screen.queryByTestId('river-legend')).not.toBeInTheDocument();
+  });
+});
+
+describe('RiverPanel network focus', () => {
+  it('a node click isolates its chain, the chip leads back, Esc clears, Edit on canvas disables the clicks', () => {
+    const props = makeProps({ channelSource: 'network', title: 'Net' }, demoNetworkFrames(0));
+    const { rerender } = render(<RiverPanel {...props} />);
+    expect(screen.getAllByTestId(/^river-focus-node-/)).toHaveLength(10);
+    expect(screen.queryByTestId('river-focus-chip')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByTestId('river-focus-node-storage'));
+    // The chain through storage reaches 9 of the 10 nodes (reverse pairs lead back up); access-1 is the one left out.
+    expect(screen.getAllByTestId(/^river-focus-node-/)).toHaveLength(9);
+    expect(screen.queryByTestId('river-focus-node-access-1')).not.toBeInTheDocument();
+    expect(screen.getByTestId('river-focus-chip').textContent).toContain('9 of 10');
+    // A second focus stacks; back pops one level.
+    fireEvent.click(screen.getByTestId('river-focus-node-dist-3'));
+    expect(screen.getByTestId('river-focus-chip').textContent).toContain('DIST 3');
+    fireEvent.click(screen.getByLabelText('Back from the focus'));
+    expect(screen.getByTestId('river-focus-chip').textContent).toContain('STORAGE');
+    fireEvent.keyDown(screen.getByTestId('river-panel'), { key: 'Escape' });
+    expect(screen.queryByTestId('river-focus-chip')).not.toBeInTheDocument();
+    expect(screen.getAllByTestId(/^river-focus-node-/)).toHaveLength(10);
+    rerender(<RiverPanel {...makeProps({ channelSource: 'network', network: { editNodes: true } as any }, demoNetworkFrames(0))} />);
+    expect(screen.queryAllByTestId(/^river-focus-node-/)).toHaveLength(0);
+    rerender(<RiverPanel {...makeProps({ channelSource: 'network', network: { clickFocus: false } as any }, demoNetworkFrames(0))} />);
+    expect(screen.queryAllByTestId(/^river-focus-node-/)).toHaveLength(0);
   });
 });

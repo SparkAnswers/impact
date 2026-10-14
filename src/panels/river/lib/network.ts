@@ -1,6 +1,7 @@
 import { type DataFrame, type Field, FieldType, toDataFrame } from '@grafana/data';
 import { type FieldNames, type Graph, type GraphEdge, type NodeStatus, edgeId, extractGraph } from '../../../shared/graph/frames';
 import { type LayoutDirection, layoutGraph } from '../../../shared/graph/layout';
+import { focusGraph, type FocusOptions } from '../../../shared/graph/focus';
 import {
   type Channel,
   DEFAULT_NETWORK,
@@ -48,6 +49,10 @@ export interface NetworkModel {
   notices: string[];
   /** Field the values came from (unit, decimals, thresholds). */
   valueField?: Field;
+  /** Nodes in the data before a focus narrowed the map (equals nodes.length without one). */
+  allNodes: number;
+  /** Id of the focused node when the map is narrowed to its chain. */
+  focusId?: string;
 }
 
 /** Field names understood by the shared graph parser, from the network options. */
@@ -502,9 +507,13 @@ export function findCaptionEdge(graph: Graph, selector: string | undefined): Gra
 }
 
 /** Builds everything the panel needs for network mode from the frames and options. */
-export function buildNetwork(frames: DataFrame[], n: Partial<NetworkOptions> | undefined, width: number, height: number): NetworkModel {
+export function buildNetwork(frames: DataFrame[], n: Partial<NetworkOptions> | undefined, width: number, height: number, focus?: string): NetworkModel {
   const opts: NetworkOptions = { ...DEFAULT_NETWORK, ...(n ?? {}), particles: { ...DEFAULT_NETWORK.particles, ...(n?.particles ?? {}) } };
-  const graph = extractNetwork(frames, opts);
+  const full = extractNetwork(frames, opts);
+  // Focus: the map narrows to the node's chain and is laid out again on that subgraph (typed / dragged positions still win).
+  const focusOpts: FocusOptions = { hops: Math.max(0, opts.focusHops ?? 0), direction: opts.focusDirection ?? 'both' };
+  const focused = focus && full.nodes.some((g) => g.id === focus);
+  const graph = focused ? focusGraph(full, focus, focusOpts) : full;
   const auto = autoPositions(graph, opts.layoutDirection, height > 0 ? width / height : 1.6, opts.nodeSize, opts.spreadLayers !== false);
   const positions = resolvePositions(graph, auto, opts.layout);
   const r = Math.max(4, opts.nodeSize);
@@ -526,6 +535,8 @@ export function buildNetwork(frames: DataFrame[], n: Partial<NetworkOptions> | u
     captionName: selected ? (selected.label ?? `${selected.source} → ${selected.target}`) : 'Total',
     notices: graph.notices,
     valueField,
+    allNodes: full.nodes.length,
+    focusId: focused ? focus : undefined,
   };
 }
 

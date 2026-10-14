@@ -57,12 +57,16 @@ export const Chip: React.FC<Props> = ({ children, tooltip, action, testId }) => 
 };
 
 /** Flex row holding the chips in the panel's top-left corner. */
-export const ChipRow: React.FC<{ children: React.ReactNode; width: number }> = ({ children, width }) => {
+export const ChipRow: React.FC<{ children: React.ReactNode; width: number; /** Distance from the panel top (default 6) */ top?: number }> = ({ children, width, top }) => {
   const styles = useStyles2(getStyles);
   if (width < CHIP_MIN_WIDTH) {
     return null;
   }
-  return <div className={styles.row}>{children}</div>;
+  return (
+    <div className={styles.row} style={top !== undefined ? { top } : undefined}>
+      {children}
+    </div>
+  );
 };
 
 const getStyles = (theme: GrafanaTheme2) => ({

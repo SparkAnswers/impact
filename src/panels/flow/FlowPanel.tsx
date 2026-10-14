@@ -23,7 +23,7 @@ import { budgetParticles, DEFAULT_PARTICLE_LIMIT, particlesVisible } from './lib
 const ZOOM_HINT_VIEW = 'Ctrl + scroll (⌘ on Mac) or pinch to zoom at the pointer · drag to pan · double-click a node to zoom onto it, empty canvas to fit';
 const ZOOM_HINT_EDIT = 'Scroll to zoom at the pointer · Space, middle mouse or Alt + drag to pan';
 import { currentVariable, openLink, resolveNodeLink, resolveNodeVariable, variableName, variableQuery } from './lib/links';
-import { Chip, ChipRow } from './components/Chip';
+import { Chip, ChipRow } from '../../shared/Chip';
 import { VariableChip } from './components/VariableChip';
 import type { GroupHints } from './lib/groups';
 import { layoutGraph, nodeSetKey, type LayoutOptions, type LayoutResult } from './lib/layout';

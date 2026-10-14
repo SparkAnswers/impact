@@ -89,6 +89,12 @@ sides so they never overlap; every other link bends gently (**Curve**; 0 = strai
   win over the list and the auto layout; *Reset dragged* in the Positions editor forgets them. Switch the handles
   off before saving.
 
+**Focus.** Clicking a node (with **Node click focuses** on, the default) shows only that node and its chain, every
+ancestor and descendant, laid out again at full size; **Focus** limits it to 1, 2 or 3 hops and **Focus
+direction** to downstream or upstream only. A `focus STORAGE · 4 of 10 · back` chip in the corner leads back
+(focusing another node while focused stacks; back pops one level, Esc leaves entirely). The focus is kept for the
+session only and the clicks are off while **Edit on canvas** is on.
+
 Labels: each node shows its label (or id) under the puck; each channel shows its formatted value at its midpoint
 (**Node labels** / **Value labels**). `{value}` in the title, subtitle and caption is the **sum** of all link
 values, or the value of one link when **Caption channel** is set (`source>target`). Caps: 60 channels (the highest
@@ -112,6 +118,7 @@ global 20000 cap still applies.
 | Network map > Colour scale / domain | Preset or thresholds; auto or fixed domain shared by all links.                      |
 | Network map > Direction             | Forward, Reverse, By sign.                                                           |
 | Network map > Particle budget / speed / colour | Particles shared by value share; speed factor; white, by value or fixed colour. |
+| Network map > Node click focuses / Focus / Focus direction | A click isolates the node's chain (whole chain, or 1–3 hops; both ways, downstream or upstream); a chip leads back, Esc clears. Session only. |
 | Network map > Node labels / Value labels | Toggle the two label layers.                                                    |
 | Network map > Caption channel       | `source>target` whose value feeds `{value}`; empty = sum of all links.               |
 | Network map fields > Source / Target / Value / Width / Label field | Edge field (or series label) names.                |

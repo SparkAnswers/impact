@@ -251,6 +251,45 @@ export const plugin = new PanelPlugin<RiverOptions>(RiverPanel)
         showIf: (o) => isNetwork(o) && o.network?.particles?.color === 'fixed',
       })
       .addBooleanSwitch({
+        path: 'network.clickFocus',
+        name: 'Node click focuses',
+        description: 'Clicking a node shows only that node and its chain, laid out again at full size; a chip in the corner leads back and Esc clears. Kept for the session only',
+        category: NETWORK,
+        defaultValue: N.clickFocus,
+        showIf: isNetwork,
+      })
+      .addSelect({
+        path: 'network.focusHops',
+        name: 'Focus',
+        description: 'What a focus shows: the whole chain through the node (every ancestor and descendant, not siblings) or only the nodes within 1, 2 or 3 hops',
+        category: NETWORK,
+        defaultValue: N.focusHops,
+        settings: {
+          options: [
+            { value: 0, label: 'Whole chain' },
+            { value: 1, label: '1 hop' },
+            { value: 2, label: '2 hops' },
+            { value: 3, label: '3 hops' },
+          ],
+        },
+        showIf: (o) => isNetwork(o) && o.network?.clickFocus !== false,
+      })
+      .addRadio({
+        path: 'network.focusDirection',
+        name: 'Focus direction',
+        description: 'Both ways (default), downstream only (what the node feeds) or upstream only (what feeds it)',
+        category: NETWORK,
+        defaultValue: N.focusDirection,
+        settings: {
+          options: [
+            { value: 'both', label: 'Both' },
+            { value: 'down', label: 'Downstream' },
+            { value: 'up', label: 'Upstream' },
+          ],
+        },
+        showIf: (o) => isNetwork(o) && o.network?.clickFocus !== false,
+      })
+      .addBooleanSwitch({
         path: 'network.showNodeLabels',
         name: 'Node labels',
         description: 'Label under each node: the node label field, or the id.',

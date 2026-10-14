@@ -289,6 +289,26 @@ describe('buildNetwork', () => {
     expect(m.valueField?.name).toBe('value');
   });
 
+  it('focus narrows the map to the node and its chain, keeps the full count, ignores unknown ids', () => {
+    // demo network: core-a → dist-1/dist-2, dist-1 → access-1/access-2, …; storage hangs off access-4 only.
+    const all = buildNetwork(demoNetworkFrames(0), DEFAULT_NETWORK, W, H);
+    const m = buildNetwork(demoNetworkFrames(0), DEFAULT_NETWORK, W, H, 'storage');
+    expect(m.focusId).toBe('storage');
+    expect(m.allNodes).toBe(all.nodes.length);
+    const ids = new Set(m.nodes.map((n) => n.id));
+    // Upstream through access-4 and dist-3 (and, via the access-3 ⇄ dist-3 reverse pair, further up); never access-1.
+    expect(['storage', 'access-4', 'dist-3', 'core-b'].every((id) => ids.has(id))).toBe(true);
+    expect(ids.has('access-1')).toBe(false);
+    expect(m.nodes.length).toBeLessThan(all.nodes.length);
+    expect(m.bound.every((b) => ids.has(b.channel.id.split('→')[0]) && ids.has(b.channel.id.split('→')[1]))).toBe(true);
+    // One hop downstream only.
+    const one = buildNetwork(demoNetworkFrames(0), { ...DEFAULT_NETWORK, focusHops: 1, focusDirection: 'down' }, W, H, 'core-a');
+    expect(one.nodes.map((n) => n.id).sort()).toEqual(['core-a', 'dist-1', 'dist-2']);
+    const none = buildNetwork(demoNetworkFrames(0), DEFAULT_NETWORK, W, H, 'nope');
+    expect(none.focusId).toBeUndefined();
+    expect(none.nodes.length).toBe(all.nodes.length);
+  });
+
   it('caption follows the selected channel', () => {
     const m = buildNetwork([small], { ...DEFAULT_NETWORK, captionChannel: 'A > C' }, W, H);
     expect(m.captionValue).toBe(6);
