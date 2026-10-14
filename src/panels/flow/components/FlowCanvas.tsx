@@ -15,7 +15,6 @@ import {
   type FlowNode,
   type FlowOptions,
   type FlowSelection,
-  type LinkTrigger,
   type Point,
   type ResolvedSide,
   type Viewport,
@@ -49,12 +48,13 @@ export interface FlowCanvasProps {
   groupHints?: GroupHints;
   /** View mode: Ctrl/⌘ + wheel (plain wheel in view-panel mode) zooms, drag pans, double-click on the canvas fits */
   zoomEnabled?: boolean;
-  /** Link for a node (view mode only); undefined = no link */
+  /** Link for a node (view mode only, for the right-click menu); undefined = no link */
   linkFor?: (node: FlowNode) => string | undefined;
-  linkTrigger?: LinkTrigger;
   onOpenLink?: (href: string) => void;
-  /** Runs on the link trigger before the link; returning true consumes the click (e.g. sets a variable). */
-  onNodeAction?: (node: FlowNode) => boolean;
+  /** View mode: runs the click / double-click action of the Links options; true when something happened. */
+  onNodeGesture?: (node: FlowNode, gesture: 'click' | 'dblclick') => boolean;
+  /** Whether a plain click does something (pointer cursor on nodes). */
+  clickActive?: boolean;
   /** The dashboard variable a node would set (Links action `variable`), for the context menu */
   variableFor?: (node: FlowNode) => VariableAction | undefined;
   onSetVariable?: (action: VariableAction) => void;
@@ -130,9 +130,9 @@ export const FlowCanvas: React.FC<FlowCanvasProps> = (props) => {
     groupHints,
     zoomEnabled,
     linkFor,
-    linkTrigger = 'off',
     onOpenLink,
-    onNodeAction,
+    onNodeGesture,
+    clickActive,
     variableFor,
     onSetVariable,
     onPrune,
@@ -529,24 +529,17 @@ export const FlowCanvas: React.FC<FlowCanvasProps> = (props) => {
     }
   };
 
-  const hrefOf = (node: FlowNode) => (!editing && linkTrigger !== 'off' && linkFor ? linkFor(node) : undefined);
+  const hrefOf = (node: FlowNode) => (!editing && linkFor ? linkFor(node) : undefined);
 
   const onNodeDoubleClick = (node: FlowNode) => {
     if (editing) {
       setRenaming({ id: node.id, value: node.label });
       return;
     }
-    if (linkTrigger === 'dblclick') {
-      if (onNodeAction?.(node)) {
-        return;
-      }
-      const href = hrefOf(node);
-      if (href) {
-        onOpenLink?.(href);
-        return;
-      }
+    if (onNodeGesture?.(node, 'dblclick')) {
+      return;
     }
-    // No link took the double-click: zoom onto the node (double-click on empty canvas fits again).
+    // Nothing took the double-click (no link, no action): zoom onto the node; double-click on empty canvas fits again.
     zoomTo?.({ node: node.id });
   };
 
@@ -559,14 +552,8 @@ export const FlowCanvas: React.FC<FlowCanvasProps> = (props) => {
   };
 
   const onNodeClick = (node: FlowNode) => {
-    if (!editing && linkTrigger === 'click') {
-      if (onNodeAction?.(node)) {
-        return;
-      }
-      const href = hrefOf(node);
-      if (href) {
-        onOpenLink?.(href);
-      }
+    if (!editing) {
+      onNodeGesture?.(node, 'click');
     }
   };
 
@@ -785,7 +772,7 @@ export const FlowCanvas: React.FC<FlowCanvasProps> = (props) => {
                 selected={isSel || pendingFrom === n.id}
                 editing={editing}
                 opacity={nodeOpacity(n.id)}
-                linked={!!hrefOf(n)}
+                linked={!!clickActive || !!hrefOf(n)}
                 onClick={onNodeClick}
                 onPointerDown={onNodeDown}
                 onDoubleClick={onNodeDoubleClick}

@@ -450,6 +450,37 @@ describe('FlowPanel links and view-mode zoom', () => {
     expect(node('ev')).not.toBeInTheDocument(); // sibling
   });
 
+  it('click and double-click run separate actions: dive on click, focus on double-click, variable on double-click', () => {
+    const open = jest.spyOn(window, 'open').mockImplementation(() => null);
+    const node = (id: string) => screen.queryByTestId(`flow-node-${id}`);
+    renderPanel({ links: { nodeUrl: '/d/t?n=${node.id}', target: 'new', trigger: 'click', action: 'link', dblclick: 'focus' } });
+    fireEvent.click(node('solar')!);
+    expect(open).toHaveBeenLastCalledWith('/d/t?n=solar', '_blank', 'noopener,noreferrer');
+    expect(screen.queryByTestId('flow-focus-chip')).not.toBeInTheDocument();
+    fireEvent.doubleClick(node('solar')!);
+    expect(screen.getByTestId('flow-focus-chip').textContent).toContain('Solar array');
+    expect(node('generator')).not.toBeInTheDocument();
+    expect(open).toHaveBeenCalledTimes(1);
+    cleanup();
+    // Double-click sets the variable while the click focuses; the menu offers both.
+    const partial = jest.spyOn(locationService, 'partial').mockImplementation(() => undefined);
+    renderPanel({ links: { nodeUrl: '', target: 'same', trigger: 'click', action: 'focus', dblclick: 'variable', variable: 'service', variableValue: '${node.id}', variableClear: '' } });
+    fireEvent.doubleClick(node('house')!);
+    expect(partial).toHaveBeenLastCalledWith({ 'var-service': 'house' });
+    fireEvent.contextMenu(node('house')!, { clientX: 100, clientY: 100 });
+    expect(screen.getByText('Set service = house')).toBeInTheDocument();
+    expect(screen.getByText('Focus on chain')).toBeInTheDocument();
+    cleanup();
+    // Double-click = Nothing: not even the zoom.
+    renderPanel({ links: { nodeUrl: '', target: 'same', trigger: 'click', action: 'focus', dblclick: 'off' } });
+    const chip = () => screen.getByTestId('flow-zoom-controls').textContent;
+    const fitted = chip();
+    fireEvent.doubleClick(node('solar')!);
+    expect(chip()).toBe(fitted);
+    partial.mockRestore();
+    open.mockRestore();
+  });
+
   it('hides the controls and ignores wheel/drag when Zoom and pan is off', () => {
     renderPanel({ interaction: { zoom: false } });
     expect(screen.queryByTestId('flow-zoom-controls')).not.toBeInTheDocument();

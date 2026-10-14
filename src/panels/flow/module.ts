@@ -528,7 +528,7 @@ export const plugin = new PanelPlugin<FlowOptions>(FlowPanel)
         category: LINKS,
         defaultValue: DEFAULT_OPTIONS.links?.variable ?? '',
         settings: { placeholder: 'service' },
-        showIf: (o) => o.links?.action === 'variable',
+        showIf: (o) => o.links?.action === 'variable' || (o.links?.trigger === 'click' && o.links?.dblclick === 'variable'),
       })
       .addTextInput({
         path: 'links.variableValue',
@@ -537,7 +537,7 @@ export const plugin = new PanelPlugin<FlowOptions>(FlowPanel)
         category: LINKS,
         defaultValue: DEFAULT_OPTIONS.links?.variableValue ?? '${node.id}',
         settings: { placeholder: '${node.id}' },
-        showIf: (o) => o.links?.action === 'variable',
+        showIf: (o) => o.links?.action === 'variable' || (o.links?.trigger === 'click' && o.links?.dblclick === 'variable'),
       })
       .addTextInput({
         path: 'links.variableClear',
@@ -546,7 +546,7 @@ export const plugin = new PanelPlugin<FlowOptions>(FlowPanel)
         category: LINKS,
         defaultValue: DEFAULT_OPTIONS.links?.variableClear ?? '',
         settings: { placeholder: '' },
-        showIf: (o) => o.links?.action === 'variable',
+        showIf: (o) => o.links?.action === 'variable' || (o.links?.trigger === 'click' && o.links?.dblclick === 'variable'),
       })
       .addTextInput({
         path: 'links.nodeUrl',
@@ -573,7 +573,7 @@ export const plugin = new PanelPlugin<FlowOptions>(FlowPanel)
       .addRadio({
         path: 'links.trigger',
         name: 'Trigger',
-        description: 'What opens a node link. Links only fire while Edit layout is off',
+        description: 'Which gesture runs the Node click action. Click leaves the double-click free for the option below; nothing fires while Edit layout is on',
         category: LINKS,
         defaultValue: DEFAULT_OPTIONS.links?.trigger ?? 'dblclick',
         settings: {
@@ -583,6 +583,23 @@ export const plugin = new PanelPlugin<FlowOptions>(FlowPanel)
             { value: 'off', label: 'Off' },
           ],
         },
+      })
+      .addSelect({
+        path: 'links.dblclick',
+        name: 'Node double-click',
+        description: 'With Trigger = Click, what a double-click does: zoom onto the node (default), open the link, set the variable, focus on the chain, or nothing. So one panel can dive on click, focus on double-click and zoom with Ctrl + scroll',
+        category: LINKS,
+        defaultValue: DEFAULT_OPTIONS.links?.dblclick ?? 'zoom',
+        settings: {
+          options: [
+            { value: 'zoom', label: 'Zoom to node' },
+            { value: 'link', label: 'Open link' },
+            { value: 'variable', label: 'Set variable' },
+            { value: 'focus', label: 'Focus' },
+            { value: 'off', label: 'Nothing' },
+          ],
+        },
+        showIf: (o) => o.links?.trigger === 'click',
       })
       .addCustomEditor<{}, Record<string, NodeOverride>>({
         id: 'flow-overrides',

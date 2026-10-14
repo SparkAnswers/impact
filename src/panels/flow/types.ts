@@ -177,6 +177,8 @@ export type LinkTarget = 'same' | 'new';
 export type LinkTrigger = 'dblclick' | 'click' | 'off';
 /** What a node click does: open the URL template, or set a dashboard variable so every query on the page follows. */
 export type LinkAction = 'link' | 'variable' | 'focus';
+/** What a double-click does when the click (Trigger = Click) already has the main action. */
+export type DoubleClickAction = 'zoom' | LinkAction | 'off';
 
 export interface LinkOptions {
   /** URL template; supports dashboard variables and ${node.id|label|group|value|status} tokens */
@@ -184,6 +186,8 @@ export interface LinkOptions {
   target: LinkTarget;
   trigger: LinkTrigger;
   action?: LinkAction;
+  /** Double-click action while Trigger is `click` (default: zoom onto the node) */
+  dblclick?: DoubleClickAction;
   /** Dashboard variable name (without `$`) set by a node click when action is `variable` */
   variable?: string;
   /** Value template for the variable; supports the `${node.*}` tokens (not URL-encoded) */
@@ -324,7 +328,7 @@ export const DEFAULT_IMAGE_SIZE = 24;
 export const MIN_IMAGE_SIZE = 12;
 export const MAX_IMAGE_SIZE = 64;
 
-export const DEFAULT_LINKS: LinkOptions = { nodeUrl: '', target: 'same', trigger: 'dblclick', action: 'link', variable: '', variableValue: '${node.id}', variableClear: '' };
+export const DEFAULT_LINKS: LinkOptions = { nodeUrl: '', target: 'same', trigger: 'dblclick', action: 'link', dblclick: 'zoom', variable: '', variableValue: '${node.id}', variableClear: '' };
 export const DEFAULT_INTERACTION: InteractionOptions = { zoom: true, focusHops: 0, focusDirection: 'both' };
 
 export const DEFAULT_OPTIONS: FlowOptions = {

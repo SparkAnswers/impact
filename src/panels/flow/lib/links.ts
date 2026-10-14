@@ -1,4 +1,4 @@
-import type { FlowNode, LinkOptions } from '../types';
+import type { DoubleClickAction, FlowNode, LinkOptions } from '../types';
 
 /** Node tokens understood by the link template. Values are URL-encoded. */
 const TOKEN = /\$\{node\.(id|label|group|value|status)\}/g;
@@ -56,6 +56,22 @@ export function resolveNodeLink(
   // Data links from the frame are already interpolated by the datasource; templates need filling.
   const href = raw === own && isData ? own : fillLinkTemplate(raw, node, value, replaceVariables);
   return safeHref(href);
+}
+
+export type NodeGesture = 'click' | 'dblclick';
+
+/**
+ * The action a gesture runs. Trigger = click: the click takes the main action and the double-click takes
+ * `dblclick` (zoom by default); Trigger = double-click: the double-click takes the main action and the click
+ * nothing; Trigger = off: only the double-click's default zoom. `'off'` = nothing.
+ */
+export function gestureAction(links: LinkOptions | undefined, gesture: NodeGesture): DoubleClickAction {
+  const trigger = links?.trigger ?? 'dblclick';
+  const main = links?.action ?? 'link';
+  if (gesture === 'click') {
+    return trigger === 'click' ? main : 'off';
+  }
+  return trigger === 'dblclick' ? main : (links?.dblclick ?? 'zoom');
 }
 
 export interface VariableAction {

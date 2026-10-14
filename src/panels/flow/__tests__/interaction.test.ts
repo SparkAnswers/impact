@@ -1,7 +1,7 @@
 import { layeredLayout, radialLayout, type LayoutNode } from '../lib/layout';
 import { MAX_ZOOM, MIN_ZOOM, wheelZoomFactor, zoomAt } from '../lib/geometry';
 import { groupSegments, segmentsOverlap } from '../lib/groups';
-import { currentVariable, fillLinkTemplate, resolveNodeLink, resolveNodeVariable, safeHref, variableQuery } from '../lib/links';
+import { currentVariable, fillLinkTemplate, gestureAction, resolveNodeLink, resolveNodeVariable, safeHref, variableQuery } from '../lib/links';
 import type { FlowNode } from '../types';
 
 describe('zoomAt', () => {
@@ -229,5 +229,23 @@ describe('wheelZoomFactor', () => {
   it('gives small pinch deltas a steeper curve', () => {
     expect(wheelZoomFactor({ deltaY: -5, deltaMode: 0, ctrlKey: true }, 500)).toBeCloseTo(Math.exp(5 * 0.004), 4);
     expect(wheelZoomFactor({ deltaY: -5, deltaMode: 0, ctrlKey: false }, 500)).toBeCloseTo(Math.exp(5 * 0.00223), 4);
+  });
+});
+
+describe('gestureAction', () => {
+  it('maps the trigger and the double-click option onto the two gestures', () => {
+    const base = { nodeUrl: '', target: 'same' as const };
+    // Defaults: double-click opens the link, click does nothing.
+    expect(gestureAction(undefined, 'click')).toBe('off');
+    expect(gestureAction(undefined, 'dblclick')).toBe('link');
+    expect(gestureAction({ ...base, trigger: 'dblclick', action: 'variable' }, 'dblclick')).toBe('variable');
+    expect(gestureAction({ ...base, trigger: 'dblclick', action: 'variable' }, 'click')).toBe('off');
+    // Trigger = click frees the double-click: zoom unless chosen otherwise.
+    expect(gestureAction({ ...base, trigger: 'click', action: 'link' }, 'click')).toBe('link');
+    expect(gestureAction({ ...base, trigger: 'click', action: 'link' }, 'dblclick')).toBe('zoom');
+    expect(gestureAction({ ...base, trigger: 'click', action: 'link', dblclick: 'focus' }, 'dblclick')).toBe('focus');
+    // Trigger = off: nothing on click, the double-click keeps its default zoom.
+    expect(gestureAction({ ...base, trigger: 'off', action: 'focus', dblclick: 'focus' }, 'click')).toBe('off');
+    expect(gestureAction({ ...base, trigger: 'off', action: 'focus' }, 'dblclick')).toBe('zoom');
   });
 });

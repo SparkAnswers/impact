@@ -22,7 +22,7 @@ import { budgetParticles, DEFAULT_PARTICLE_LIMIT, particlesVisible } from './lib
 
 const ZOOM_HINT_VIEW = 'Ctrl + scroll (⌘ on Mac) or pinch to zoom at the pointer · drag to pan · double-click a node to zoom onto it, empty canvas to fit';
 const ZOOM_HINT_EDIT = 'Scroll to zoom at the pointer · Space, middle mouse or Alt + drag to pan';
-import { currentVariable, openLink, resolveNodeLink, resolveNodeVariable, variableName, variableQuery } from './lib/links';
+import { currentVariable, gestureAction, openLink, resolveNodeLink, resolveNodeVariable, variableName, variableQuery, type NodeGesture } from './lib/links';
 import { Chip, ChipRow } from '../../shared/Chip';
 import { VariableChip } from './components/VariableChip';
 import type { GroupHints } from './lib/groups';
@@ -548,35 +548,53 @@ export const FlowPanel: React.FC<PanelProps<FlowOptions>> = ({
 
   // Node links (view mode only).
   const links = useMemo(() => ({ ...DEFAULT_LINKS, ...(options.links ?? {}) }), [options.links]);
+  // The link a node has, whatever the trigger (the gestures decide when it opens; the menu always offers it).
   const linkFor = useCallback(
-    (node: FlowNode) => resolveNodeLink(node, links, formatValue(node.valueField ? fields.get(node.valueField) : undefined, node.valueFormat), replaceVariables, isData),
+    (node: FlowNode) => resolveNodeLink(node, { ...links, trigger: 'click' }, formatValue(node.valueField ? fields.get(node.valueField) : undefined, node.valueFormat), replaceVariables, isData),
     [links, fields, replaceVariables, isData]
   );
   const onOpenLink = useCallback((href: string) => openLink(href, links.target, (path) => locationService.push(path)), [links.target]);
-  // Node click sets a dashboard variable (action `variable`): every query on the page that uses it follows.
-  const onNodeAction = useCallback(
-    (node: FlowNode) => {
-      if (links.action === 'focus') {
-        focusOn(node.id);
-        return true;
-      }
-      const v = resolveNodeVariable(node, links, formatValue(node.valueField ? fields.get(node.valueField) : undefined, node.valueFormat), replaceVariables);
-      if (!v) {
-        return false;
-      }
-      locationService.partial(variableQuery(v.name, v.value));
-      return true;
-    },
-    [links, fields, replaceVariables, focusOn]
-  );
-  // Context menu: the variable a node would set, whatever the trigger, and a direct setter.
+  // The variable a node would set, whenever one is named (the menu offers it with any click action).
   const variableFor = useCallback(
     (node: FlowNode) =>
-      links.action === 'variable'
-        ? resolveNodeVariable(node, { ...links, trigger: 'click' }, formatValue(node.valueField ? fields.get(node.valueField) : undefined, node.valueFormat), replaceVariables)
+      variableName(links)
+        ? resolveNodeVariable(node, { ...links, action: 'variable', trigger: 'click' }, formatValue(node.valueField ? fields.get(node.valueField) : undefined, node.valueFormat), replaceVariables)
         : undefined,
     [links, fields, replaceVariables]
   );
+  // Click and double-click each run their own action (Links options): open the link, set the variable, focus,
+  // zoom onto the node, or nothing. Returns whether something happened.
+  const onNodeGesture = useCallback(
+    (node: FlowNode, gesture: NodeGesture) => {
+      switch (gestureAction(links, gesture)) {
+        case 'focus':
+          focusOn(node.id);
+          return true;
+        case 'variable': {
+          const v = variableFor(node);
+          if (!v) {
+            return false;
+          }
+          locationService.partial(variableQuery(v.name, v.value));
+          return true;
+        }
+        case 'link': {
+          const href = linkFor(node);
+          if (!href) {
+            return false;
+          }
+          onOpenLink(href);
+          return true;
+        }
+        case 'zoom':
+          return false; // the canvas zooms onto the node when nothing else took the double-click
+        default:
+          return gesture === 'click' ? false : true; // 'off' on a double-click: not even the zoom
+      }
+    },
+    [links, focusOn, variableFor, linkFor, onOpenLink]
+  );
+  const clickActive = gestureAction(links, 'click') !== 'off';
   const onSetVariable = useCallback((v: { name: string; value: string }) => locationService.partial(variableQuery(v.name, v.value)), []);
   const varName = links.action === 'variable' ? variableName(links) : '';
   const varValue = varName ? currentVariable(varName, replaceVariables) : undefined;
@@ -677,9 +695,9 @@ export const FlowPanel: React.FC<PanelProps<FlowOptions>> = ({
         groupHints={isData ? groupHints : undefined}
         zoomEnabled={zoomEnabled}
         linkFor={linkFor}
-        linkTrigger={links.trigger}
         onOpenLink={onOpenLink}
-        onNodeAction={onNodeAction}
+        onNodeGesture={onNodeGesture}
+        clickActive={clickActive}
         variableFor={variableFor}
         onSetVariable={onSetVariable}
         onPrune={isData ? onPrune : undefined}

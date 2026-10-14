@@ -365,7 +365,8 @@ result is the same wherever you start from; what survives is the drawn diagram, 
 | Links → Variable / Value / Clear value | Variable name (without `$`), value template with the `${node.*}` tokens (default `${node.id}`, not URL-encoded), and what the clear button writes (empty for a Text box variable, `$__all` for Query/Custom variables with All). |
 | Links → Node link | URL template with dashboard variables and `${node.id|label|group|value|status}` tokens. Opened by the trigger when Node click is `Open link`; with `Focus` or `Set variable` it is still offered as **Open link** in the right-click menu. |
 | Links → Open in | `Same tab` or `New tab`. |
-| Links → Trigger | `Double-click` (default), `Click` or `Off`. Links only fire when Edit layout is off. |
+| Links → Trigger | Which gesture runs the Node click action: `Double-click` (default), `Click` or `Off`. Nothing fires while Edit layout is on. |
+| Links → Node double-click | With Trigger = `Click`: what a double-click does. `Zoom to node` (default), `Open link`, `Set variable`, `Focus` or `Nothing`. This is how one panel dives on click, focuses on double-click and zooms with Ctrl + scroll; the right-click menu always offers all of them. |
 | Standard options / Overrides | Unit, decimals, min/max, thresholds, colour scheme and display name of the bound fields. |
 
 ## Diagram JSON
