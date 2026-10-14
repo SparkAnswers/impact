@@ -115,6 +115,31 @@ each arc gets a box. A long arc whose box would still reach a node of another gr
 it does not, so boxes stay compact rather than spanning the whole ring. The label sits on the first
 arc with free room above it.
 
+### Pruning
+
+Big graphs are only useful once the reader can cut them down. Two mechanisms, both saved with the panel and
+applied to the extracted graph before layout (so the visible part is laid out at full size):
+
+**Right-click menu (view mode).** Right-click a node or a group label to **Hide node**, **Hide group `name`**
+or toggle **Collapse groups**; when **Links → Node click** is *Set variable* the menu also offers
+**Set `$variable` = value**, and **Open link** appears whenever the node has a URL. Hidden items go into
+**Data → Prune → Hidden items**, where each can be restored, and a `hidden 12 · show` chip in the panel's
+top-left corner restores everything at once. Nothing is hidden on manual diagrams or while **Edit layout** is on.
+
+**Data → Prune rules**, applied in this order after the hidden list:
+
+| Rule | Effect |
+| --- | --- |
+| Min value | drops edges whose value is below the number (in the value field's unit; edges without a value stay), then nodes left without any edge unless they come from a node frame |
+| Max depth | keeps nodes within N hops of the roots (nodes without an incoming edge, or the most connected node when every node has one, as in the radial hub); 0 = all |
+| Hide leaves | drops nodes with exactly one edge, once (so the new leaves stay); skipped when fewer than two nodes would remain |
+| Collapse groups | one node per group, named after the group, with the edges between groups summed (values and secondary values), edges inside a group dropped, the node value the sum of the members and the status the worst one; ungrouped nodes stay as they are |
+
+The notice at the bottom of the panel lists what went (`3 nodes hidden · 2 edges below 5 · 4 leaves hidden`)
+next to the usual *Top N of M edges*. When everything is pruned away the panel says so instead of complaining
+about missing edges. Presets keep the rules and the hidden list; the river network map shares the pure
+functions (`src/shared/graph/prune.ts`) but has no menu yet.
+
 ### Overrides
 
 With `Data + manual overrides` and **Layout → Edit layout** on, dragging a node stores its position
@@ -307,6 +332,11 @@ result is the same wherever you start from; what survives is the drawn diagram, 
 | Data → Show edge values | Draw the formatted value on every edge (a label field wins). |
 | Data → Group boxes | Faint rounded container with the group name around each group. |
 | Data → Top N edges by value | Keep only the busiest N edges (0 = all; hard cap 400 nodes / 1500 edges). |
+| Data → Prune → Hide leaves | Drop nodes with a single edge (applied once, never below two nodes). Data modes only. |
+| Data → Prune → Min value | Drop edges below this value (value field's unit); nodes left without edges go unless they come from a node frame. Blank = off. |
+| Data → Prune → Max depth | Keep nodes within N hops of the roots (or the hub when there are none). 0 = all. |
+| Data → Prune → Collapse groups | One node per group with summed edges between groups; ungrouped nodes unchanged. Also toggled from the right-click menu. |
+| Data → Prune → Hidden items | Nodes and groups hidden with the right-click menu; restore one or all. The `hidden N · show` chip does the same from the panel. |
 | Data → Edge and node fields | Source, Target, Value, Secondary value, Label, Source group, Target group field / label names for edge frames; Node id, label, group, status, value, image field names for node frames. Empty value fields mean "first numeric field"; a name that matches nothing means "no value". |
 | Data → Node overrides | Inspector for data nodes (overrides mode): label, shape, icon, image URL, status, colour, position; clear one node or reset all. |
 | Interaction → Zoom and pan | View-mode zoom (Ctrl/⌘ + wheel, pinch, plain wheel in view-panel mode), drag to pan, double-click to fit, floating +/−/fit control. Session only. |

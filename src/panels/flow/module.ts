@@ -6,8 +6,19 @@ import { FlowPanel } from './FlowPanel';
 import { InspectorEditor } from './editors/InspectorEditor';
 import { JsonEditor } from './editors/JsonEditor';
 import { OverridesEditor } from './editors/OverridesEditor';
+import { HiddenEditor } from './editors/HiddenEditor';
 import { FLOW_PRESETS } from './presets';
-import { DEFAULT_IMAGE_SIZE, DEFAULT_OPTIONS, MAX_IMAGE_SIZE, MIN_IMAGE_SIZE, type FlowDiagram, type FlowOptions, type NodeOverride, type ValueMapTarget } from './types';
+import {
+  DEFAULT_IMAGE_SIZE,
+  DEFAULT_OPTIONS,
+  MAX_IMAGE_SIZE,
+  MIN_IMAGE_SIZE,
+  type FlowDiagram,
+  type FlowOptions,
+  type HiddenItems,
+  type NodeOverride,
+  type ValueMapTarget,
+} from './types';
 
 const APPEARANCE = ['Appearance'];
 const ANIMATION = ['Animation'];
@@ -17,6 +28,7 @@ const DATA = ['Data'];
 const INTERACTION = ['Interaction'];
 const LINKS = ['Links'];
 const DATA_FIELDS = ['Data', 'Edge and node fields'];
+const DATA_PRUNE = ['Data', 'Prune'];
 
 const D = DEFAULT_OPTIONS.data;
 const isManual = (o: FlowOptions) => !o.data || o.data.source === 'manual' || !o.data.source;
@@ -265,6 +277,50 @@ export const plugin = new PanelPlugin<FlowOptions>(FlowPanel)
         category: DATA,
         defaultValue: D.topN,
         settings: { min: 0, max: 1500, integer: true },
+        showIf: isData,
+      })
+      .addBooleanSwitch({
+        path: 'data.prune.hideLeaves',
+        name: 'Hide leaves',
+        description: 'Drop nodes with a single edge (the long tail of volumes, pods or child processes). Applied once, never below two nodes',
+        category: DATA_PRUNE,
+        defaultValue: false,
+        showIf: isData,
+      })
+      .addNumberInput({
+        path: 'data.prune.minValue',
+        name: 'Min value',
+        description:
+          'Drop edges whose value is below this number, in the unit of the value field (edges without a value stay). Nodes left without edges go too unless they come from a node frame. Blank = off',
+        category: DATA_PRUNE,
+        settings: { placeholder: 'off' },
+        showIf: isData,
+      })
+      .addSliderInput({
+        path: 'data.prune.maxDepth',
+        name: 'Max depth',
+        description: 'Keep only nodes within this many hops of the roots (nodes without incoming edges, or the most connected node when there are none). 0 = all',
+        category: DATA_PRUNE,
+        defaultValue: 0,
+        settings: { min: 0, max: 12, step: 1 },
+        showIf: isData,
+      })
+      .addBooleanSwitch({
+        path: 'data.prune.collapseGroups',
+        name: 'Collapse groups',
+        description: 'One node per group (named after the group) with the edges between groups summed, so a namespace of 90 pods becomes one box. Ungrouped nodes stay as they are',
+        category: DATA_PRUNE,
+        defaultValue: false,
+        showIf: isData,
+      })
+      .addCustomEditor<{}, HiddenItems>({
+        id: 'flow-hidden',
+        path: 'data.hidden',
+        name: 'Hidden items',
+        description: 'Nodes and groups hidden with the right-click menu in the panel; restore them one by one or all at once',
+        category: DATA_PRUNE,
+        editor: HiddenEditor,
+        defaultValue: { nodes: [], groups: [] },
         showIf: isData,
       })
       .addTextInput({

@@ -1,4 +1,5 @@
 import type { DemoMode } from '../../shared/demo';
+import type { HiddenItems, PruneRules } from '../../shared/graph/prune';
 import type { MotionPreference } from '../../shared/motion';
 import type { QuickStartState } from '../../shared/presets';
 
@@ -160,7 +161,13 @@ export interface DataOptions {
   wrap: number;
   groupBoxes: boolean;
   overrides: Record<string, NodeOverride>;
+  /** Rule-based pruning applied to the extracted graph before layout (all off by default) */
+  prune: PruneRules;
+  /** Nodes and groups hidden from the context menu, restored with the "hidden" chip or the Hidden items editor */
+  hidden: HiddenItems;
 }
+
+export type { HiddenItems, PruneRules };
 
 export type LinkTarget = 'same' | 'new';
 export type LinkTrigger = 'dblclick' | 'click' | 'off';
@@ -288,6 +295,8 @@ export const DEFAULT_DATA_OPTIONS: DataOptions = {
   wrap: 0,
   groupBoxes: true,
   overrides: {},
+  prune: {},
+  hidden: { nodes: [], groups: [] },
 };
 
 /** Hard limits for data-driven diagrams; beyond these the panel truncates and shows a notice. */
