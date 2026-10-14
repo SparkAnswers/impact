@@ -7,6 +7,7 @@ Flow Designer
 - Focus: a node click (Links > Node click = Focus) or "Focus on chain" in the right-click menu shows only the node and its chain; Interaction > Focus limits hops and direction; a chip with a Back button and Esc lead back
 - Prune: Data > Prune rules (hide leaves, min value, max depth, collapse groups), a hidden list with a right-click "Hide node / Hide group" menu and a `hidden N` chip
 - Layout: tall layers fold automatically (Wrap layers after 0 = automatic); Data > Spread sets how far layers stretch towards the panel shape
+- Links: with Trigger = Click the double-click gets its own action (Links > Node double-click: Zoom to node, Open link, Set variable, Focus or Nothing); a click waits briefly for a possible double-click when both are configured; the Node link field stays visible for every click action and the right-click menu always offers Open link and Set variable
 - Zoom: one wheel notch is one +/- step on every browser, the floor is 5 %, double-click a node or group label to zoom onto it, a Back chip while zoomed, and a large panel resize re-fits
 - Particles: Animation > Particles (Animated / Static / Hidden), Animation off hides them instead of freezing them, Particle limit (default 400) and a separate particle layer keep big graphs smooth
 
