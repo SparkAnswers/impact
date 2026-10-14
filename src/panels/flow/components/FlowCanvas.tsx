@@ -55,6 +55,11 @@ export interface FlowCanvasProps {
   onNodeGesture?: (node: FlowNode, gesture: 'click' | 'dblclick') => boolean;
   /** Whether a plain click does something (pointer cursor on nodes). */
   clickActive?: boolean;
+  /**
+   * Milliseconds a click waits for a possible double-click before it runs (0 = at once). Needed when the click
+   * navigates: the first click of a double-click would otherwise leave the page before the double-click fires.
+   */
+  clickDelay?: number;
   /** The dashboard variable a node would set (Links action `variable`), for the context menu */
   variableFor?: (node: FlowNode) => VariableAction | undefined;
   onSetVariable?: (action: VariableAction) => void;
@@ -133,6 +138,7 @@ export const FlowCanvas: React.FC<FlowCanvasProps> = (props) => {
     onOpenLink,
     onNodeGesture,
     clickActive,
+    clickDelay = 0,
     variableFor,
     onSetVariable,
     onPrune,
@@ -531,7 +537,17 @@ export const FlowCanvas: React.FC<FlowCanvasProps> = (props) => {
 
   const hrefOf = (node: FlowNode) => (!editing && linkFor ? linkFor(node) : undefined);
 
+  const pendingClick = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const cancelPendingClick = () => {
+    if (pendingClick.current) {
+      clearTimeout(pendingClick.current);
+      pendingClick.current = undefined;
+    }
+  };
+  useEffect(() => cancelPendingClick, []);
+
   const onNodeDoubleClick = (node: FlowNode) => {
+    cancelPendingClick();
     if (editing) {
       setRenaming({ id: node.id, value: node.label });
       return;
@@ -552,9 +568,18 @@ export const FlowCanvas: React.FC<FlowCanvasProps> = (props) => {
   };
 
   const onNodeClick = (node: FlowNode) => {
-    if (!editing) {
-      onNodeGesture?.(node, 'click');
+    if (editing || !onNodeGesture) {
+      return;
     }
+    if (clickDelay > 0) {
+      cancelPendingClick();
+      pendingClick.current = setTimeout(() => {
+        pendingClick.current = undefined;
+        onNodeGesture(node, 'click');
+      }, clickDelay);
+      return;
+    }
+    onNodeGesture(node, 'click');
   };
 
   const onCanvasDoubleClick = (e: React.MouseEvent<SVGSVGElement>) => {

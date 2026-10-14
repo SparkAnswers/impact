@@ -20,6 +20,9 @@ import { extractGraph } from './lib/frames';
 import { fitViewport, MAX_ZOOM, zoomAt } from './lib/geometry';
 import { budgetParticles, DEFAULT_PARTICLE_LIMIT, particlesVisible } from './lib/particles';
 
+/** Wait for a double-click before a click acts (only when both gestures are configured). */
+const CLICK_DELAY_MS = 250;
+
 const ZOOM_HINT_VIEW = 'Ctrl + scroll (⌘ on Mac) or pinch to zoom at the pointer · drag to pan · double-click a node to zoom onto it, empty canvas to fit';
 const ZOOM_HINT_EDIT = 'Scroll to zoom at the pointer · Space, middle mouse or Alt + drag to pan';
 import { currentVariable, gestureAction, openLink, resolveNodeLink, resolveNodeVariable, variableName, variableQuery, type NodeGesture } from './lib/links';
@@ -595,6 +598,8 @@ export const FlowPanel: React.FC<PanelProps<FlowOptions>> = ({
     [links, focusOn, variableFor, linkFor, onOpenLink]
   );
   const clickActive = gestureAction(links, 'click') !== 'off';
+  // A click waits for a possible double-click only when both gestures do something.
+  const clickDelay = clickActive && gestureAction(links, 'dblclick') !== 'off' ? CLICK_DELAY_MS : 0;
   const onSetVariable = useCallback((v: { name: string; value: string }) => locationService.partial(variableQuery(v.name, v.value)), []);
   const varName = links.action === 'variable' ? variableName(links) : '';
   const varValue = varName ? currentVariable(varName, replaceVariables) : undefined;
@@ -698,6 +703,7 @@ export const FlowPanel: React.FC<PanelProps<FlowOptions>> = ({
         onOpenLink={onOpenLink}
         onNodeGesture={onNodeGesture}
         clickActive={clickActive}
+        clickDelay={clickDelay}
         variableFor={variableFor}
         onSetVariable={onSetVariable}
         onPrune={isData ? onPrune : undefined}

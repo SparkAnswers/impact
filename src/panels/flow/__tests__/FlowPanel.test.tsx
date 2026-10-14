@@ -322,13 +322,13 @@ describe('FlowPanel links and view-mode zoom', () => {
 
   it('prefers a manual node link, honours the click trigger and never fires in design mode', () => {
     const open = jest.spyOn(window, 'open').mockImplementation(() => null);
-    renderPanel({ diagram: diagramWithLink(), links: { nodeUrl: '/d/t?n=${node.id}', target: 'new', trigger: 'click' } });
+    renderPanel({ diagram: diagramWithLink(), links: { nodeUrl: '/d/t?n=${node.id}', target: 'new', trigger: 'click', dblclick: 'off' } });
     fireEvent.click(screen.getByTestId('flow-node-solar'));
     expect(open).toHaveBeenLastCalledWith('/own?id=solar', '_blank', 'noopener,noreferrer');
     fireEvent.doubleClick(screen.getByTestId('flow-node-grid'));
     expect(open).toHaveBeenCalledTimes(1); // dblclick is not the trigger
     open.mockClear();
-    renderPanel({ diagram: diagramWithLink(), layout: { ...DEFAULT_OPTIONS.layout, editMode: true }, links: { nodeUrl: '/d/t?n=${node.id}', target: 'new', trigger: 'click' } });
+    renderPanel({ diagram: diagramWithLink(), layout: { ...DEFAULT_OPTIONS.layout, editMode: true }, links: { nodeUrl: '/d/t?n=${node.id}', target: 'new', trigger: 'click', dblclick: 'off' } });
     fireEvent.click(screen.getAllByTestId('flow-node-solar').at(-1)!);
     expect(open).not.toHaveBeenCalled();
     open.mockRestore();
@@ -418,7 +418,7 @@ describe('FlowPanel links and view-mode zoom', () => {
 
   it('focus: a click shows only the node and its chain, the chip leads back, Esc clears, the menu offers it', () => {
     const node = (id: string) => screen.queryByTestId(`flow-node-${id}`);
-    renderPanel({ links: { ...DEFAULT_OPTIONS.links!, action: 'focus', trigger: 'click' } });
+    renderPanel({ links: { ...DEFAULT_OPTIONS.links!, action: 'focus', trigger: 'click', dblclick: 'off' } });
     expect(node('generator')).toBeInTheDocument();
     fireEvent.click(node('solar')!);
     // Solar feeds the bus, the bus feeds the loads; the generator and grid import are neither upstream nor downstream of solar.
@@ -451,16 +451,29 @@ describe('FlowPanel links and view-mode zoom', () => {
   });
 
   it('click and double-click run separate actions: dive on click, focus on double-click, variable on double-click', () => {
+    jest.useFakeTimers();
     const open = jest.spyOn(window, 'open').mockImplementation(() => null);
     const node = (id: string) => screen.queryByTestId(`flow-node-${id}`);
     renderPanel({ links: { nodeUrl: '/d/t?n=${node.id}', target: 'new', trigger: 'click', action: 'link', dblclick: 'focus' } });
+    // With both gestures configured the click waits for a possible double-click before it opens the link.
     fireEvent.click(node('solar')!);
+    expect(open).not.toHaveBeenCalled();
+    act(() => {
+      jest.advanceTimersByTime(300);
+    });
     expect(open).toHaveBeenLastCalledWith('/d/t?n=solar', '_blank', 'noopener,noreferrer');
     expect(screen.queryByTestId('flow-focus-chip')).not.toBeInTheDocument();
+    // A double-click (two clicks then dblclick) cancels the pending click: the link must not open again.
+    fireEvent.click(node('solar')!);
+    fireEvent.click(node('solar')!);
     fireEvent.doubleClick(node('solar')!);
+    act(() => {
+      jest.advanceTimersByTime(300);
+    });
     expect(screen.getByTestId('flow-focus-chip').textContent).toContain('Solar array');
     expect(node('generator')).not.toBeInTheDocument();
     expect(open).toHaveBeenCalledTimes(1);
+    jest.useRealTimers();
     cleanup();
     // Double-click sets the variable while the click focuses; the menu offers both.
     const partial = jest.spyOn(locationService, 'partial').mockImplementation(() => undefined);
