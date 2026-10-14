@@ -57,3 +57,6 @@ provisioning/datasources/local-*.yaml
 # Local agent files, kept out of the repo
 CLAUDE.md
 .claude/
+
+# local test-stack settings (no login)
+docker-compose.override.yaml
