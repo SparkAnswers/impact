@@ -103,7 +103,7 @@ export function dominantEdges(edges: GraphEdge[]): GraphEdge[] {
  * Auto layout as normalised positions (0..1). Deterministic for a given node set, so positions are stable
  * across refreshes. The layout box is stretched to the padded panel so a wide panel spreads the layers.
  */
-export function autoPositions(graph: Graph, direction: LayoutDirection, aspect: number, nodeSize: number): Map<string, Waypoint> {
+export function autoPositions(graph: Graph, direction: LayoutDirection, aspect: number, nodeSize: number, spreadLayers = true): Map<string, Waypoint> {
   const out = new Map<string, Waypoint>();
   if (!graph.nodes.length) {
     return out;
@@ -134,7 +134,33 @@ export function autoPositions(graph: Graph, direction: LayoutDirection, aspect: 
       y: spanY > 0 ? PAD_Y + ((c.y - minY) / spanY) * (1 - 2 * PAD_Y) : 0.5,
     });
   }
-  return direction === 'radial' ? out : reduceCrossings(out, graph.edges, direction === 'tb' ? 'x' : 'y');
+  if (direction === 'radial') {
+    return out;
+  }
+  const cross = direction === 'tb' ? 'x' : 'y';
+  return reduceCrossings(spreadLayers ? spreadAcross(out, cross) : out, graph.edges, cross);
+}
+
+/**
+ * Spaces every layer's nodes evenly across the padded cross axis (keeping their order), so a layer with five
+ * nodes uses the same height as one with twenty instead of huddling in the middle where its channels overlap.
+ */
+export function spreadAcross(positions: Map<string, Waypoint>, cross: 'x' | 'y'): Map<string, Waypoint> {
+  const main = cross === 'y' ? 'x' : 'y';
+  const pad = cross === 'y' ? PAD_Y : PAD_X;
+  const out = new Map(Array.from(positions.entries()).map(([id, p]) => [id, { ...p }]));
+  const layers = new Map<string, string[]>();
+  for (const [id, p] of out) {
+    const key = p[main].toFixed(3);
+    (layers.get(key) ?? layers.set(key, []).get(key)!).push(id);
+  }
+  for (const ids of layers.values()) {
+    ids.sort((a, b) => out.get(a)![cross] - out.get(b)![cross] || (a < b ? -1 : 1));
+    ids.forEach((id, i) => {
+      out.get(id)![cross] = ids.length > 1 ? pad + (i / (ids.length - 1)) * (1 - 2 * pad) : 0.5;
+    });
+  }
+  return out;
 }
 
 const segmentsCross = (a1: Point, a2: Point, b1: Point, b2: Point) => {
@@ -327,7 +353,7 @@ export interface EdgePathOptions {
   rB: number;
   /** Lateral offset (px, right of travel) applied at both ends: separates reverse pairs. */
   endLateral: number;
-  /** Extra lateral offset at the midpoint as a fraction of the length: the gentle bend. */
+  /** Extra lateral offset at the midpoint as a fraction of the length: the gentle bend (negative bends left). */
   curve: number;
 }
 
@@ -416,7 +442,7 @@ export function edgesToChannels(
       rA: r,
       rB: r,
       endLateral,
-      curve: Math.max(0, n.curve),
+      curve: Math.max(-0.5, Math.min(0.5, n.curve)),
     });
     const value = e.value ?? 0;
     const channel: Channel = createChannel({
@@ -479,7 +505,7 @@ export function findCaptionEdge(graph: Graph, selector: string | undefined): Gra
 export function buildNetwork(frames: DataFrame[], n: Partial<NetworkOptions> | undefined, width: number, height: number): NetworkModel {
   const opts: NetworkOptions = { ...DEFAULT_NETWORK, ...(n ?? {}), particles: { ...DEFAULT_NETWORK.particles, ...(n?.particles ?? {}) } };
   const graph = extractNetwork(frames, opts);
-  const auto = autoPositions(graph, opts.layoutDirection, height > 0 ? width / height : 1.6, opts.nodeSize);
+  const auto = autoPositions(graph, opts.layoutDirection, height > 0 ? width / height : 1.6, opts.nodeSize, opts.spreadLayers !== false);
   const positions = resolvePositions(graph, auto, opts.layout);
   const r = Math.max(4, opts.nodeSize);
   const nodes: NetworkNode[] = graph.nodes.map((g) => {

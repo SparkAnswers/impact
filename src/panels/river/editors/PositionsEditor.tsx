@@ -31,7 +31,7 @@ export const PositionsEditor: React.FC<StandardEditorProps<NetworkLayout, unknow
 
   const auto = useMemo(() => {
     const graph = extractNetwork(context.data ?? [], network);
-    return autoPositions(graph, network.layoutDirection, 1.8, network.nodeSize);
+    return autoPositions(graph, network.layoutDirection, 1.8, network.nodeSize, network.spreadLayers !== false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [context.data, network.layoutDirection, network.nodeSize, network.sourceField, network.targetField, network.nodeIdField]);
 

@@ -104,6 +104,14 @@ export const plugin = new PanelPlugin<RiverOptions>(RiverPanel)
         },
         showIf: isNetwork,
       })
+      .addBooleanSwitch({
+        path: 'network.spreadLayers',
+        name: 'Spread layers',
+        description: 'Auto layout: space each layer’s nodes evenly across the panel, so a layer of five nodes uses the same height as one of twenty and its channels fan out instead of piling up. Off keeps the layout’s compact spacing.',
+        category: NETWORK,
+        defaultValue: N.spreadLayers,
+        showIf: (o) => isNetwork(o) && o.network?.placement !== 'positions' && o.network?.layoutDirection !== 'radial',
+      })
       .addCustomEditor({
         id: 'network.layout',
         path: 'network.layout',
@@ -143,10 +151,10 @@ export const plugin = new PanelPlugin<RiverOptions>(RiverPanel)
       .addSliderInput({
         path: 'network.curve',
         name: 'Curve',
-        description: 'Bend of each channel as a fraction of its length. 0 draws straight links; reverse pairs are always offset so they do not overlap.',
+        description: 'Bend of each channel as a fraction of its length. 0 draws straight links, negative bends the other way; reverse pairs are always offset so they do not overlap.',
         category: NETWORK,
         defaultValue: N.curve,
-        settings: { min: 0, max: 0.5, step: 0.01 },
+        settings: { min: -0.5, max: 0.5, step: 0.01 },
         showIf: isNetwork,
       })
       .addSelect({

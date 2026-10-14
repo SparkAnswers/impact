@@ -77,7 +77,7 @@ parsed exactly like the flow panel's data-driven mode:
 The value drives the colour scale (one shared domain across all links) and the particle speed; the width comes
 from the width field (normalised to its maximum) or is fixed (**Channel width**). **Direction** = *By sign* sends
 links with a negative value backwards. Links in both directions between the same two nodes are offset to opposite
-sides so they never overlap; every other link bends gently (**Curve**).
+sides so they never overlap; every other link bends gently (**Curve**; 0 = straight, negative = the other way).
 
 ### Node placement
 
@@ -103,11 +103,12 @@ global 20000 cap still applies.
 | Data > Channel source               | *Manual* (the Channels list) or *Network map* (channels from links in the data).     |
 | Network map > Node placement        | *Auto layout* or *Positions*.                                                         |
 | Network map > Layout direction      | Left to right, top to bottom, or radial around the most connected node.              |
+| Network map > Spread layers         | Auto layout (default on): each layer's nodes are spaced evenly across the panel, so a short layer fans out instead of huddling in the middle. |
 | Network map > Positions             | Node id → x, y list with *Seed from auto layout*, *Add* and *Reset dragged*.          |
 | Network map > Edit on canvas        | Drag handles on the nodes; dragged positions are stored as overrides.                |
 | Network map > Node size             | Puck radius in pixels.                                                               |
 | Network map > Channel width (px)    | Fixed width, or the widest channel when a width field is set.                        |
-| Network map > Curve                 | Bend of each channel as a fraction of its length (0 = straight).                     |
+| Network map > Curve                 | Bend of each channel as a fraction of its length (0 = straight, negative = the other way). |
 | Network map > Colour scale / domain | Preset or thresholds; auto or fixed domain shared by all links.                      |
 | Network map > Direction             | Forward, Reverse, By sign.                                                           |
 | Network map > Particle budget / speed / colour | Particles shared by value share; speed factor; white, by value or fixed colour. |

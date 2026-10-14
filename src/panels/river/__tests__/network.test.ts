@@ -125,6 +125,11 @@ describe('reverse pairs', () => {
     const off = Math.hypot(ac[1].x - mx, ac[1].y - my);
     expect(off).toBeGreaterThan(5);
     expect(off).toBeLessThan(80);
+    // A negative curve bends to the other side of the straight line; 0 is straight.
+    const neg = edgesToChannels(graph, pos, { ...DEFAULT_NETWORK, widthPx: 30, curve: -0.1 }, W, H)[2].channel.path.map((p) => ({ x: p.x * W, y: p.y * H }));
+    expect(Math.sign(neg[1].x - mx)).toBe(-Math.sign(ac[1].x - mx));
+    const straight = edgesToChannels(graph, pos, { ...DEFAULT_NETWORK, widthPx: 30, curve: 0 }, W, H)[2].channel.path.map((p) => ({ x: p.x * W, y: p.y * H }));
+    expect(Math.hypot(straight[1].x - mx, straight[1].y - my)).toBeLessThan(1e-6);
   });
 });
 
@@ -156,6 +161,36 @@ describe('positions', () => {
     const keys = Array.from(p1.values()).map((p) => `${p.x.toFixed(3)},${p.y.toFixed(3)}`);
     expect(new Set(keys).size).toBe(keys.length);
     expect(p1.get('a')!.x).toBeLessThan(p1.get('b')!.x);
+  });
+
+  it('spreads each layer evenly across the cross axis, keeping order, unless switched off', () => {
+    // one source feeding three targets: with spreading the source sits mid-height and the targets span it.
+    const frame = toDataFrame({
+      refId: 'A',
+      fields: [
+        { name: 'source', type: FieldType.string, values: ['s', 's', 's', 's2'] },
+        { name: 'target', type: FieldType.string, values: ['t1', 't2', 't3', 't1'] },
+        { name: 'value', type: FieldType.number, values: [1, 2, 3, 4] },
+      ],
+    });
+    const graph = extractNetwork([frame], DEFAULT_NETWORK);
+    const spread = autoPositions(graph, 'lr', 3, 14);
+    const ys = ['t1', 't2', 't3'].map((id) => spread.get(id)!.y).sort((a, b) => a - b);
+    expect(ys[0]).toBeCloseTo(0.14, 5);
+    expect(ys[1]).toBeCloseTo(0.5, 5);
+    expect(ys[2]).toBeCloseTo(0.86, 5);
+    const src = ['s', 's2'].map((id) => spread.get(id)!.y).sort((a, b) => a - b);
+    expect(src[0]).toBeCloseTo(0.14, 5);
+    expect(src[1]).toBeCloseTo(0.86, 5);
+    const compact = autoPositions(graph, 'lr', 3, 14, false);
+    const cs = ['s', 's2'].map((id) => compact.get(id)!.y).sort((a, b) => a - b);
+    expect(cs[1] - cs[0]).toBeLessThan(0.72);
+    // Top to bottom spreads along x instead.
+    const tb = autoPositions(graph, 'tb', 1, 14);
+    const xs = ['t1', 't2', 't3'].map((id) => tb.get(id)!.x).sort((a, b) => a - b);
+    expect(xs[0]).toBeCloseTo(0.08, 5);
+    expect(xs[1]).toBeCloseTo(0.5, 5);
+    expect(xs[2]).toBeCloseTo(0.92, 5);
   });
 
   it('typed positions override the auto layout and dragged overrides win over both', () => {

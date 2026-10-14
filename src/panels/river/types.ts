@@ -121,6 +121,8 @@ export interface NetworkOptions {
   nodeStatusField: string;
   placement: NodePlacement;
   layoutDirection: LayoutDirection;
+  /** Auto layout: space each layer's nodes evenly across the panel instead of keeping the layout's compact spacing. */
+  spreadLayers?: boolean;
   layout: NetworkLayout;
   /** Draggable node handles on the panel. */
   editNodes: boolean;
@@ -128,7 +130,7 @@ export interface NetworkOptions {
   nodeSize: number;
   /** Channel width in CSS pixels (the widest channel when a second value drives the width). */
   widthPx: number;
-  /** Bend of each channel as a fraction of its length (0 = straight). */
+  /** Bend of each channel as a fraction of its length (0 = straight, negative bends the other way). */
   curve: number;
   colorScale: ColorPreset;
   scaleDomain: ScaleDomain;
@@ -218,6 +220,7 @@ export const DEFAULT_NETWORK: NetworkOptions = {
   nodeLabelField: 'label',
   nodeStatusField: 'status',
   placement: 'auto',
+  spreadLayers: true,
   layoutDirection: 'lr',
   layout: { positions: [], overrides: {} },
   editNodes: false,
