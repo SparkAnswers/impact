@@ -363,7 +363,7 @@ result is the same wherever you start from; what survives is the drawn diagram, 
 | Interaction → Zoom and pan | View-mode zoom (Ctrl/⌘ + wheel, pinch, plain wheel in view-panel mode), drag to pan, double-click a node / group label to zoom onto it, double-click empty canvas to fit, floating +/−/fit control and a View section in the right-click menu. Session only; a large panel resize goes back to the fitted view. |
 | Links → Node click | `Open link` (the URL template), `Set variable`: the click writes the node into a dashboard variable, so every query on the page that uses `$name` follows; a chip in the panel's corner shows the current value and clears it. `Focus`: only the node and its chain stay visible (see Interaction → Focus). |
 | Links → Variable / Value / Clear value | Variable name (without `$`), value template with the `${node.*}` tokens (default `${node.id}`, not URL-encoded), and what the clear button writes (empty for a Text box variable, `$__all` for Query/Custom variables with All). |
-| Links → Node link | URL template with dashboard variables and `${node.id|label|group|value|status}` tokens. |
+| Links → Node link | URL template with dashboard variables and `${node.id|label|group|value|status}` tokens. Opened by the trigger when Node click is `Open link`; with `Focus` or `Set variable` it is still offered as **Open link** in the right-click menu. |
 | Links → Open in | `Same tab` or `New tab`. |
 | Links → Trigger | `Double-click` (default), `Click` or `Off`. Links only fire when Edit layout is off. |
 | Standard options / Overrides | Unit, decimals, min/max, thresholds, colour scheme and display name of the bound fields. |

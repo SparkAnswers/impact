@@ -551,11 +551,11 @@ export const plugin = new PanelPlugin<FlowOptions>(FlowPanel)
       .addTextInput({
         path: 'links.nodeUrl',
         name: 'Node link',
-        description: 'URL template opened from a node. Dashboard variables plus ${node.id}, ${node.label}, ${node.group}, ${node.value} and ${node.status} (URL-encoded). Beats data links on the node id field; a manual node’s own Link beats this',
+        description:
+          'URL template opened from a node. Dashboard variables plus ${node.id}, ${node.label}, ${node.group}, ${node.value} and ${node.status} (URL-encoded). Beats data links on the node id field; a manual node’s own Link beats this. With Node click = Focus or Set variable the link stays reachable as Open link in the right-click menu',
         category: LINKS,
         defaultValue: DEFAULT_OPTIONS.links?.nodeUrl ?? '',
         settings: { placeholder: '/d/dashboard?var-node=${node.id}' },
-        showIf: (o) => (o.links?.action ?? 'link') === 'link',
       })
       .addRadio({
         path: 'links.target',
