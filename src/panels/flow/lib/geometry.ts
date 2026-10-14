@@ -236,32 +236,8 @@ export function midpoint(geo: EdgeGeometry): Point {
   return { x: (geo.a.x + geo.b.x) / 2, y: (geo.a.y + geo.b.y) / 2 };
 }
 
-/** Far enough out for graphs of several hundred nodes to fit a panel. */
-export const MIN_ZOOM = 0.05;
-export const MAX_ZOOM = 4;
-
-/**
- * Zoom factor for one wheel event. Deltas are normalised to pixels (Firefox reports lines or pages), one
- * mouse notch (~100 px) gives the same ×1.25 / ×0.8 step as the +/− buttons, and a single event is capped so
- * a flicked wheel cannot jump from fitted to fully zoomed. Trackpad pinches arrive as Ctrl + wheel with
- * small deltas and get a steeper curve so a pinch still feels direct.
- */
-export function wheelZoomFactor(e: { deltaY: number; deltaMode: number; ctrlKey: boolean }, pageHeight: number): number {
-  const unit = e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? Math.max(1, pageHeight) : 1;
-  const dy = Math.max(-300, Math.min(300, e.deltaY * unit));
-  const k = e.ctrlKey && Math.abs(dy) < 20 ? 0.004 : 0.00223;
-  return Math.exp(-dy * k);
-}
-
-/**
- * Zoom a viewport by `factor` keeping the canvas point under the pointer (px, py in panel pixels) fixed.
- * Zoom is clamped to MIN_ZOOM..MAX_ZOOM and rounded to 3 decimals.
- */
-export function zoomAt(vp: { x: number; y: number; zoom: number }, px: number, py: number, factor: number) {
-  const zoom = Math.round(Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, vp.zoom * factor)) * 1000) / 1000;
-  const k = zoom / vp.zoom;
-  return { x: px - (px - vp.x) * k, y: py - (py - vp.y) * k, zoom };
-}
+import { MIN_ZOOM } from '../../../shared/zoom';
+export { MAX_ZOOM, MIN_ZOOM, wheelZoomFactor, zoomAt } from '../../../shared/zoom';
 
 export const snap = (v: number, size: number, enabled: boolean) => (enabled && size > 0 ? Math.round(v / size) * size : v);
 

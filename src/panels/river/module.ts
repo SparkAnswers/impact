@@ -516,6 +516,13 @@ export const plugin = new PanelPlugin<RiverOptions>(RiverPanel)
         defaultValue: DEFAULT_OPTIONS.channelHalo,
       })
       .addBooleanSwitch({
+        path: 'interaction.zoom',
+        name: 'Zoom and pan',
+        description: 'View mode: Ctrl/⌘ + wheel (or trackpad pinch) zooms around the pointer, plain wheel zooms when the panel is viewed on its own, drag pans, double-click on empty space fits. Session only; a small +/−/fit control appears bottom-right on hover and a chip leads back',
+        category: ['Interaction'],
+        defaultValue: DEFAULT_OPTIONS.interaction?.zoom ?? true,
+      })
+      .addBooleanSwitch({
         path: 'animate',
         name: 'Animate',
         description: 'Animate particles. Off renders static streaks; see Reduced motion for the system preference.',

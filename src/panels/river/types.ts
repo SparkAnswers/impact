@@ -176,6 +176,8 @@ export interface RiverOptions {
   /** Soft dark halo around each channel. */
   channelHalo: boolean;
   animate: boolean;
+  /** View-mode zoom and pan: Ctrl/⌘ + wheel (plain wheel in view-panel mode) zooms, drag pans, double-click fits */
+  interaction?: { zoom: boolean };
   animationSpeed: number;
   reducedMotion: MotionPreference;
 }
@@ -249,6 +251,7 @@ export const DEFAULT_NETWORK: NetworkOptions = {
 
 export const DEFAULT_OPTIONS: RiverOptions = {
   demoData: 'whenNoData',
+  interaction: { zoom: true },
   channelSource: 'manual',
   channels: [],
   network: DEFAULT_NETWORK,

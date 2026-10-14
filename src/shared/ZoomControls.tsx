@@ -29,7 +29,7 @@ const getStyles = (theme: GrafanaTheme2) => ({
     opacity: 0,
     transition: 'opacity 150ms ease',
     zIndex: 2,
-    '[data-testid=flow-panel]:hover &, &:focus-within': { opacity: 0.85 },
+    '.impact-zoomable:hover &, &:focus-within': { opacity: 0.85 },
     '&:hover': { opacity: 1 },
   }),
   pinned: css({ opacity: 0.85 }),

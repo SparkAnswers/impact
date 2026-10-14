@@ -12,7 +12,7 @@ import { ReducedMotionHint } from '../../shared/ReducedMotionHint';
 import { FlowCanvas, type PruneChange } from './components/FlowCanvas';
 import { Toolbar, type Tool } from './components/Toolbar';
 import { FLOW_PRESETS } from './presets';
-import { ZoomControls } from './components/ZoomControls';
+import { ZoomControls } from '../../shared/ZoomControls';
 import { formatValue, indexFields } from './lib/data';
 import { buildDataDiagram, mergeOverrides, nodeSize, overridesFromMove, shortLabel } from './lib/datadriven';
 import { createExampleDiagram } from './lib/example';
@@ -700,7 +700,7 @@ export const FlowPanel: React.FC<PanelProps<FlowOptions>> = ({
   const overrideCount = dataMode === 'overrides' ? Object.keys(dataOpts.overrides ?? {}).length : 0;
 
   return (
-    <div className={styles.wrap} style={{ width, height }} tabIndex={editing || focusId ? 0 : undefined} onKeyDown={onKeyDown} data-testid="flow-panel">
+    <div className={`${styles.wrap} impact-zoomable`} style={{ width, height }} tabIndex={editing || focusId ? 0 : undefined} onKeyDown={onKeyDown} data-testid="flow-panel">
       <FlowCanvas
         diagram={displayDiagram}
         width={width}

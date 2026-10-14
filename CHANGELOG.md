@@ -7,6 +7,10 @@ Flow Designer
 - Ctrl / ⌘ + click opens a card's link in a new tab and Shift + click in the same tab, whatever the plain click does
 - Click switch: a pill in the bottom-left corner shows what a click does (Isolate, Zoom, Open, Filter) and changes it for the session; Interaction > Click switch turns it off
 
+Flow River
+
+- Zoom and pan in view mode: Ctrl / ⌘ + wheel zooms at the pointer, drag pans, double-click fits, a +/−/fit control and a Back chip; Interaction > Zoom and pan turns it off
+
 ## 1.0.1 (2026-10-14)
 
 Flow Designer

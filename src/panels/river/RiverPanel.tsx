@@ -1,13 +1,15 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { css } from '@emotion/css';
 import { type GrafanaTheme2, type PanelProps } from '@grafana/data';
-import { PanelDataErrorView } from '@grafana/runtime';
+import { locationService, PanelDataErrorView } from '@grafana/runtime';
 import { useStyles2, useTheme2 } from '@grafana/ui';
 import { DemoBadge, rollingMultiSeries, useDemoFrames, type DemoGenerator } from '../../shared/demo';
 import { useMotionAllowed } from '../../shared/motion';
 import { useQuickStart } from '../../shared/presets';
 import { ReducedMotionHint } from '../../shared/ReducedMotionHint';
 import { Chip, ChipRow } from '../../shared/Chip';
+import { ZoomControls } from '../../shared/ZoomControls';
+import { bigResize, wheelZoomFactor, wheelZooms, ZOOM_HINT_VIEW, zoomAt, type ZoomViewport } from '../../shared/zoom';
 import { Legend } from './components/Legend';
 import { NodeEditor } from './components/NodeEditor';
 import { PathEditor } from './components/PathEditor';
@@ -35,6 +37,7 @@ const getStyles = (theme: GrafanaTheme2, onImage: boolean) => {
     root: css({ position: 'relative', overflow: 'hidden', fontFamily: theme.typography.fontFamily }),
     canvas: css({ position: 'absolute', left: 0, top: 0, display: 'block' }),
     overlay: css({ position: 'absolute', pointerEvents: 'none' }),
+    world: css({ position: 'absolute', left: 0, top: 0, transformOrigin: '0 0', pointerEvents: 'none', '& > button': { pointerEvents: 'auto' } }),
     nodeHit: css({
       position: 'absolute',
       borderRadius: '50%',
@@ -142,6 +145,9 @@ const hasNumericField = (series: Parameters<typeof getNumericFields>[0]) => getN
 export const RIVER_NO_DATA_MESSAGE = 'Needs one or more numeric series';
 export const RIVER_NO_EDGES_MESSAGE = 'Needs edges: a source and a target field (or series labels) per link';
 
+const RIVER_MAX_ZOOM = 3;
+const IDENTITY: ZoomViewport = { x: 0, y: 0, zoom: 1 };
+
 export const RiverPanel: React.FC<PanelProps<RiverOptions>> = (props) => {
   const { data, width, height, fieldConfig, replaceVariables, onOptionsChange, onFieldConfigChange, timeZone, timeRange, id } = props;
   const options = useMemo(() => ({ ...DEFAULT_OPTIONS, ...props.options }), [props.options]);
@@ -150,6 +156,7 @@ export const RiverPanel: React.FC<PanelProps<RiverOptions>> = (props) => {
   const onImage = options.background === 'image' && isSafeImageUrl(options.backgroundUrl);
   const styles = useStyles2(getStyles, onImage);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const rootRef = useRef<HTMLDivElement>(null);
   // One offscreen particle canvas per distinct trail value, kept across renders and resized only when
   // the device size or the set of trail values changes; released on unmount.
   const layersRef = useRef<TrailLayerSet | null>(null);
@@ -237,6 +244,92 @@ export const RiverPanel: React.FC<PanelProps<RiverOptions>> = (props) => {
     };
   }, [bgUrl]);
 
+  // ---- zoom and pan (session only). The painted layers are scaled at compose time; overlays follow via a CSS
+  // transform. Capped at 3× since the layers are rasters (crisp up to the device pixel ratio).
+  const editingPaths = channels.some((c) => c.editPath && (options.channels ?? []).some((o) => o.id === c.id));
+  const zoomEnabled = options.interaction?.zoom !== false && !(network && networkOptions.editNodes) && !editingPaths;
+  const [viewport, setViewport] = useState<ZoomViewport>(IDENTITY);
+  const viewRef = useRef(viewport);
+  const zoomed = viewport.zoom !== 1 || viewport.x !== 0 || viewport.y !== 0;
+  const resetView = useCallback(() => setViewport(IDENTITY), []);
+  const zoomBy = useCallback((factor: number) => setViewport((v) => zoomAt(v, width / 2, height / 2, factor, RIVER_MAX_ZOOM)), [width, height]);
+  // A big resize (leaving view panel) or losing the ability to zoom drops the session view (derived state, settled in render).
+  const [prevSize, setPrevSize] = useState({ width, height });
+  if (prevSize.width !== width || prevSize.height !== height) {
+    setPrevSize({ width, height });
+    if (bigResize(prevSize, { width, height })) {
+      setViewport(IDENTITY);
+    }
+  }
+  const [prevZoomEnabled, setPrevZoomEnabled] = useState(zoomEnabled);
+  if (prevZoomEnabled !== zoomEnabled) {
+    setPrevZoomEnabled(zoomEnabled);
+    if (!zoomEnabled) {
+      setViewport(IDENTITY);
+    }
+  }
+  useEffect(() => {
+    const el = rootRef.current;
+    if (!el || !zoomEnabled) {
+      return;
+    }
+    const onWheel = (e: WheelEvent) => {
+      const alone = locationService?.getSearchObject?.()?.viewPanel != null;
+      if (!wheelZooms(e, alone)) {
+        return;
+      }
+      e.preventDefault();
+      const rect = el.getBoundingClientRect();
+      setViewport(zoomAt(viewRef.current, e.clientX - rect.left, e.clientY - rect.top, wheelZoomFactor(e, rect.height), RIVER_MAX_ZOOM));
+    };
+    el.addEventListener('wheel', onWheel, { passive: false });
+    return () => el.removeEventListener('wheel', onWheel);
+  }, [zoomEnabled]);
+  const panRef = useRef<{ id: number; sx: number; sy: number; orig: ZoomViewport; moved: boolean } | undefined>(undefined);
+  const onEmptyTarget = (e: React.PointerEvent | React.MouseEvent) => !(e.target as Element).closest?.('button, a, input, [data-testid=river-node-editor], [data-testid=river-path-editor]');
+  const onRootPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!zoomEnabled || (e.button !== 0 && e.button !== 1) || !onEmptyTarget(e)) {
+      return;
+    }
+    panRef.current = { id: e.pointerId, sx: e.clientX, sy: e.clientY, orig: viewRef.current, moved: false };
+  };
+  const onRootPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    const p = panRef.current;
+    if (!p || p.id !== e.pointerId) {
+      return;
+    }
+    const dx = e.clientX - p.sx;
+    const dy = e.clientY - p.sy;
+    if (!p.moved && Math.hypot(dx, dy) < 3) {
+      return;
+    }
+    if (!p.moved) {
+      p.moved = true;
+      try {
+        e.currentTarget.setPointerCapture(e.pointerId);
+      } catch {
+        // jsdom
+      }
+    }
+    setViewport({ ...p.orig, x: p.orig.x + dx, y: p.orig.y + dy });
+  };
+  const onRootPointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (panRef.current?.id === e.pointerId) {
+      panRef.current = undefined;
+    }
+  };
+  const onRootDoubleClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (zoomEnabled && onEmptyTarget(e)) {
+      resetView();
+    }
+  };
+  // Static renders (animation off) need a recompose when the view changes; the animation loop reads the ref itself.
+  const composeRef = useRef<(() => void) | undefined>(undefined);
+  useEffect(() => {
+    viewRef.current = viewport;
+    composeRef.current?.();
+  }, [viewport]);
+
   // Rendering + animation
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -321,17 +414,22 @@ export const RiverPanel: React.FC<PanelProps<RiverOptions>> = (props) => {
     }
 
     const compose = () => {
+      const v = viewRef.current;
       ctx.setTransform(1, 0, 0, 1, 0, 0);
       ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.setTransform(v.zoom, 0, 0, v.zoom, v.x * dpr, v.y * dpr);
       ctx.drawImage(staticLayer, 0, 0);
       layers.composite(ctx);
     };
+    composeRef.current = compose;
 
     const animate = motionOn && typeof requestAnimationFrame === 'function';
     if (!animate) {
       systems.forEach((s, i) => s.drawStatic(targets[i]));
       compose();
-      return;
+      return () => {
+        composeRef.current = undefined;
+      };
     }
 
     let raf = 0;
@@ -372,6 +470,7 @@ export const RiverPanel: React.FC<PanelProps<RiverOptions>> = (props) => {
     raf = requestAnimationFrame(frame);
     return () => {
       stop();
+      composeRef.current = undefined;
       document.removeEventListener('visibilitychange', onVisibility);
     };
   }, [geometries, options, theme, width, height, bgImage, motionOn, network, networkOptions, onImage]);
@@ -411,8 +510,22 @@ export const RiverPanel: React.FC<PanelProps<RiverOptions>> = (props) => {
   const titleHeight = (title ? 26 : 0) + (subtitle ? 16 : 0);
 
   return (
-    <div className={styles.root} style={{ width, height }} data-testid="river-panel" tabIndex={focusStack.length ? 0 : undefined} onKeyDown={onRootKeyDown}>
+    <div
+      ref={rootRef}
+      className={`${styles.root} impact-zoomable`}
+      style={{ width, height, cursor: zoomEnabled ? 'grab' : undefined, touchAction: zoomEnabled ? 'none' : undefined }}
+      data-testid="river-panel"
+      tabIndex={focusStack.length ? 0 : undefined}
+      onKeyDown={onRootKeyDown}
+      onPointerDown={onRootPointerDown}
+      onPointerMove={onRootPointerMove}
+      onPointerUp={onRootPointerUp}
+      onPointerCancel={onRootPointerUp}
+      onDoubleClick={onRootDoubleClick}
+    >
       <canvas ref={canvasRef} className={styles.canvas} style={{ width, height }} />
+      {/* Everything drawn in canvas pixels follows the zoom: value labels, node labels, click targets, channel labels. */}
+      <div className={styles.world} style={{ width, height, transform: `translate(${viewport.x}px, ${viewport.y}px) scale(${viewport.zoom})` }} data-testid="river-world">
       {focusClicks
         ? network!.nodes.map((n) => (
             <button
@@ -427,8 +540,49 @@ export const RiverPanel: React.FC<PanelProps<RiverOptions>> = (props) => {
             />
           ))
         : null}
-      {network?.focusId ? (
+      {network && networkOptions.showValueLabels
+        ? spreadLabels(geometries.length, (i, t) => pointAt(geometries[i].centre, t)).map((p, i) => (
+            <span key={`v-${geometries[i].bound.channel.id}`} className={styles.valueLabel} style={{ left: p.x, top: p.y }}>
+              {formatValue(display, geometries[i].bound.latest)}
+            </span>
+          ))
+        : null}
+      {network && networkOptions.showNodeLabels
+        ? network.nodes.map((n) => (
+            <span key={`n-${n.id}`} className={styles.nodeLabel} style={{ left: n.x, top: n.y + n.r + 4 }}>
+              {n.label}
+            </span>
+          ))
+        : null}
+      {geometries.map((g) =>
+        (g.bound.channel.labels ?? []).map((l, i) => {
+          const at = Math.max(0, Math.min(1, l.at ?? 0.5));
+          const half = (g.bound.channel.widthPx * g.widthAt(at)) / 2;
+          const lateral = l.side === 'left' ? half + 10 : l.side === 'right' ? -(half + 10) : 0;
+          const p = pointAt(g.centre, at, lateral);
+          const edge = pointAt(g.centre, at, l.side === 'left' ? half : l.side === 'right' ? -half : 0);
+          return (
+            <React.Fragment key={`${g.bound.channel.id}-${i}`}>
+              {l.side !== 'center' ? <span className={styles.dot} style={{ left: edge.x, top: edge.y }} /> : null}
+              <span
+                className={styles.anchor}
+                style={{ left: p.x, top: p.y, transform: l.side === 'center' ? 'translate(-50%,-50%)' : undefined }}
+              >
+                {replaceVariables(l.text ?? '')}
+              </span>
+            </React.Fragment>
+          );
+        })
+      )}
+      </div>
+      {(network?.focusId || zoomed) ? (
         <ChipRow width={width} top={titleHeight ? titleHeight + 14 : undefined}>
+          {zoomed && (
+            <Chip testId="river-zoom-chip" tooltip="The view is zoomed or panned for this session. Back returns to the full map" action={{ label: 'Back to the full view', icon: 'arrow-left', text: 'Back', onClick: resetView }}>
+              zoomed <b>{Math.round(viewport.zoom * 100)}%</b>
+            </Chip>
+          )}
+          {network?.focusId && (
           <Chip
             testId="river-focus-chip"
             tooltip={`Only this node and its chain are shown (Network map → Focus). Back leaves the focus${focusStack.length > 1 ? ' one step' : ''}; Esc leaves it entirely`}
@@ -436,6 +590,7 @@ export const RiverPanel: React.FC<PanelProps<RiverOptions>> = (props) => {
           >
             focus <b>{network.nodes.find((n) => n.id === network.focusId)?.label ?? network.focusId}</b> · {network.nodes.length} of {network.allNodes}
           </Chip>
+          )}
         </ChipRow>
       ) : null}
       {(title || subtitle) && (
@@ -457,41 +612,7 @@ export const RiverPanel: React.FC<PanelProps<RiverOptions>> = (props) => {
           name={network ? undefined : geometries.length > 1 ? primary.bound.channel.name : undefined}
         />
       ) : null}
-      {network && networkOptions.showValueLabels
-        ? spreadLabels(geometries.length, (i, t) => pointAt(geometries[i].centre, t)).map((p, i) => (
-            <span key={`v-${geometries[i].bound.channel.id}`} className={styles.valueLabel} style={{ left: p.x, top: p.y }}>
-              {formatValue(display, geometries[i].bound.latest)}
-            </span>
-          ))
-        : null}
-      {network && networkOptions.showNodeLabels
-        ? network.nodes.map((n) => (
-            <span key={`n-${n.id}`} className={styles.nodeLabel} style={{ left: n.x, top: n.y + n.r + 4 }}>
-              {n.label}
-            </span>
-          ))
-        : null}
       {network && network.notices.length ? <div className={styles.notice}>{network.notices.join(' · ')}</div> : null}
-      {geometries.map((g) =>
-        (g.bound.channel.labels ?? []).map((l, i) => {
-          const at = Math.max(0, Math.min(1, l.at ?? 0.5));
-          const half = (g.bound.channel.widthPx * g.widthAt(at)) / 2;
-          const lateral = l.side === 'left' ? half + 10 : l.side === 'right' ? -(half + 10) : 0;
-          const p = pointAt(g.centre, at, lateral);
-          const edge = pointAt(g.centre, at, l.side === 'left' ? half : l.side === 'right' ? -half : 0);
-          return (
-            <React.Fragment key={`${g.bound.channel.id}-${i}`}>
-              {l.side !== 'center' ? <span className={styles.dot} style={{ left: edge.x, top: edge.y }} /> : null}
-              <span
-                className={styles.anchor}
-                style={{ left: p.x, top: p.y, transform: l.side === 'center' ? 'translate(-50%,-50%)' : undefined }}
-              >
-                {replaceVariables(l.text ?? '')}
-              </span>
-            </React.Fragment>
-          );
-        })
-      )}
       {caption || options.captionValue ? (
         <>
           <div className={styles.shade} />
@@ -507,6 +628,7 @@ export const RiverPanel: React.FC<PanelProps<RiverOptions>> = (props) => {
       ) : null}
       {editing.length > 0 ? <PathEditor width={width} height={height} channels={editing} onChange={onPathChange} /> : null}
       {network && networkOptions.editNodes ? <NodeEditor width={width} height={height} nodes={network.nodes} onChange={onNodeChange} /> : null}
+      {zoomEnabled && geometries.length > 0 ? <ZoomControls zoom={viewport.zoom} onZoomIn={() => zoomBy(1.25)} onZoomOut={() => zoomBy(0.8)} onFit={resetView} hint={ZOOM_HINT_VIEW} /> : null}
       <DemoBadge visible={isDemo} width={width} />
       <ReducedMotionHint animationEnabled={options.animate} preference={options.reducedMotion} width={width} />
     </div>

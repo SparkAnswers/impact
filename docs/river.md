@@ -187,6 +187,7 @@ result is the same wherever you start from; what survives is the background imag
 | Background                   | Panel (inherits the panel background, so Grafana's built-in *Transparent background* switch works), Image URL (`http(s)` or `data:image` only; cover/contain; dim slider), Transparent (paints nothing behind the channels). |
 | Channel halo                 | Soft dark halo around each channel (default on). Switch off for a flat look on light or transparent backgrounds. |
 | Animate / Animation speed    | Toggle the particle loop and scale its speed. The loop pauses while the tab is hidden and stops on unmount. |
+| Interaction > Zoom and pan   | On by default: **Ctrl/⌘ + wheel** (or a trackpad pinch) zooms around the pointer, a plain wheel zooms when the panel is viewed on its own, **drag** pans, **double-click** on empty space fits again; a +/−/fit control appears bottom-right on hover and a `zoomed 125% · Back` chip leads back. Session only, capped at 3×; off while Edit on canvas or a path editor is on. |
 | Reduced motion               | `Follow system setting` (default) renders static streaks when the operating system asks for reduced motion and shows a small pause icon in the panel corner; `Always animate` ignores that setting; `Never animate` keeps the river static. |
 
 Standard field options (unit, decimals, min, max, thresholds, display name, overrides) apply to the bound fields.
