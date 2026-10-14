@@ -57,7 +57,8 @@ services:
       - .:/plugin:ro
     working_dir: /plugin
     entrypoint: sh
-    command: -c "/app/bin/linux_amd64/plugincheck2 -config ./scripts/validator.yaml $${SOURCE_URI:+-sourceCodeUri $$SOURCE_URI} ./$$(ls *.zip | head -n1)"
+    # The zip of the version in package.json, never a stale one from an earlier release left in the directory.
+    command: -c "/app/bin/linux_amd64/plugincheck2 -config ./scripts/validator.yaml $${SOURCE_URI:+-sourceCodeUri $$SOURCE_URI} ./sparkanswers-impact-app-$$(grep -m1 '\"version\"' package.json | cut -d '\"' -f4).zip"
     profiles: [tools]
 
   grafana:
