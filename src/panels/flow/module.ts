@@ -265,7 +265,7 @@ export const plugin = new PanelPlugin<FlowOptions>(FlowPanel)
         path: 'data.wrap',
         name: 'Wrap layers after',
         description:
-          'Layered layouts: a layer with more nodes than this is folded into several side-by-side bands so one big fan-out does not become a single very long column. 0 = never wrap',
+          'Layered layouts: a layer with more nodes than this is folded into several side-by-side bands so one big fan-out does not become a single very long column. 0 = automatic: a layer folds when it is much taller than the rest of the diagram, aiming at the panel’s shape. Set a high number to never fold',
         category: DATA,
         defaultValue: D.wrap,
         settings: { min: 0, max: 40, step: 1 },

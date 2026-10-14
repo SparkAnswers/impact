@@ -233,6 +233,8 @@ export const FlowPanel: React.FC<PanelProps<FlowOptions>> = ({
       aspect,
       spread: Math.min(100, Math.max(0, dataOpts.spread ?? 100)) / 100,
       wrap: Math.max(0, dataOpts.wrap ?? 0),
+      // Wrap layers after = 0 means automatic folding.
+      autoWrap: !(dataOpts.wrap > 0),
     }),
     [dataOpts.layout, dataOpts.layerGap, dataOpts.nodeGap, dataOpts.spread, dataOpts.wrap, dataOpts.groupBoxes, fontSize, aspect]
   );

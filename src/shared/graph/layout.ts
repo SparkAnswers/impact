@@ -44,9 +44,15 @@ export interface LayoutOptions {
   /**
    * Layered layouts only: fold a layer with more than this many nodes into ceil(n / wrap) side-by-side bands
    * (sub-columns separated by nodeGap) so one huge fan-out does not become a single very long column.
-   * 0 / undefined = never wrap.
+   * 0 / undefined = never wrap, unless `autoWrap` is set.
    */
   wrap?: number;
+  /**
+   * Layered layouts, when `wrap` is 0 / undefined and `aspect` is known: fold any layer that is much taller
+   * than the diagram's target cross extent (the main extent divided by the aspect) into the fewest bands that
+   * fit it, so one big fan-out does not force fit-to-panel to shrink everything.
+   */
+  autoWrap?: boolean;
 }
 
 export interface LayoutResult {
@@ -243,7 +249,13 @@ export function layeredLayout(nodes: LayoutNode[], edges: LayoutEdge[], opts: La
     i >= band.length - 1 ? 0 : opts.nodeGap + ((groups.get(band[i]) ?? '') !== (groups.get(band[i + 1]) ?? '') ? groupGap : 0);
   // Long layers are folded into several bands that sit side by side along the main axis; ordering is kept so
   // crossing reduction and group contiguity survive. Without wrapping every layer is exactly one band.
-  const bands = layers.flatMap((layer, li) => wrapLayer(layer, opts.wrap).map((ids, bi) => ({ ids, layer: li, band: bi })));
+  const caps =
+    opts.wrap && opts.wrap > 0
+      ? layers.map(() => opts.wrap!)
+      : opts.autoWrap
+        ? autoWrapCaps(layers, { cross: (id) => cross(size.get(id)!), main: (id) => main(size.get(id)!), gapAfter }, opts, horizontal)
+        : layers.map(() => 0);
+  const bands = layers.flatMap((layer, li) => wrapLayer(layer, caps[li]).map((ids, bi) => ({ ids, layer: li, band: bi })));
   const extents = bands.map(({ ids }) => {
     const items = ids.map((id) => size.get(id)!);
     const length = items.reduce((s, n, i) => s + cross(n) + gapAfter(ids, i), 0);
@@ -326,6 +338,43 @@ function connectedComponents(sorted: LayoutNode[], adj: Map<string, Set<string>>
  * Split an ordered layer into ceil(n / wrap) bands of near-equal size (the first bands take the remainder).
  * Returns the layer unchanged as a single band when wrap is 0 / undefined or the layer is short enough.
  */
+/**
+ * Automatic folding: per-layer band cap (0 = one band) so no layer is much taller than the diagram's target cross
+ * extent. Each layer takes the fewest bands `b` with `length / b <= 1.25 * target`, where the target is the main
+ * extent (layer thicknesses, bands and gaps included) divided by the panel aspect; a band keeps at least two nodes.
+ * Layers are settled one after another, twice, since folding one widens the diagram and relaxes the others.
+ */
+export function autoWrapCaps(
+  layers: string[][],
+  measure: { cross: (id: string) => number; main: (id: string) => number; gapAfter: (band: string[], i: number) => number },
+  opts: LayoutOptions,
+  horizontal: boolean
+): number[] {
+  const aspect = opts.aspect;
+  if (!aspect || aspect <= 0 || layers.length < 2) {
+    return layers.map(() => 0);
+  }
+  const lengths = layers.map((ids) => ids.reduce((s, id, i) => s + measure.cross(id) + measure.gapAfter(ids, i), 0));
+  const thick = layers.map((ids) => ids.reduce((m, id) => Math.max(m, measure.main(id)), 0));
+  const bands = layers.map(() => 1);
+  const target = () => {
+    const mainExtent = thick.reduce((s, t, i) => s + t * bands[i] + opts.nodeGap * (bands[i] - 1), 0) + opts.layerGap * (layers.length - 1);
+    return horizontal ? mainExtent / aspect : mainExtent * aspect;
+  };
+  for (let pass = 0; pass < 2; pass++) {
+    layers.forEach((ids, i) => {
+      const most = Math.max(1, Math.floor(ids.length / 2));
+      for (let b = 1; b <= most; b++) {
+        bands[i] = b;
+        if (lengths[i] / b <= 1.25 * target()) {
+          break;
+        }
+      }
+    });
+  }
+  return bands.map((b, i) => (b > 1 ? Math.ceil(layers[i].length / b) : 0));
+}
+
 export function wrapLayer(layer: string[], wrap: number | undefined): string[][] {
   const max = Math.floor(wrap ?? 0);
   if (max <= 0 || layer.length <= max) {
@@ -535,7 +584,7 @@ export function layoutGraph(nodes: LayoutNode[], edges: LayoutEdge[], opts: Layo
 
 /** Signature of the node set (used to decide whether a re-layout is needed). */
 export const nodeSetKey = (nodes: Array<{ id: string }>, opts: LayoutOptions) =>
-  `${opts.direction}|${opts.layerGap}|${opts.nodeGap}|${opts.groupGap ?? ''}|${opts.aspect ?? ''}|${opts.spread ?? ''}|${opts.wrap ?? ''}|${nodes
+  `${opts.direction}|${opts.layerGap}|${opts.nodeGap}|${opts.groupGap ?? ''}|${opts.aspect ?? ''}|${opts.spread ?? ''}|${opts.wrap ?? ''}|${opts.autoWrap ? 'a' : ''}|${nodes
     .map((n) => n.id)
     .sort()
     .join('\n')}`;

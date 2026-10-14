@@ -1,4 +1,4 @@
-import { breakCycles, layeredLayout, layoutGraph, nodeSetKey, radialLayout, rankNodes, wrapLayer, type LayoutEdge, type LayoutNode } from '../lib/layout';
+import { autoWrapCaps, breakCycles, layeredLayout, layoutGraph, nodeSetKey, radialLayout, rankNodes, wrapLayer, type LayoutEdge, type LayoutNode } from '../lib/layout';
 
 const n = (id: string, group?: string): LayoutNode => ({ id, w: 140, h: 52, group });
 const e = (source: string, target: string): LayoutEdge => ({ source, target });
@@ -221,6 +221,42 @@ describe('layout', () => {
     expect(nodeSetKey([n('b'), n('a')], opts)).toBe(nodeSetKey([n('a'), n('b')], opts));
     expect(nodeSetKey([n('a')], opts)).not.toBe(nodeSetKey([n('a')], { ...opts, direction: 'tb' }));
     expect(nodeSetKey([n('a')], opts)).not.toBe(nodeSetKey([n('a')], { ...opts, wrap: 5 }));
+  });
+
+  describe('auto wrap', () => {
+    const measure = { cross: () => 40, main: () => 140, gapAfter: (band: string[], i: number) => (i < band.length - 1 ? 24 : 0) };
+    const ids = (k: number, p: string) => Array.from({ length: k }, (_, i) => `${p}${i}`);
+
+    it('does nothing without an aspect, with a fixed wrap, or for layers that already fit', () => {
+      const layers = [['src'], ids(60, 'c')];
+      expect(autoWrapCaps(layers, measure, opts, true)).toEqual([0, 0]);
+      expect(autoWrapCaps([['a'], ['b', 'c']], measure, { ...opts, aspect: 1.6 }, true)).toEqual([0, 0]);
+      const fixed = layeredLayout([n('src'), ...ids(60, 'c').map((id) => n(id))], ids(60, 'c').map((c) => e('src', c)), { ...opts, aspect: 1.6, wrap: 30, autoWrap: true }).positions;
+      expect(new Set(ids(60, 'c').map((c) => fixed.get(c)!.x)).size).toBe(2);
+      const off = layeredLayout([n('src'), ...ids(60, 'c').map((id) => n(id))], ids(60, 'c').map((c) => e('src', c)), { ...opts, aspect: 1.6 }).positions;
+      expect(new Set(ids(60, 'c').map((c) => off.get(c)!.x)).size).toBe(1);
+    });
+
+    it('folds one parent with 60 children into the fewest bands that match the panel shape', () => {
+      // 1.6 wide: 5 bands of 12 (about 1060 x 760 canvas px) instead of one 3800 px column.
+      expect(autoWrapCaps([['src'], ids(60, 'c')], measure, { ...opts, aspect: 1.6 }, true)).toEqual([0, 12]);
+      // A full-width panel (3.5) wants more, shorter bands.
+      const wide = autoWrapCaps([['src'], ids(60, 'c')], measure, { ...opts, aspect: 3.5 }, true);
+      expect(wide[1]).toBeLessThan(12);
+      // Top-to-bottom swaps the axes: the same graph on a tall panel folds like a wide horizontal one.
+      expect(autoWrapCaps([['src'], ids(60, 'c')], measure, { ...opts, aspect: 1 / 1.6 }, false)).toEqual([0, 12]);
+    });
+
+    it('folds the tall fan-out of a chain into two columns on a wide panel and keeps the chain as is', () => {
+      const layers = [['web', 'websecure'], ['traefik'], ['svc'], ['gateway'], ids(14, 'role'), ids(5, 'node')];
+      const caps = autoWrapCaps(layers, measure, { ...opts, aspect: 3.5 }, true);
+      expect(caps).toEqual([0, 0, 0, 0, 7, 0]);
+      const nodes = layers.flat().map((id) => n(id));
+      const edges = [...layers.slice(1).flatMap((l, i) => l.flatMap((t) => layers[i].map((s) => e(s, t))))];
+      const { positions } = layeredLayout(nodes, edges, { ...opts, aspect: 3.5, autoWrap: true });
+      expect(overlaps(nodes, positions)).toBe(false);
+      expect(new Set(ids(14, 'role').map((r) => positions.get(r)!.x)).size).toBe(2);
+    });
   });
 
   describe('wrap', () => {

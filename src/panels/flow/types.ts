@@ -160,7 +160,7 @@ export interface DataOptions {
   nodeGap: number;
   /** Layered layouts: how far (0..100 %) the layer gap stretches towards the panel's aspect; 0 = compact */
   spread?: number;
-  /** Layered layouts: fold a layer with more than this many nodes into side-by-side bands (0 = never) */
+  /** Layered layouts: fold a layer with more than this many nodes into side-by-side bands (0 = automatic) */
   wrap: number;
   groupBoxes: boolean;
   overrides: Record<string, NodeOverride>;

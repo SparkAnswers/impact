@@ -83,7 +83,10 @@ configured name.
 - **Wrap layers after** folds a layer with more nodes than this (say one parent with 60 children)
   into several side-by-side bands of near-equal size, separated by the node gap, so fit-to-panel
   does not end up at 20% zoom on one very long column; alternate bands are offset by half a node
-  step so edges pass between nodes rather than through them. 0 (default) never wraps.
+  step so edges pass between nodes rather than through them. 0 (default) folds automatically: a
+  layer much taller than the diagram's target shape (its length along the flow divided by the
+  panel's aspect) takes the fewest bands that fit it, so a thin chain feeding one tall fan-out
+  gets a two- or three-column fan-out instead of a tiny diagram. Set a high number to never fold.
 - Positions are only recomputed when the **set of node ids** (or a layout option) changes, so
   refreshes never reshuffle the diagram. Nodes that appear fade in, nodes that disappear fade out
   and edges re-route.
@@ -336,7 +339,7 @@ result is the same wherever you start from; what survives is the drawn diagram, 
 | Data → Layout direction | `Left to right`, `Top to bottom` (layered) or `Radial`. |
 | Data → Layer gap / Node gap | Spacing between layers and between nodes in a layer, in canvas pixels. |
 | Data → Spread | Layered layouts: how far (0–100 %) the layer gap stretches towards the panel's shape. At 100 (default) the gap grows up to 4× so a tall fan-out uses the panel width, which spreads a thin chain feeding it across empty space; at 0 the Layer gap is kept as set, the chain stays compact and fit-to-panel scales the whole diagram. |
-| Data → Wrap layers after | Layered layouts only: a layer with more nodes than this is folded into side-by-side bands (ceil(n / wrap), near-equal size, node gap between them). 0 = never wrap. |
+| Data → Wrap layers after | Layered layouts only: a layer with more nodes than this is folded into side-by-side bands (ceil(n / wrap), near-equal size, node gap between them). 0 (default) = automatic: layers much taller than the diagram's target shape fold into the fewest bands that fit; set a high number to never fold. |
 | Data → Value drives | What the edge value controls: particle speed, colour (thresholds / colour scheme of the value field), width, or nothing. |
 | Data → Secondary value drives | Same for the secondary value field (shown when one is configured). |
 | Data → Show edge values | Draw the formatted value on every edge (a label field wins). |
