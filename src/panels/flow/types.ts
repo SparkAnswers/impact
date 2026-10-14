@@ -1,6 +1,7 @@
 import type { DemoMode } from '../../shared/demo';
 import type { HiddenItems, PruneRules } from '../../shared/graph/prune';
 import type { MotionPreference } from '../../shared/motion';
+import { DEFAULT_PARTICLE_LIMIT, type ParticleMode } from './lib/particles';
 import type { QuickStartState } from '../../shared/presets';
 
 /**
@@ -212,6 +213,13 @@ export interface FlowOptions {
     speed: number;
     /** How the system reduce-motion preference is treated (default: follow it). */
     reducedMotion?: MotionPreference;
+    /**
+     * `animated` (default): particles travel and disappear while the animation is paused; `static`: paused
+     * particles stay in place; `hidden`: never drawn.
+     */
+    particles?: ParticleMode;
+    /** Cap on particles drawn at once (counts are scaled down above it); 0 = no cap. */
+    particleLimit?: number;
   };
   layout: {
     editMode: boolean;
@@ -322,7 +330,7 @@ export const DEFAULT_OPTIONS: FlowOptions = {
     particleSpeed: 1,
     imageSize: 24,
   },
-  animation: { enabled: true, speed: 1, reducedMotion: 'system' },
+  animation: { enabled: true, speed: 1, reducedMotion: 'system', particles: 'animated', particleLimit: DEFAULT_PARTICLE_LIMIT },
   layout: { editMode: false, gridSize: 20, snap: true, autoFit: true },
   diagram: EMPTY_DIAGRAM,
   data: DEFAULT_DATA_OPTIONS,

@@ -140,12 +140,38 @@ describe('FlowPanel', () => {
     expect(last.diagram.edges.map((e: { id: string }) => e.id)).not.toContain('e1');
   });
 
-  it('does not animate particles when animation is off but still renders them', () => {
+  it('draws no particles when animation is off (nothing is left frozen on the edges)', () => {
     const raf = jest.spyOn(window, 'requestAnimationFrame');
     renderPanel({ animation: { enabled: false, speed: 1 } });
-    expect(screen.getByTestId('flow-particles').querySelectorAll('circle').length).toBeGreaterThan(0);
+    expect(screen.queryByTestId('flow-particles')).not.toBeInTheDocument();
     expect(raf).not.toHaveBeenCalled();
     raf.mockRestore();
+  });
+
+  it('Particles = Static keeps them in place while paused; Hidden never draws them', () => {
+    const raf = jest.spyOn(window, 'requestAnimationFrame');
+    renderPanel({ animation: { enabled: false, speed: 1, particles: 'static' } });
+    expect(screen.getByTestId('flow-particles').querySelectorAll('circle').length).toBeGreaterThan(0);
+    expect(raf).not.toHaveBeenCalled();
+    cleanup();
+    renderPanel({ animation: { enabled: true, speed: 1, particles: 'hidden' } });
+    expect(screen.queryByTestId('flow-particles')).not.toBeInTheDocument();
+    raf.mockRestore();
+  });
+
+  it('caps the particle total with the particle limit and drops the glow above 150', () => {
+    renderPanel({ animation: { enabled: true, speed: 1, particleLimit: 8 } });
+    // 8 of the 9 example edges carry particles → one each, two circles each (outer + inner)
+    expect(screen.getByTestId('flow-particles').querySelectorAll('circle')).toHaveLength(16);
+    expect(screen.getByTestId('flow-particles').getAttribute('data-glow')).toBe('on');
+    cleanup();
+    const big = createExampleDiagram();
+    // Per-edge counts are clamped to 12 by the normaliser, so double the edges: 18 × 12 = 216 particles.
+    const dense = big.edges.map((e) => ({ ...e, particles: { ...e.particles, enabled: true, count: 12 } }));
+    big.edges = [...dense, ...dense.map((e) => ({ ...e, id: `${e.id}-b` }))];
+    renderPanel({ diagram: big, animation: { enabled: true, speed: 1, particleLimit: 0 } });
+    expect(screen.getByTestId('flow-particles').querySelectorAll('circle')).toHaveLength(216 * 2);
+    expect(screen.getByTestId('flow-particles').getAttribute('data-glow')).toBe('off');
   });
 });
 
@@ -319,6 +345,44 @@ describe('FlowPanel links and view-mode zoom', () => {
     fireEvent.doubleClick(screen.getByTestId('flow-canvas'));
     expect(g.getAttribute('transform')).not.toBe(zoomed);
     expect(chip()).toBe(before);
+  });
+
+  it('drops a session zoom and fits again when the panel size changes a lot', () => {
+    const { rerender, options } = renderPanel();
+    const chip = () => screen.getByTestId('flow-zoom-controls').textContent;
+    const fitted = chip();
+    fireEvent.click(screen.getByLabelText('Zoom in'));
+    const zoomed = chip();
+    expect(zoomed).not.toBe(fitted);
+    const props = (w: number, h: number) =>
+      ({
+        id: 1,
+        data: { series: makeSeries(), state: LoadingState.Done, timeRange: getDefaultTimeRange() },
+        timeRange: getDefaultTimeRange(),
+        timeZone: 'browser',
+        options,
+        onOptionsChange: jest.fn(),
+        fieldConfig: { defaults: {}, overrides: [] },
+        onFieldConfigChange: jest.fn(),
+        replaceVariables: (v: string) => v,
+        width: w,
+        height: h,
+        transparent: false,
+        renderCounter: 0,
+        title: 'Flow',
+        eventBus: { publish: jest.fn(), subscribe: jest.fn(), getStream: jest.fn(), removeAllListeners: jest.fn(), newScopedBus: jest.fn() },
+        onChangeTimeRange: jest.fn(),
+      }) as unknown as PanelProps<FlowOptions>;
+    // A small nudge (dashboard column reflow) keeps the user's zoom.
+    rerender(<FlowPanel {...props(840, 500)} />);
+    expect(chip()).toBe(zoomed);
+    // Leaving "view panel": the panel shrinks by more than 20 % → back to the fitted view.
+    rerender(<FlowPanel {...props(400, 250)} />);
+    expect(chip()).not.toBe(zoomed);
+    fireEvent.click(screen.getByLabelText('Zoom in'));
+    const again = chip();
+    fireEvent.doubleClick(screen.getByTestId('flow-canvas'));
+    expect(chip()).not.toBe(again);
   });
 
   it('hides the controls and ignores wheel/drag when Zoom and pan is off', () => {

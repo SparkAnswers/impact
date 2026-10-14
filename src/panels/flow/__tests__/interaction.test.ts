@@ -1,5 +1,5 @@
 import { layeredLayout, radialLayout, type LayoutNode } from '../lib/layout';
-import { MAX_ZOOM, MIN_ZOOM, zoomAt } from '../lib/geometry';
+import { MAX_ZOOM, MIN_ZOOM, wheelZoomFactor, zoomAt } from '../lib/geometry';
 import { groupSegments, segmentsOverlap } from '../lib/groups';
 import { currentVariable, fillLinkTemplate, resolveNodeLink, resolveNodeVariable, safeHref, variableQuery } from '../lib/links';
 import type { FlowNode } from '../types';
@@ -209,5 +209,25 @@ describe('group boxes', () => {
     ];
     expect(groupSegments(placed, 'tb', 10, 10)).toHaveLength(2);
     expect(groupSegments(placed, 'lr', 10, 10)).toHaveLength(2);
+  });
+});
+
+describe('wheelZoomFactor', () => {
+  it('one mouse notch is one +/- button step', () => {
+    expect(wheelZoomFactor({ deltaY: 100, deltaMode: 0, ctrlKey: true }, 500)).toBeCloseTo(0.8, 2);
+    expect(wheelZoomFactor({ deltaY: -100, deltaMode: 0, ctrlKey: true }, 500)).toBeCloseTo(1.25, 2);
+  });
+
+  it('normalises line and page deltas and caps a flicked wheel', () => {
+    // Firefox: 3 lines ≈ 48 px
+    expect(wheelZoomFactor({ deltaY: 3, deltaMode: 1, ctrlKey: true }, 500)).toBeCloseTo(Math.exp(-48 * 0.00223), 4);
+    // A page is capped to 300 px worth of zoom
+    expect(wheelZoomFactor({ deltaY: 1, deltaMode: 2, ctrlKey: false }, 500)).toBeCloseTo(Math.exp(-300 * 0.00223), 4);
+    expect(wheelZoomFactor({ deltaY: 5000, deltaMode: 0, ctrlKey: false }, 500)).toBeCloseTo(Math.exp(-300 * 0.00223), 4);
+  });
+
+  it('gives small pinch deltas a steeper curve', () => {
+    expect(wheelZoomFactor({ deltaY: -5, deltaMode: 0, ctrlKey: true }, 500)).toBeCloseTo(Math.exp(5 * 0.004), 4);
+    expect(wheelZoomFactor({ deltaY: -5, deltaMode: 0, ctrlKey: false }, 500)).toBeCloseTo(Math.exp(5 * 0.00223), 4);
   });
 });

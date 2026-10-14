@@ -17,6 +17,10 @@ import { buildDataDiagram, mergeOverrides, nodeSize, overridesFromMove, shortLab
 import { createExampleDiagram } from './lib/example';
 import { extractGraph } from './lib/frames';
 import { fitViewport, zoomAt } from './lib/geometry';
+import { budgetParticles, DEFAULT_PARTICLE_LIMIT, particlesVisible } from './lib/particles';
+
+const ZOOM_HINT_VIEW = 'Ctrl + scroll (⌘ on Mac) or pinch to zoom at the pointer · drag to pan · double-click to fit';
+const ZOOM_HINT_EDIT = 'Scroll to zoom at the pointer · Space, middle mouse or Alt + drag to pan';
 import { currentVariable, openLink, resolveNodeLink, resolveNodeVariable, variableName, variableQuery } from './lib/links';
 import { Chip, ChipRow } from './components/Chip';
 import { VariableChip } from './components/VariableChip';
@@ -295,6 +299,19 @@ export const FlowPanel: React.FC<PanelProps<FlowOptions>> = ({
     setPrevIsData(isData);
     setUserViewport(false);
   }
+  // A big size change (leaving "view panel", a window resize, a re-arranged dashboard) drops a session zoom
+  // and goes back to the fitted view: a viewport zoomed for a full-screen panel is useless in a small one.
+  const lastSize = useRef({ width, height });
+  useEffect(() => {
+    const prev = lastSize.current;
+    lastSize.current = { width, height };
+    if (editing || !userViewport) {
+      return;
+    }
+    if (Math.abs(width - prev.width) > prev.width * 0.2 || Math.abs(height - prev.height) > prev.height * 0.2) {
+      setUserViewport(false);
+    }
+  }, [width, height, editing, userViewport]);
 
   const emit = useCallback(
     (next: FlowDiagram) => {
@@ -466,6 +483,14 @@ export const FlowPanel: React.FC<PanelProps<FlowOptions>> = ({
   const zoomBy = useCallback((factor: number) => setViewport(zoomAt(effectiveViewport, width / 2, height / 2, factor)), [effectiveViewport, width, height, setViewport]);
   const zoomEnabled = (options.interaction ?? DEFAULT_INTERACTION).zoom !== false;
 
+  // Particles: mode (animated / static / hidden) and the global cap, resolved to per-edge counts.
+  const particleMode = options.animation?.particles ?? 'animated';
+  const particleLimit = options.animation?.particleLimit ?? DEFAULT_PARTICLE_LIMIT;
+  const particleBudget = useMemo(
+    () => (particlesVisible(particleMode, animate) ? budgetParticles(shown.edges, particleLimit) : { counts: new Map<string, number>(), total: 0, limited: false }),
+    [particleMode, animate, shown.edges, particleLimit]
+  );
+
   // Node links (view mode only).
   const links = useMemo(() => ({ ...DEFAULT_LINKS, ...(options.links ?? {}) }), [options.links]);
   const linkFor = useCallback(
@@ -577,6 +602,7 @@ export const FlowPanel: React.FC<PanelProps<FlowOptions>> = ({
         selection={selection}
         viewport={effectiveViewport}
         animate={animate}
+        particleCounts={particleBudget.counts}
         uid={uid}
         opacity={fadeOpacity}
         groupBoxes={isData && dataOpts.groupBoxes}
@@ -616,6 +642,7 @@ export const FlowPanel: React.FC<PanelProps<FlowOptions>> = ({
           <span className={styles.mode}>{isData ? (dataMode === 'overrides' ? 'Design mode · data + overrides' : 'Design mode · data') : 'Design mode'}</span>
           <span className={styles.chip}>
             {Math.round(effectiveViewport.zoom * 100)}% · {diagram.nodes.length} nodes · {diagram.edges.length} edges
+            {particleBudget.limited ? ` · particles capped at ${particleBudget.total}` : ''}
             {isData
               ? dataMode === 'overrides'
                 ? ` · drag nodes to override their position (${overrideCount} overridden)`
@@ -628,7 +655,7 @@ export const FlowPanel: React.FC<PanelProps<FlowOptions>> = ({
           </span>
         </>
       )}
-      {(zoomEnabled || editing) && !empty && <ZoomControls zoom={effectiveViewport.zoom} onZoomIn={() => zoomBy(1.25)} onZoomOut={() => zoomBy(0.8)} onFit={fit} pinned={editing} />}
+      {(zoomEnabled || editing) && !empty && <ZoomControls zoom={effectiveViewport.zoom} onZoomIn={() => zoomBy(1.25)} onZoomOut={() => zoomBy(0.8)} onFit={fit} pinned={editing} hint={editing ? ZOOM_HINT_EDIT : ZOOM_HINT_VIEW} />}
       <ReducedMotionHint animationEnabled={animationEnabled} preference={options.animation?.reducedMotion} width={width} />
       {/* Below the design-mode toolbar and mode chip while editing. */}
       <div className={styles.badgeWrap} style={editing ? { top: 28 } : undefined}>

@@ -243,7 +243,10 @@ With **Interaction → Zoom and pan** on (default), viewers can explore a diagra
 design mode: **Ctrl/⌘ + wheel** (or a trackpad pinch) zooms around the pointer, a plain wheel zooms
 when the panel is viewed on its own (view panel / fullscreen) and scrolls the dashboard otherwise,
 **drag** pans, **double-click** on empty canvas fits the diagram again, and a small **+ / − / fit**
-control appears bottom-right when hovering the panel. The zoom is kept for the session only; the
+control appears bottom-right when hovering the panel (hover its percentage for the key hints). One
+wheel notch is one +/− step (×1.25); the view zooms out to 5 %, so a map of several hundred nodes
+still fits. The zoom is kept for the session only and dropped when the panel size changes a lot
+(for example coming back from **View panel** to the dashboard), so the small panel fits again; the
 saved viewport is never changed outside design mode.
 
 **Links → Node link** is a URL template opened from a node: dashboard variables are interpolated
@@ -316,6 +319,8 @@ result is the same wherever you start from; what survives is the drawn diagram, 
 | Animation → Animation | Enables the particle animation. Automatically static when the tab is hidden. |
 | Animation → Speed | Animation speed multiplier (shown when animation is on). |
 | Animation → Reduced motion | `Follow system setting` (default) pauses the particles when the operating system asks for reduced motion and shows a small pause icon in the panel corner; `Always animate` ignores that setting; `Never animate` keeps the panel static. |
+| Animation → Particles | `Animated` (default): particles travel along the edges and disappear while the animation is paused (Animation off, reduced motion), so nothing is left frozen on the lines. `Static`: paused particles stay in place as direction markers. `Hidden`: no particles at all, the lightest setting for big graphs. |
+| Animation → Particle limit | Most particles drawn at once (default 400, 0 = no limit). Above it every edge's count is scaled down proportionally, never below one per edge; with more edges than the limit only the widest edges keep a single particle. Above 150 particles the glow filter is dropped, which is what keeps large maps smooth. Design mode shows "particles capped at N" in the status line when the cap is active. |
 | Layout → Edit layout | Design mode toggle: toolbar, dragging, drawing, pan and zoom inside the panel. Off by default. |
 | Layout → Grid size | Spacing of the background grid and of snapping, in canvas pixels. |
 | Layout → Snap to grid | Snap node positions while dragging. |
@@ -339,7 +344,7 @@ result is the same wherever you start from; what survives is the drawn diagram, 
 | Data → Prune → Hidden items | Nodes and groups hidden with the right-click menu; restore one or all. The `hidden N · show` chip does the same from the panel. |
 | Data → Edge and node fields | Source, Target, Value, Secondary value, Label, Source group, Target group field / label names for edge frames; Node id, label, group, status, value, image field names for node frames. Empty value fields mean "first numeric field"; a name that matches nothing means "no value". |
 | Data → Node overrides | Inspector for data nodes (overrides mode): label, shape, icon, image URL, status, colour, position; clear one node or reset all. |
-| Interaction → Zoom and pan | View-mode zoom (Ctrl/⌘ + wheel, pinch, plain wheel in view-panel mode), drag to pan, double-click to fit, floating +/−/fit control. Session only. |
+| Interaction → Zoom and pan | View-mode zoom (Ctrl/⌘ + wheel, pinch, plain wheel in view-panel mode), drag to pan, double-click to fit, floating +/−/fit control. Session only; a large panel resize goes back to the fitted view. |
 | Links → Node click | `Open link` (the URL template) or `Set variable`: the click writes the node into a dashboard variable, so every query on the page that uses `$name` follows; a chip in the panel's corner shows the current value and clears it. |
 | Links → Variable / Value / Clear value | Variable name (without `$`), value template with the `${node.*}` tokens (default `${node.id}`, not URL-encoded), and what the clear button writes (empty for a Text box variable, `$__all` for Query/Custom variables with All). |
 | Links → Node link | URL template with dashboard variables and `${node.id|label|group|value|status}` tokens. |
@@ -390,7 +395,7 @@ result is the same wherever you start from; what survives is the drawn diagram, 
 - Map `color` to a field and set thresholds in **Standard options** to get "goes red when
   overloaded" edges without any per-edge configuration.
 - Dashboard variables are interpolated in node labels and sub-labels (`$site`).
-- For 30+ edges keep particle counts around 2-3; the animation runs as one frame loop regardless
+- For 30+ edges keep particle counts around 2-3; the animation runs as one frame loop regardless, and **Animation → Particle limit** (default 400) caps the total for very large graphs; set **Particles** to `Hidden` for the lightest rendering
   of edge count.
 - Data-driven: prefer **Instant + Table** queries; use `label_replace` to rename labels into
   `source` / `target` so one panel can stack several hops (host → pod → claim → volume). Use

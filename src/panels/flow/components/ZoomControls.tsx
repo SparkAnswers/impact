@@ -1,7 +1,7 @@
 import React from 'react';
 import { css, cx } from '@emotion/css';
 import type { GrafanaTheme2 } from '@grafana/data';
-import { IconButton, useStyles2 } from '@grafana/ui';
+import { IconButton, Tooltip, useStyles2 } from '@grafana/ui';
 
 export interface ZoomControlsProps {
   zoom: number;
@@ -10,6 +10,8 @@ export interface ZoomControlsProps {
   onFit: () => void;
   /** Always visible (design mode) instead of only on hover */
   pinned?: boolean;
+  /** Hint shown over the zoom percentage (how to zoom with the wheel) */
+  hint?: string;
 }
 
 const getStyles = (theme: GrafanaTheme2) => ({
@@ -36,12 +38,13 @@ const getStyles = (theme: GrafanaTheme2) => ({
 });
 
 /** Small floating zoom control (bottom-right): zoom in, zoom out, fit. Appears on hover of the panel. */
-export const ZoomControls: React.FC<ZoomControlsProps> = ({ zoom, onZoomIn, onZoomOut, onFit, pinned }) => {
+export const ZoomControls: React.FC<ZoomControlsProps> = ({ zoom, onZoomIn, onZoomOut, onFit, pinned, hint }) => {
   const s = useStyles2(getStyles);
+  const pct = <span className={s.zoom}>{Math.round(zoom * 100)}%</span>;
   return (
     <div className={cx(s.box, pinned && s.pinned)} data-testid="flow-zoom-controls" onPointerDown={(e) => e.stopPropagation()} onDoubleClick={(e) => e.stopPropagation()}>
       <IconButton name="minus" tooltip="Zoom out" aria-label="Zoom out" className={s.btn} size="sm" onClick={onZoomOut} />
-      <span className={s.zoom}>{Math.round(zoom * 100)}%</span>
+      {hint ? <Tooltip content={hint}>{pct}</Tooltip> : pct}
       <IconButton name="plus" tooltip="Zoom in" aria-label="Zoom in" className={s.btn} size="sm" onClick={onZoomIn} />
       <IconButton name="expand-arrows-alt" tooltip="Fit to panel" aria-label="Fit to panel" className={s.btn} size="sm" onClick={onFit} />
     </div>

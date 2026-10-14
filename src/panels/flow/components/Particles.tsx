@@ -1,13 +1,16 @@
 import React, { useEffect, useMemo, useRef } from 'react';
 import type { ResolvedEdge } from './EdgeView';
+import { GLOW_LIMIT, pointAt, samplePath, type SampledPath } from '../lib/particles';
 
 export interface ParticlesProps {
   edges: ResolvedEdge[];
   uid: string;
   /** Global multiplier from the Animation + Appearance options */
   speed: number;
-  /** When false, particles are drawn at static positions (animation off or reduced motion, resolved by the panel) */
+  /** When false, particles are drawn at static positions (Particles = Static while the animation is paused) */
   animate: boolean;
+  /** Particles per edge id after the particle limit (see budgetParticles); edges missing here draw none */
+  counts: Map<string, number>;
   highlight: string;
 }
 
@@ -22,29 +25,53 @@ const BASE_PERIOD = 2.5;
 
 type PathMap = Map<string, SVGPathElement | null>;
 type CircleMap = Map<string, SVGCircleElement | null>;
+type SampleMap = Map<string, SampledPath>;
 
-/** Write particle positions straight to the DOM for every edge. */
-function placeAll(paths: PathMap, circles: CircleMap, progress: Map<string, number>, edges: ResolvedEdge[]) {
-  const byId = new Map(edges.map((e) => [e.edge.id, e]));
-  for (const [key, path] of paths) {
-    const item = byId.get(key);
-    if (!path || !item || typeof path.getTotalLength !== 'function') {
+/** (Re)sample every measuring path whose geometry changed; drop samples of edges that are gone. */
+function resample(paths: PathMap, samples: SampleMap, edges: ResolvedEdge[]) {
+  const live = new Set<string>();
+  for (const e of edges) {
+    live.add(e.edge.id);
+    const path = paths.get(e.edge.id);
+    if (!path) {
       continue;
     }
-    const len = path.getTotalLength();
-    if (!len) {
+    const prev = samples.get(e.edge.id);
+    if (prev && prev.d === e.geo.d) {
       continue;
     }
-    const count = Math.max(0, Math.round(item.edge.particles.count));
+    const s = samplePath(path, e.geo.d);
+    if (s) {
+      samples.set(e.edge.id, s);
+    } else {
+      samples.delete(e.edge.id);
+    }
+  }
+  for (const id of [...samples.keys()]) {
+    if (!live.has(id)) {
+      samples.delete(id);
+    }
+  }
+}
+
+/** Write particle positions straight to the DOM for every edge (pure arithmetic, no path queries). */
+function placeAll(samples: SampleMap, circles: CircleMap, progress: Map<string, number>, counts: Map<string, number>) {
+  for (const [key, count] of counts) {
+    const s = samples.get(key);
+    if (!s) {
+      continue;
+    }
     const p0 = progress.get(key) ?? 0;
     for (let i = 0; i < count; i++) {
       const t = (((p0 + i / count) % 1) + 1) % 1;
-      const pt = path.getPointAtLength(t * len);
+      const pt = pointAt(s, t);
+      const cx = pt.x.toFixed(2);
+      const cy = pt.y.toFixed(2);
       for (const suffix of ['o', 'i']) {
         const c = circles.get(`${key}:${i}:${suffix}`);
         if (c) {
-          c.setAttribute('cx', pt.x.toFixed(2));
-          c.setAttribute('cy', pt.y.toFixed(2));
+          c.setAttribute('cx', cx);
+          c.setAttribute('cy', cy);
         }
       }
     }
@@ -52,32 +79,33 @@ function placeAll(paths: PathMap, circles: CircleMap, progress: Map<string, numb
 }
 
 /**
- * Travelling particles for every edge. A single requestAnimationFrame loop moves all circles using
- * `getPointAtLength` on hidden measuring paths; this stays smooth for dozens of edges because React is
- * not involved per frame (attributes are written directly).
+ * Travelling particles for every edge. A single requestAnimationFrame loop moves all circles; each edge
+ * path is sampled once (when its geometry changes) and the loop only interpolates, so React and the SVG
+ * path engine are both out of the per-frame work. Above GLOW_LIMIT particles the glow filter is dropped.
  */
-export const Particles: React.FC<ParticlesProps> = ({ edges, uid, speed, animate, highlight }) => {
+export const Particles: React.FC<ParticlesProps> = ({ edges, uid, speed, animate, counts, highlight }) => {
   const paths = useRef<PathMap>(new Map());
   const circles = useRef<CircleMap>(new Map());
+  const samples = useRef<SampleMap>(new Map());
   const progress = useRef(new Map<string, number>());
   const edgesRef = useRef(edges);
+  const countsRef = useRef(counts);
   useEffect(() => {
     edgesRef.current = edges;
-  }, [edges]);
+    countsRef.current = counts;
+  }, [edges, counts]);
 
   const slots = useMemo(() => {
     const out: Slot[] = [];
     for (const e of edges) {
-      if (!e.edge.particles.enabled) {
-        continue;
-      }
-      const count = Math.max(0, Math.round(e.edge.particles.count));
+      const count = counts.get(e.edge.id) ?? 0;
       for (let i = 0; i < count; i++) {
         out.push({ edgeId: e.edge.id, index: i, count });
       }
     }
     return out;
-  }, [edges]);
+  }, [edges, counts]);
+  const glow = slots.length <= GLOW_LIMIT;
 
   const running = animate;
 
@@ -86,7 +114,7 @@ export const Particles: React.FC<ParticlesProps> = ({ edges, uid, speed, animate
     let last = performance.now();
     let active = true;
 
-    const place = () => placeAll(paths.current, circles.current, progress.current, edgesRef.current);
+    const place = () => placeAll(samples.current, circles.current, progress.current, countsRef.current);
 
     const tick = (now: number) => {
       if (!active) {
@@ -97,6 +125,9 @@ export const Particles: React.FC<ParticlesProps> = ({ edges, uid, speed, animate
       if (!document.hidden) {
         for (const item of edgesRef.current) {
           const key = item.edge.id;
+          if (!countsRef.current.has(key)) {
+            continue;
+          }
           const dir = item.reversed ? -1 : 1;
           const v = (item.edge.particles.speed * item.speed * speed * dir) / BASE_PERIOD;
           progress.current.set(key, ((progress.current.get(key) ?? 0) + v * dt) % 1);
@@ -106,6 +137,7 @@ export const Particles: React.FC<ParticlesProps> = ({ edges, uid, speed, animate
       raf = requestAnimationFrame(tick);
     };
 
+    resample(paths.current, samples.current, edgesRef.current);
     place();
     if (running) {
       raf = requestAnimationFrame(tick);
@@ -121,26 +153,29 @@ export const Particles: React.FC<ParticlesProps> = ({ edges, uid, speed, animate
     };
   }, [running, speed, slots]);
 
-  // Re-place whenever geometry changes (e.g. a node is dragged) without restarting the loop.
+  // Re-sample and re-place whenever geometry changes (e.g. a node is dragged) without restarting the loop.
   useEffect(() => {
-    placeAll(paths.current, circles.current, progress.current, edges);
-  }, [edges]);
+    resample(paths.current, samples.current, edges);
+    placeAll(samples.current, circles.current, progress.current, counts);
+  }, [edges, counts]);
 
   const byId = useMemo(() => new Map(edges.map((e) => [e.edge.id, e])), [edges]);
 
   return (
-    <g style={{ pointerEvents: 'none' }} data-testid="flow-particles">
-      {edges.map((e) => (
-        <path
-          key={e.edge.id}
-          d={e.geo.d}
-          fill="none"
-          stroke="none"
-          ref={(el) => {
-            paths.current.set(e.edge.id, el);
-          }}
-        />
-      ))}
+    <g style={{ pointerEvents: 'none' }} data-testid="flow-particles" data-glow={glow ? 'on' : 'off'}>
+      {edges.map((e) =>
+        counts.has(e.edge.id) ? (
+          <path
+            key={e.edge.id}
+            d={e.geo.d}
+            fill="none"
+            stroke="none"
+            ref={(el) => {
+              paths.current.set(e.edge.id, el);
+            }}
+          />
+        ) : null
+      )}
       {slots.map((s) => {
         const item = byId.get(s.edgeId);
         if (!item) {
@@ -148,13 +183,14 @@ export const Particles: React.FC<ParticlesProps> = ({ edges, uid, speed, animate
         }
         const size = item.edge.particles.size;
         const r = Math.max(1, size * 0.6 + item.width * 0.4);
+        const filter = glow ? `url(#${uid}-pglow)` : undefined;
         return (
           <React.Fragment key={`${s.edgeId}:${s.index}`}>
             <circle
               r={r + 1.8}
               fill={item.color}
               opacity={0.5}
-              filter={`url(#${uid}-pglow)`}
+              filter={filter}
               ref={(el) => {
                 circles.current.set(`${s.edgeId}:${s.index}:o`, el);
               }}
@@ -162,7 +198,7 @@ export const Particles: React.FC<ParticlesProps> = ({ edges, uid, speed, animate
             <circle
               r={r}
               fill={highlight}
-              filter={`url(#${uid}-pglow)`}
+              filter={filter}
               ref={(el) => {
                 circles.current.set(`${s.edgeId}:${s.index}:i`, el);
               }}

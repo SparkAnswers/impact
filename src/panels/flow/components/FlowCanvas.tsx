@@ -4,7 +4,7 @@ import { locationService } from '@grafana/runtime';
 import { ContextMenu, Input, MenuGroup, MenuItem } from '@grafana/ui';
 import { applyBinding, formatValue, type FieldValue } from '../lib/data';
 import { groupPalette } from '../lib/datadriven';
-import { edgeGeometry, hitNode, nearestSide, portOffsets, snap, uniqueId, zoomAt } from '../lib/geometry';
+import { edgeGeometry, hitNode, nearestSide, portOffsets, snap, uniqueId, wheelZoomFactor, zoomAt } from '../lib/geometry';
 import { groupSegments, type GroupHints } from '../lib/groups';
 import type { VariableAction } from '../lib/links';
 import {
@@ -38,6 +38,8 @@ export interface FlowCanvasProps {
   selection?: FlowSelection;
   viewport: Viewport;
   animate: boolean;
+  /** Particles per edge id after the Particles mode and limit are applied; empty = none drawn */
+  particleCounts: Map<string, number>;
   uid: string;
   /** Enter / leave opacities keyed by `node:<id>` / `edge:<id>` (data-driven diagrams) */
   opacity?: Map<string, number>;
@@ -114,6 +116,7 @@ export const FlowCanvas: React.FC<FlowCanvasProps> = (props) => {
     selection,
     viewport,
     animate,
+    particleCounts,
     uid,
     opacity,
     groupBoxes,
@@ -265,9 +268,7 @@ export const FlowCanvas: React.FC<FlowCanvasProps> = (props) => {
       }
       e.preventDefault();
       const rect = el.getBoundingClientRect();
-      // Pinch gestures arrive as Ctrl + wheel with small deltas; scale them up a bit.
-      const factor = Math.exp(-e.deltaY * (e.ctrlKey ? 0.004 : 0.0015));
-      onViewport(zoomAt(viewportRef.current, e.clientX - rect.left, e.clientY - rect.top, factor));
+      onViewport(zoomAt(viewportRef.current, e.clientX - rect.left, e.clientY - rect.top, wheelZoomFactor(e, rect.height)));
     };
     el.addEventListener('wheel', onWheel, { passive: false });
     return () => el.removeEventListener('wheel', onWheel);
@@ -720,7 +721,6 @@ export const FlowCanvas: React.FC<FlowCanvasProps> = (props) => {
             />
           ))}
         </g>
-        <Particles edges={resolved} uid={uid} speed={options.animation.speed * options.appearance.particleSpeed} animate={animate} highlight={theme.isDark ? '#ffffff' : theme.colors.text.primary} />
         <g>
           {diagram.nodes.map((n) => {
             const fv = n.valueField ? fields.get(n.valueField) : undefined;
@@ -827,6 +827,28 @@ export const FlowCanvas: React.FC<FlowCanvasProps> = (props) => {
         )}
       </g>
     </svg>
+    {particleCounts.size > 0 && (
+      // Own SVG on its own compositing layer: moving the particles repaints this (mostly empty) layer only,
+      // not the whole diagram, which is what keeps big graphs smooth.
+      <svg
+        width={width}
+        height={height}
+        viewBox={`0 0 ${width} ${height}`}
+        style={{ position: 'absolute', left: 0, top: 0, pointerEvents: 'none', willChange: 'transform' }}
+        data-testid="flow-particle-layer"
+      >
+        <g transform={`translate(${viewport.x} ${viewport.y}) scale(${viewport.zoom})`}>
+          <Particles
+            edges={resolved}
+            uid={uid}
+            speed={options.animation.speed * options.appearance.particleSpeed}
+            animate={animate}
+            counts={particleCounts}
+            highlight={theme.isDark ? '#ffffff' : theme.colors.text.primary}
+          />
+        </g>
+      </svg>
+    )}
     {menuEnabled && menu && <ContextMenu x={menu.x} y={menu.y} onClose={closeMenu} renderMenuItems={renderMenuItems} />}
     </>
   );

@@ -88,6 +88,7 @@ Draws a diagram you design inside the panel, or builds one from query results. N
 | Node style             | `Cards` (filled, status accent) or `Minimal` (outlined)                                     |
 | Default edge colour    | Colour for edges without their own                                                          |
 | Particle speed         | Global multiplier for every edge                                                            |
+| Particles              | `Animated` (gone while paused), `Static` or `Hidden`, plus a particle limit for big graphs   |
 | Edit layout            | Design mode: toolbar, dragging, drawing, pan and zoom. Off by default so viewers never move things |
 | Grid size / Snap       | Grid spacing and snapping while dragging                                                    |
 | Fit to panel           | Scale and centre the diagram to the panel when not editing                                  |
