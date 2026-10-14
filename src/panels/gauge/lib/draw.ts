@@ -1,7 +1,7 @@
 import { colorManipulator } from '@grafana/data';
 import { computeLayout, type Layout, type LayoutInput } from './layout';
 import { type LiveWindow, scrollX } from './live';
-import { type ArcSpec, clamp, fractionToAngle, polar, type ScaleSpec, signedArc, valueToFraction } from './scale';
+import { type ArcSpec, clamp, degToRad, fractionToAngle, polar, type ScaleSpec, signedArc, valueToFraction } from './scale';
 
 export interface TickModel {
   value: number;
@@ -251,18 +251,20 @@ export function drawStaticLayer(ctx: CanvasRenderingContext2D, model: GaugeModel
       drawValueText(ctx, model, L, model.valueText);
     }
     if (model.valueLabel) {
-      ctx.font = `500 ${L.subtitleFont}px ${font}`;
+      const fit = fitLine(ctx, model.valueLabel, L.subtitleFont, '500', font, clearHalfWidth(model, L, L.valueLabelY, L.subtitleFont * 0.75) * 2);
+      ctx.font = `500 ${fit.size}px ${font}`;
       ctx.fillStyle = model.colors.textSecondary;
-      ctx.fillText(model.valueLabel, cx, L.valueLabelY);
+      ctx.fillText(fit.text, cx, L.valueLabelY);
     }
   }
   if (L.showSecondary && model.secondaryText) {
-    drawEmphasisedLine(ctx, model.secondaryText, cx, L.secondaryY, L.secondaryFont, font, model.colors.text);
+    drawEmphasisedLine(ctx, model.secondaryText, cx, L.secondaryY, L.secondaryFont, font, model.colors.text, clearHalfWidth(model, L, L.secondaryY, L.secondaryFont * 0.75) * 2);
     if (model.subtitleText && L.showSubtitle) {
-      ctx.font = `400 ${L.subtitleFont}px ${font}`;
+      const fit = fitLine(ctx, model.subtitleText, L.subtitleFont, '400', font, clearHalfWidth(model, L, L.subtitleY, L.subtitleFont * 0.75) * 2);
+      ctx.font = `400 ${fit.size}px ${font}`;
       ctx.fillStyle = model.colors.textSecondary;
       ctx.textAlign = 'center';
-      ctx.fillText(model.subtitleText, cx, L.subtitleY);
+      ctx.fillText(fit.text, cx, L.subtitleY);
     }
   }
   if (L.showTitle && model.titleText) {
@@ -381,40 +383,113 @@ export function drawLiveLayer(ctx: CanvasRenderingContext2D, model: GaugeModel, 
   // Stale caption.
   if (live.staleText && L.showStale) {
     ctx.save();
-    ctx.font = `400 ${L.subtitleFont}px ${font}`;
+    const fit = fitLine(ctx, live.staleText, L.subtitleFont, '400', font, clearHalfWidth(model, L, L.staleY, L.subtitleFont * 0.75) * 2);
+    ctx.font = `400 ${fit.size}px ${font}`;
     ctx.fillStyle = model.colors.textDisabled;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'alphabetic';
-    ctx.fillText(live.staleText, cx, L.staleY);
+    ctx.fillText(fit.text, cx, L.staleY);
     ctx.restore();
   }
 }
 
-/** Draws the big number with its unit suffix in a smaller, secondary-coloured font. */
+/**
+ * Half of the width free of the ring, its ends and the end tick labels on the text line whose alphabetic baseline
+ * is `y` and whose glyphs rise `lineHeight` above it. Inside the ring's inner circle that is the chord; below it,
+ * the gap between the two arc ends (and between their labels while the line is level with them).
+ */
+export function clearHalfWidth(model: Pick<GaugeModel, 'arc' | 'ringWidth'>, L: Layout, y: number, lineHeight: number): number {
+  const dy = y - L.cy;
+  const top = dy - lineHeight;
+  const inner = L.innerRadius;
+  if (dy <= inner) {
+    const d = Math.max(Math.abs(dy), Math.abs(top));
+    return Math.max(0, Math.sqrt(Math.max(0, inner * inner - d * d)) - 2);
+  }
+  let half = Infinity;
+  for (const deg of [model.arc.startAngle, model.arc.startAngle + model.arc.sweepAngle]) {
+    const a = degToRad(deg);
+    const sin = Math.sin(a);
+    const cos = Math.cos(a);
+    if (sin <= 0) {
+      continue; // this end sits above the centre: nothing of it is down here
+    }
+    const ringBottom = sin * (L.r + model.ringWidth / 2);
+    if (top < ringBottom) {
+      half = Math.min(half, Math.abs(cos) * (L.r - model.ringWidth / 2) - 4);
+    }
+    if (L.showTicks && L.showTickLabels) {
+      const labelY = sin * L.tickLabelRadius;
+      if (top < labelY + L.tickFont * 0.6 && dy > labelY - L.tickFont * 0.6) {
+        half = Math.min(half, Math.abs(cos) * L.tickLabelRadius - L.tickFont * 1.8);
+      }
+    }
+  }
+  return Math.max(0, half);
+}
+
+/** Shrinks a font (never below `min`) and then shortens the text with an ellipsis until it fits `maxWidth`. */
+export function fitLine(ctx: CanvasRenderingContext2D, text: string, size: number, weight: string, font: string, maxWidth: number, min = 9): { size: number; text: string } {
+  if (!Number.isFinite(maxWidth)) {
+    return { size, text };
+  }
+  const width = (s: number, t: string) => {
+    ctx.font = `${weight} ${s}px ${font}`;
+    return ctx.measureText(t).width;
+  };
+  let s = size;
+  let w = width(s, text);
+  if (w <= maxWidth) {
+    return { size, text };
+  }
+  s = Math.max(min, Math.floor((size * maxWidth) / w));
+  if (width(s, text) <= maxWidth) {
+    return { size: s, text };
+  }
+  let t = text;
+  while (t.length > 1 && width(s, `${t.trimEnd()}…`) > maxWidth) {
+    t = t.slice(0, -1);
+  }
+  return { size: s, text: t.length > 1 ? `${t.trimEnd()}…` : '' };
+}
+
+/** Draws the big number with its unit suffix in a smaller, secondary-coloured font, shrunk to the clear width. */
 function drawValueText(ctx: CanvasRenderingContext2D, model: GaugeModel, L: Layout, v: TextPart) {
   const font = model.fontFamily;
   const main = `${v.prefix ?? ''}${v.text}`;
   const suffix = v.suffix ? ` ${v.suffix.trim()}` : '';
   ctx.save();
   ctx.textBaseline = 'alphabetic';
-  ctx.font = `300 ${L.valueFont}px ${font}`;
-  const tw = ctx.measureText(main).width;
-  ctx.font = `400 ${L.valueUnitFont}px ${font}`;
-  const uw = suffix ? ctx.measureText(suffix).width : 0;
+  let valueFont = L.valueFont;
+  let unitFont = L.valueUnitFont;
+  const measure = () => {
+    ctx.font = `300 ${valueFont}px ${font}`;
+    const tw = ctx.measureText(main).width;
+    ctx.font = `400 ${unitFont}px ${font}`;
+    return { tw, uw: suffix ? ctx.measureText(suffix).width : 0 };
+  };
+  let { tw, uw } = measure();
+  const maxWidth = clearHalfWidth(model, L, L.valueY, valueFont * 0.75) * 2;
+  if (Number.isFinite(maxWidth) && tw + uw > maxWidth && maxWidth > 0) {
+    const k = Math.max(10 / valueFont, maxWidth / (tw + uw));
+    valueFont = Math.max(10, Math.floor(valueFont * k));
+    unitFont = Math.max(8, Math.floor(unitFont * k));
+    ({ tw, uw } = measure());
+  }
   const x0 = L.cx - (tw + uw) / 2;
   ctx.textAlign = 'left';
   ctx.fillStyle = model.colors.text;
-  ctx.font = `300 ${L.valueFont}px ${font}`;
+  ctx.font = `300 ${valueFont}px ${font}`;
   ctx.fillText(main, x0, L.valueY);
   if (suffix) {
-    ctx.font = `400 ${L.valueUnitFont}px ${font}`;
+    ctx.font = `400 ${unitFont}px ${font}`;
     ctx.fillStyle = model.colors.textSecondary;
     ctx.fillText(suffix, x0 + tw, L.valueY);
   }
   ctx.restore();
 }
 
-/** Draws "Avg. 378 Wh/mi" with the first number in bold. */
+/** Draws "Avg. 378 Wh/mi" with the first number in bold, shrunk (then shortened) to `maxWidth`. */
 function drawEmphasisedLine(
   ctx: CanvasRenderingContext2D,
   text: string,
@@ -422,23 +497,40 @@ function drawEmphasisedLine(
   y: number,
   size: number,
   font: string,
-  color: string
+  color: string,
+  maxWidth = Infinity
 ) {
   ctx.fillStyle = color;
   const m = /^(.*?)(-?\d[\d.,]*)(.*)$/.exec(text);
-  const regular = `400 ${size}px ${font}`;
-  const bold = `600 ${size}px ${font}`;
   if (!m) {
-    ctx.font = regular;
+    const fit = fitLine(ctx, text, size, '400', font, maxWidth);
+    ctx.font = `400 ${fit.size}px ${font}`;
     ctx.textAlign = 'center';
-    ctx.fillText(text, cx, y);
+    ctx.fillText(fit.text, cx, y);
     return;
   }
-  ctx.font = regular;
-  const w1 = ctx.measureText(m[1]).width;
-  const w3 = ctx.measureText(m[3]).width;
-  ctx.font = bold;
-  const w2 = ctx.measureText(m[2]).width;
+  const widths = (s: number) => {
+    ctx.font = `400 ${s}px ${font}`;
+    const w1 = ctx.measureText(m[1]).width;
+    const w3 = ctx.measureText(m[3]).width;
+    ctx.font = `600 ${s}px ${font}`;
+    return { w1, w2: ctx.measureText(m[2]).width, w3 };
+  };
+  let { w1, w2, w3 } = widths(size);
+  if (Number.isFinite(maxWidth) && w1 + w2 + w3 > maxWidth) {
+    size = Math.max(9, Math.floor((size * maxWidth) / (w1 + w2 + w3)));
+    ({ w1, w2, w3 } = widths(size));
+    if (w1 + w2 + w3 > maxWidth) {
+      // Still too wide at the smallest size: plain text with an ellipsis.
+      const fit = fitLine(ctx, text, size, '400', font, maxWidth);
+      ctx.font = `400 ${fit.size}px ${font}`;
+      ctx.textAlign = 'center';
+      ctx.fillText(fit.text, cx, y);
+      return;
+    }
+  }
+  const regular = `400 ${size}px ${font}`;
+  const bold = `600 ${size}px ${font}`;
   let x = cx - (w1 + w2 + w3) / 2;
   ctx.textAlign = 'left';
   ctx.font = regular;

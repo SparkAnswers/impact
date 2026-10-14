@@ -199,5 +199,5 @@ Standard field options used: Unit, Decimals, Min, Max, Thresholds, Color, Displa
 - The secondary line accepts any free text, so `Net {value}` with the Sum reducer and a `kWh` unit
   override gives an energy total under a power reading.
 - The canvas never paints an opaque background, so Grafana's panel option *Transparent background* works as expected.
-- Tiny panels (below about 150 px) hide tick labels, then the stale caption, subtitle and secondary line, then the value.
+- Tiny panels (below about 150 px) hide tick labels, then the stale caption, subtitle and secondary line, then the value. When the arc opens at the bottom, the secondary line and subtitle sit below the ring ends and their tick labels rather than level with them; a line that would still be wider than the free space at its height is shrunk (to 9 px) and then shortened with an ellipsis, so text never overlaps the ring.
 - Live motion only animates samples you already have; to compare, put a copy of the panel next to it with the *Live motion* switches off (see the demo dashboard).

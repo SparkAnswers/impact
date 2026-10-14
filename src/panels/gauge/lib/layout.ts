@@ -101,33 +101,56 @@ function fontsFor(r: number, valueFontPx: number | undefined): Fonts {
   };
 }
 
-/** Height in px of the text block under the history chart (value + secondary + subtitle, incl. descenders). */
-function textBlockHeight(
-  f: Fonts,
-  r: number,
-  showValue: boolean,
-  showSecondary: boolean,
-  showSubtitle: boolean,
-  hasValueLabel: boolean,
-  showStale: boolean
-): number {
-  let h = 0;
-  if (showValue) {
-    h += f.valueFont * 0.95 + r * 0.04 + (hasValueLabel ? f.subtitleFont * 1.4 : 0);
-  }
-  if (showSecondary) {
-    h += (showValue ? 0 : r * 0.1) + f.secondaryFont * 1.45;
-    if (showSubtitle) {
-      h += f.subtitleFont * 1.3;
+/** Lowest point (px below the centre) of the ring ends and their tick labels, -Infinity when no end is in the lower half. */
+function endsFloor(arc: ArcSpec, r: number, ringWidth: number, showTickLabels: boolean, tickFont: number): number {
+  let floor = -Infinity;
+  for (const deg of [arc.startAngle, arc.startAngle + clamp(arc.sweepAngle, 0, 360)]) {
+    const s = Math.sin(degToRad(deg));
+    if (s <= 0.05) {
+      continue;
     }
-    if (showStale) {
-      h += f.subtitleFont * 1.25;
+    floor = Math.max(floor, s * (r + ringWidth / 2) + 4);
+    if (showTickLabels) {
+      floor = Math.max(floor, s * (r + Math.max(14, r * 0.13)) + tickFont * 0.6 + 2);
     }
-    h += (showSubtitle || showStale ? f.subtitleFont : f.secondaryFont) * 0.3;
-  } else if (showValue) {
-    h += f.valueFont * 0.1;
   }
-  return h;
+  return floor;
+}
+
+interface TextPlacement {
+  historyBottom: number;
+  valueLabelY: number;
+  valueY: number;
+  secondaryY: number;
+  subtitleY: number;
+  staleY: number;
+  /** Bottom of the text block (px below the centre, descenders included). */
+  bottom: number;
+}
+
+/**
+ * Baselines of the text lines, in px below the centre. The big value sits under the history chart inside the
+ * ring. The secondary line and the subtitle go below it, but never level with the ring's ends: when the arc opens
+ * at the bottom they move under the ends and their tick labels, where the full panel width is free.
+ */
+function placeText(input: LayoutInput, r: number, f: Fonts, innerRadius: number, flags: { showValue: boolean; showSecondary: boolean; showSubtitle: boolean; showStale: boolean; hasValueLabel: boolean; showTickLabels: boolean }): TextPlacement {
+  const hasText = flags.showValue || flags.showSecondary;
+  const historyBottom = hasText ? r * 0.14 : innerRadius * 0.5;
+  const valueLabelY = historyBottom + f.subtitleFont * 1.1;
+  const valueY = historyBottom + f.valueFont * 0.95 + r * 0.04 + (flags.hasValueLabel ? f.subtitleFont * 1.4 : 0);
+  let secondaryTop = flags.showValue ? valueY : historyBottom + r * 0.1;
+  if (flags.showSecondary) {
+    secondaryTop = Math.max(secondaryTop, endsFloor(input.arc, r, input.ringWidth, flags.showTickLabels, f.tickFont));
+  }
+  const secondaryY = secondaryTop + f.secondaryFont * 1.45;
+  const subtitleY = secondaryY + f.subtitleFont * 1.3;
+  const staleY = (flags.showSubtitle ? subtitleY : secondaryY) + f.subtitleFont * 1.25;
+  let bottom = flags.showValue ? valueY + f.valueFont * 0.1 : historyBottom;
+  if (flags.showSecondary) {
+    const last = flags.showStale ? staleY : flags.showSubtitle ? subtitleY : secondaryY;
+    bottom = Math.max(bottom, last + (flags.showSubtitle || flags.showStale ? f.subtitleFont : f.secondaryFont) * 0.3);
+  }
+  return { historyBottom, valueLabelY, valueY, secondaryY, subtitleY, staleY, bottom };
 }
 
 export function computeLayout(input: LayoutInput): Layout {
@@ -151,13 +174,16 @@ export function computeLayout(input: LayoutInput): Layout {
   const availH = Math.max(10, height - pad * 2 - titleReserve);
   const fitRadius = () => Math.max(8, Math.min(availW / (box.maxX - box.minX), availH / (box.maxY - box.minY)));
   const ringBottom = box.maxY; // bottom of ring/labels (and the nominal text area)
+  const innerFor = (r: number) => Math.max(4, r - input.ringWidth / 2 - Math.max(4, r * 0.04));
+  const flags = () => ({ showValue, showSecondary, showSubtitle, showStale, hasValueLabel, showTickLabels });
 
-  // Fit, then make sure the text block really fits under the history chart; font minimums can make it
-  // taller than the nominal 0.9 r at small sizes. Grow the box and refit, hiding lines when needed.
+  // Fit, then make sure the text block really fits: font minimums and the lines pushed under the ring's ends
+  // can make it taller than the nominal 0.9 r. Grow the box and refit, hiding lines when the panel is too short.
   let r = fitRadius();
   let fonts = fontsFor(r, input.valueFontPx);
-  for (let pass = 0; pass < 3 && hasText; pass++) {
-    const needed = (0.14 * r + textBlockHeight(fonts, r, showValue, showSecondary, showSubtitle, hasValueLabel, showStale)) / r;
+  let text = placeText(input, r, fonts, innerFor(r), flags());
+  for (let pass = 0; pass < 8 && hasText; pass++) {
+    const needed = text.bottom / r + 0.02;
     if (needed <= box.maxY + 1e-6) {
       break;
     }
@@ -165,7 +191,7 @@ export function computeLayout(input: LayoutInput): Layout {
     r = fitRadius();
     fonts = fontsFor(r, input.valueFontPx);
     // When the box has grown far beyond the ring, the panel is too short: drop lines instead of shrinking the ring.
-    if (box.maxY > ringBottom + 0.35 || r < 40) {
+    if (box.maxY > ringBottom + 0.55 || r < 40) {
       if (showStale) {
         showStale = false;
       } else if (showSubtitle) {
@@ -177,6 +203,7 @@ export function computeLayout(input: LayoutInput): Layout {
       r = fitRadius();
       fonts = fontsFor(r, input.valueFontPx);
     }
+    text = placeText(input, r, fonts, innerFor(r), flags());
   }
 
   const contentW = (box.maxX - box.minX) * r;
@@ -190,9 +217,9 @@ export function computeLayout(input: LayoutInput): Layout {
 
   // History box: as large as fits entirely inside the ring's inner edge. Its half width is the chord of
   // the inner circle at the box's top and bottom (whichever is narrower).
-  const innerRadius = Math.max(4, r - input.ringWidth / 2 - Math.max(4, r * 0.04));
+  const innerRadius = innerFor(r);
   const historyTop = cy - innerRadius * 0.74;
-  const historyBottom = cy + (hasText ? r * 0.14 : innerRadius * 0.5);
+  const historyBottom = cy + text.historyBottom;
   const chord = (dy: number) => Math.sqrt(Math.max(0, innerRadius * innerRadius - dy * dy));
   const halfW = Math.max(2, Math.min(chord(historyTop - cy), chord(historyBottom - cy)));
   const history = {
@@ -202,11 +229,11 @@ export function computeLayout(input: LayoutInput): Layout {
     h: Math.max(4, historyBottom - historyTop),
   };
 
-  const valueLabelY = historyBottom + subtitleFont * 1.1;
-  const valueY = historyBottom + valueFont * 0.95 + r * 0.04 + (hasValueLabel ? subtitleFont * 1.4 : 0);
-  const secondaryY = (showValue ? valueY : historyBottom + r * 0.1) + secondaryFont * 1.45;
-  const subtitleY = secondaryY + subtitleFont * 1.3;
-  const staleY = (showSubtitle ? subtitleY : secondaryY) + subtitleFont * 1.25;
+  const valueLabelY = cy + text.valueLabelY;
+  const valueY = cy + text.valueY;
+  const secondaryY = cy + text.secondaryY;
+  const subtitleY = cy + text.subtitleY;
+  const staleY = cy + text.staleY;
   const titleY = input.titlePosition === 'top' ? pad + titleFont : height - pad - 4;
 
   return {

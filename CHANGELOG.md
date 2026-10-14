@@ -11,6 +11,10 @@ Flow River
 
 - Zoom and pan in view mode: Ctrl / ⌘ + wheel zooms at the pointer, drag pans, double-click fits, a +/−/fit control and a Back chip; Interaction > Zoom and pan turns it off
 
+Power Gauge
+
+- Text no longer spills over the ring in short panels: the secondary line and subtitle move under the ring's ends, every line is shrunk or shortened to the width that is free at its height, and the subtitle is hidden before anything overlaps
+
 ## 1.0.1 (2026-10-14)
 
 Flow Designer
