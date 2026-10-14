@@ -27,6 +27,8 @@ export interface NodeViewProps {
   onClick?: (node: FlowNode) => void;
   onPointerDown?: (e: React.PointerEvent<SVGGElement>, node: FlowNode) => void;
   onDoubleClick?: (node: FlowNode) => void;
+  /** Right-click (view mode context menu) */
+  onContextMenu?: (e: React.MouseEvent<SVGGElement>, node: FlowNode) => void;
   onPortPointerDown?: (e: React.PointerEvent<SVGCircleElement>, node: FlowNode, side: ResolvedSide) => void;
 }
 
@@ -64,6 +66,7 @@ export const NodeView: React.FC<NodeViewProps> = ({
   onClick,
   onPointerDown,
   onDoubleClick,
+  onContextMenu,
   onPortPointerDown,
 }) => {
   const hub = n.shape === 'hub';
@@ -155,6 +158,7 @@ export const NodeView: React.FC<NodeViewProps> = ({
       onPointerDown={onPointerDown ? (e) => onPointerDown(e, n) : undefined}
       onClick={onClick ? () => onClick(n) : undefined}
       onDoubleClick={onDoubleClick ? () => onDoubleClick(n) : undefined}
+      onContextMenu={onContextMenu ? (e) => onContextMenu(e, n) : undefined}
       data-testid={`flow-node-${n.id}`}
       aria-label={n.label}
     >

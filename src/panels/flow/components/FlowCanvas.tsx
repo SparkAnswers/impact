@@ -1,10 +1,11 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { GrafanaTheme2 } from '@grafana/data';
-import { Input } from '@grafana/ui';
+import { ContextMenu, Input, MenuGroup, MenuItem } from '@grafana/ui';
 import { applyBinding, formatValue, type FieldValue } from '../lib/data';
 import { groupPalette } from '../lib/datadriven';
 import { edgeGeometry, hitNode, nearestSide, portOffsets, snap, uniqueId, zoomAt } from '../lib/geometry';
 import { groupSegments, type GroupHints } from '../lib/groups';
+import type { VariableAction } from '../lib/links';
 import {
   DEFAULT_EDGE,
   DEFAULT_NODE,
@@ -51,6 +52,16 @@ export interface FlowCanvasProps {
   onOpenLink?: (href: string) => void;
   /** Runs on the link trigger before the link; returning true consumes the click (e.g. sets a variable). */
   onNodeAction?: (node: FlowNode) => boolean;
+  /** The dashboard variable a node would set (Links action `variable`), for the context menu */
+  variableFor?: (node: FlowNode) => VariableAction | undefined;
+  onSetVariable?: (action: VariableAction) => void;
+  /**
+   * Data-driven diagrams, view mode: enables the right-click menu on nodes and group labels. Hides a node or a
+   * group, or toggles the Collapse groups rule.
+   */
+  onPrune?: (change: PruneChange) => void;
+  /** Whether the Collapse groups rule is on (labels the toggle; collapsed nodes are groups) */
+  collapsed?: boolean;
   onFit?: () => void;
   onViewport: (vp: Viewport) => void;
   onSelect: (sel?: FlowSelection) => void;
@@ -60,6 +71,15 @@ export interface FlowCanvasProps {
   onCommit: (d: FlowDiagram) => void;
   onTool: (t: Tool) => void;
 }
+
+export interface PruneChange {
+  hideNode?: string;
+  hideGroup?: string;
+  toggleCollapse?: boolean;
+}
+
+/** What the context menu was opened on */
+type MenuTarget = { x: number; y: number } & ({ kind: 'node'; node: FlowNode } | { kind: 'group'; group: string });
 
 type Drag =
   | { type: 'node'; id: string; start: Point; orig: Point; moved: boolean }
@@ -102,6 +122,10 @@ export const FlowCanvas: React.FC<FlowCanvasProps> = (props) => {
     linkTrigger = 'off',
     onOpenLink,
     onNodeAction,
+    variableFor,
+    onSetVariable,
+    onPrune,
+    collapsed,
     onFit,
     onViewport,
     onSelect,
@@ -110,6 +134,9 @@ export const FlowCanvas: React.FC<FlowCanvasProps> = (props) => {
     onTool,
   } = props;
   const viewZoom = !editing && !!zoomEnabled;
+  const menuEnabled = !editing && !!onPrune;
+  const [menu, setMenu] = useState<MenuTarget | undefined>();
+  const closeMenu = useCallback(() => setMenu(undefined), []);
   const svgRef = useRef<SVGSVGElement>(null);
   const dragRef = useRef<Drag | undefined>(undefined);
   const draftRef = useRef<FlowDiagram>(diagram);
@@ -528,6 +555,71 @@ export const FlowCanvas: React.FC<FlowCanvasProps> = (props) => {
     onFit();
   };
 
+  const onNodeContextMenu = (e: React.MouseEvent<SVGGElement>, node: FlowNode) => {
+    if (!menuEnabled) {
+      return;
+    }
+    e.preventDefault();
+    e.stopPropagation();
+    setMenu({ kind: 'node', node, x: e.clientX, y: e.clientY });
+  };
+
+  const onGroupContextMenu = (e: React.MouseEvent<SVGTextElement>, group: string) => {
+    if (!menuEnabled) {
+      return;
+    }
+    e.preventDefault();
+    e.stopPropagation();
+    setMenu({ kind: 'group', group, x: e.clientX, y: e.clientY });
+  };
+
+  const hasGroups = diagram.nodes.some((n) => !!n.group);
+
+  const renderMenuItems = () => {
+    if (!menu || !onPrune) {
+      return null;
+    }
+    const collapseItem =
+      hasGroups || collapsed ? (
+        <MenuItem
+          key="collapse"
+          label={collapsed ? 'Expand groups' : 'Collapse groups'}
+          icon={collapsed ? 'expand-arrows' : 'compress-arrows'}
+          ariaChecked={!!collapsed}
+          role="menuitemcheckbox"
+          onClick={() => onPrune({ toggleCollapse: true })}
+        />
+      ) : null;
+    if (menu.kind === 'group') {
+      return (
+        <MenuGroup label={menu.group}>
+          <MenuItem label={`Hide group ${menu.group}`} icon="eye-slash" onClick={() => onPrune({ hideGroup: menu.group })} />
+          {collapseItem}
+        </MenuGroup>
+      );
+    }
+    const node = menu.node;
+    // A collapsed group is drawn as one node named after the group: hiding it means hiding the group.
+    const isGroupNode = !!collapsed && !!node.group && node.group === node.id;
+    const variable = variableFor?.(node);
+    const href = linkFor?.(node);
+    return (
+      <>
+        <MenuGroup label={node.label}>
+          {!isGroupNode && <MenuItem label="Hide node" icon="eye-slash" onClick={() => onPrune({ hideNode: node.id })} />}
+          {node.group && <MenuItem label={`Hide group ${node.group}`} icon="eye-slash" onClick={() => onPrune({ hideGroup: node.group! })} />}
+          {collapseItem}
+        </MenuGroup>
+        {(variable || href) && (
+          <MenuGroup label="Go to">
+            {variable && onSetVariable && <MenuItem label={`Set ${variable.name} = ${variable.value}`} icon="filter" onClick={() => onSetVariable(variable)} />}
+            {href && onOpenLink && <MenuItem label="Open link" icon="external-link-alt" onClick={() => onOpenLink(href)} />}
+          </MenuGroup>
+        )}
+      </>
+    );
+  };
+
   const finishRename = (commit: boolean) => {
     if (!renaming) {
       return;
@@ -554,6 +646,7 @@ export const FlowCanvas: React.FC<FlowCanvasProps> = (props) => {
   const cursor = editing ? (tool === 'addNode' ? 'copy' : tool === 'addEdge' ? 'crosshair' : undefined) : viewZoom ? 'grab' : undefined;
 
   return (
+    <>
     <svg
       ref={svgRef}
       width={width}
@@ -593,7 +686,17 @@ export const FlowCanvas: React.FC<FlowCanvasProps> = (props) => {
                 <rect x={g.x} y={g.y} width={g.w} height={g.h} rx={12} fill={g.color} opacity={0.07} />
                 <rect x={g.x} y={g.y} width={g.w} height={g.h} rx={12} fill="none" stroke={g.color} opacity={0.35} strokeDasharray="4 3" />
                 {g.first && (
-                  <text x={g.x + 10} y={g.y + fontSize + 2} fill={g.color} fontSize={fontSize - 1} fontWeight={600} opacity={0.9} style={{ userSelect: 'none' }}>
+                  <text
+                    x={g.x + 10}
+                    y={g.y + fontSize + 2}
+                    fill={g.color}
+                    fontSize={fontSize - 1}
+                    fontWeight={600}
+                    opacity={0.9}
+                    style={{ userSelect: 'none', pointerEvents: menuEnabled ? 'auto' : undefined }}
+                    data-testid={`flow-group-label-${g.group}`}
+                    onContextMenu={menuEnabled ? (e) => onGroupContextMenu(e, g.group) : undefined}
+                  >
                     {g.group}
                   </text>
                 )}
@@ -641,6 +744,7 @@ export const FlowCanvas: React.FC<FlowCanvasProps> = (props) => {
                 onClick={onNodeClick}
                 onPointerDown={onNodeDown}
                 onDoubleClick={onNodeDoubleClick}
+                onContextMenu={menuEnabled ? onNodeContextMenu : undefined}
                 onPortPointerDown={onPortDown}
               />
             );
@@ -722,6 +826,8 @@ export const FlowCanvas: React.FC<FlowCanvasProps> = (props) => {
         )}
       </g>
     </svg>
+    {menuEnabled && menu && <ContextMenu x={menu.x} y={menu.y} onClose={closeMenu} renderMenuItems={renderMenuItems} />}
+    </>
   );
 };
 

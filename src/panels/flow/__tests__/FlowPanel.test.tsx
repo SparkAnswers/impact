@@ -342,3 +342,176 @@ describe('variable action', () => {
     partial.mockRestore();
   });
 });
+
+describe('FlowPanel pruning and context menu', () => {
+  const edgeFrame = () =>
+    applyFieldOverrides({
+      data: [
+        toDataFrame({
+          refId: 'A',
+          fields: [
+            { name: 'source', type: FieldType.string, values: ['web', 'api', 'api'] },
+            { name: 'target', type: FieldType.string, values: ['api', 'db', 'cache'] },
+            { name: 'Value', type: FieldType.number, values: [10, 4, 1], config: { unit: 'reqps' } },
+            { name: 'target_group', type: FieldType.string, values: ['backend', 'data', 'data'] },
+          ],
+        }),
+      ],
+      fieldConfig: { defaults: {}, overrides: [] },
+      replaceVariables: (v) => v,
+      theme,
+    });
+
+  function renderData(
+    partial: Partial<FlowOptions['data']> = {},
+    extra: Partial<FlowOptions> = {},
+    onOptionsChange = jest.fn()
+  ) {
+    const options: FlowOptions = {
+      ...DEFAULT_OPTIONS,
+      ...extra,
+      data: { ...DEFAULT_OPTIONS.data, source: 'data', ...partial },
+    };
+    const props = {
+      id: 1,
+      data: { series: edgeFrame(), state: LoadingState.Done, timeRange: getDefaultTimeRange() },
+      timeRange: getDefaultTimeRange(),
+      timeZone: 'browser',
+      options,
+      onOptionsChange,
+      fieldConfig: { defaults: {}, overrides: [] },
+      onFieldConfigChange: jest.fn(),
+      replaceVariables: (v: string) => v,
+      width: 800,
+      height: 500,
+      transparent: false,
+      renderCounter: 0,
+      title: 'Flow',
+      eventBus: {
+        publish: jest.fn(),
+        subscribe: jest.fn(),
+        getStream: jest.fn(),
+        removeAllListeners: jest.fn(),
+        newScopedBus: jest.fn(),
+      },
+      onChangeTimeRange: jest.fn(),
+    } as unknown as PanelProps<FlowOptions>;
+    return { ...render(<FlowPanel {...props} />), onOptionsChange, options };
+  }
+
+  const nodeIds = () =>
+    screen.getAllByTestId(/^flow-node-/).map((el) => el.getAttribute('data-testid')!.replace('flow-node-', ''));
+
+  it('hides listed nodes and groups, shows the chip and clears both lists with "show"', () => {
+    const { onOptionsChange } = renderData({ hidden: { nodes: ['db'], groups: [] } });
+    expect(nodeIds().sort()).toEqual(['api', 'cache', 'web']);
+    expect(screen.queryByTestId('flow-edge-api→db')).not.toBeInTheDocument();
+    const chip = screen.getByTestId('flow-hidden-chip');
+    expect(chip).toHaveTextContent('hidden 1');
+    expect(screen.getByTestId('flow-notice')).toHaveTextContent('1 node hidden');
+    fireEvent.click(screen.getByRole('button', { name: 'Show hidden items' }));
+    expect(onOptionsChange).toHaveBeenCalledTimes(1);
+    expect(onOptionsChange.mock.calls[0][0].data.hidden).toEqual({ nodes: [], groups: [] });
+    cleanup();
+    renderData({ hidden: { nodes: ['db'], groups: ['data'] } });
+    expect(nodeIds().sort()).toEqual(['api', 'web']);
+    expect(screen.getByTestId('flow-hidden-chip')).toHaveTextContent('hidden 2');
+    cleanup();
+    renderData();
+    expect(screen.queryByTestId('flow-hidden-chip')).not.toBeInTheDocument();
+  });
+
+  it('applies the prune rules and reports what went in the notice', () => {
+    renderData({ prune: { minValue: 2 } });
+    expect(screen.queryByTestId('flow-node-cache')).not.toBeInTheDocument();
+    expect(screen.getByTestId('flow-notice')).toHaveTextContent('1 edge below 2');
+    cleanup();
+    renderData({ prune: { collapseGroups: true } });
+    expect(nodeIds().sort()).toEqual(['backend', 'data', 'web']);
+    expect(screen.getByTestId('flow-edge-backend→data')).toBeInTheDocument();
+    cleanup();
+    renderData({ hidden: { nodes: ['web', 'api', 'db', 'cache'], groups: [] } });
+    expect(screen.getByTestId('flow-pruned-empty')).toBeInTheDocument();
+    expect(screen.queryByTestId('flow-data-empty')).not.toBeInTheDocument();
+  });
+
+  it('opens a context menu on right-click with hide, collapse, variable and link items', () => {
+    const partial = jest.spyOn(locationService, 'partial').mockImplementation(() => undefined);
+    const { onOptionsChange } = renderData(
+      {},
+      {
+        links: {
+          nodeUrl: '',
+          target: 'new',
+          trigger: 'dblclick',
+          action: 'variable',
+          variable: 'service',
+          variableValue: '${node.id}',
+        },
+      }
+    );
+    fireEvent.contextMenu(screen.getByTestId('flow-node-api'), { clientX: 120, clientY: 80 });
+    expect(screen.getByText('Hide node')).toBeInTheDocument();
+    expect(screen.getByText('Hide group backend')).toBeInTheDocument();
+    expect(screen.getByText('Collapse groups')).toBeInTheDocument();
+    expect(screen.getByText('Set service = api')).toBeInTheDocument();
+    expect(screen.queryByText('Open link')).not.toBeInTheDocument(); // variable action: no URL template
+    fireEvent.click(screen.getByText('Set service = api'));
+    expect(partial).toHaveBeenLastCalledWith({ 'var-service': 'api' });
+    expect(screen.queryByText('Hide node')).not.toBeInTheDocument(); // closed after a click
+
+    fireEvent.contextMenu(screen.getByTestId('flow-node-api'), { clientX: 120, clientY: 80 });
+    fireEvent.click(screen.getByText('Hide node'));
+    expect(onOptionsChange).toHaveBeenLastCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ hidden: { nodes: ['api'], groups: [] } }) })
+    );
+
+    fireEvent.contextMenu(screen.getByTestId('flow-node-db'), { clientX: 120, clientY: 80 });
+    fireEvent.click(screen.getByText('Hide group data'));
+    expect(onOptionsChange).toHaveBeenLastCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ hidden: { nodes: [], groups: ['data'] } }) })
+    );
+
+    fireEvent.contextMenu(screen.getByTestId('flow-node-web'), { clientX: 120, clientY: 80 });
+    expect(screen.queryByText(/Hide group/)).not.toBeInTheDocument(); // web has no group
+    fireEvent.click(screen.getByText('Collapse groups'));
+    expect(onOptionsChange.mock.calls.at(-1)[0].data.prune.collapseGroups).toBe(true);
+    partial.mockRestore();
+  });
+
+  it('offers "Open link" with a URL template, hides groups from a group label, and closes on Escape or outside click', () => {
+    const open = jest.spyOn(window, 'open').mockImplementation(() => null);
+    const { onOptionsChange } = renderData(
+      {},
+      { links: { nodeUrl: '/d/x?n=${node.id}', target: 'new', trigger: 'dblclick' } }
+    );
+    fireEvent.contextMenu(screen.getByTestId('flow-node-db'), { clientX: 10, clientY: 10 });
+    fireEvent.click(screen.getByText('Open link'));
+    expect(open).toHaveBeenCalledWith('/d/x?n=db', '_blank', 'noopener,noreferrer');
+
+    fireEvent.contextMenu(screen.getByTestId('flow-group-label-data'), { clientX: 10, clientY: 10 });
+    expect(screen.queryByText('Hide node')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByText('Hide group data'));
+    expect(onOptionsChange.mock.calls.at(-1)[0].data.hidden.groups).toEqual(['data']);
+
+    fireEvent.contextMenu(screen.getByTestId('flow-node-db'), { clientX: 10, clientY: 10 });
+    fireEvent.keyDown(screen.getByText('Hide node'), { key: 'Escape' });
+    expect(screen.queryByText('Hide node')).not.toBeInTheDocument();
+    fireEvent.contextMenu(screen.getByTestId('flow-node-db'), { clientX: 10, clientY: 10 });
+    expect(screen.getByText('Hide node')).toBeInTheDocument();
+    fireEvent.mouseDown(document.body);
+    expect(screen.queryByText('Hide node')).not.toBeInTheDocument();
+    open.mockRestore();
+  });
+
+  it('shows no menu in design mode or on manual diagrams', () => {
+    renderData({}, { layout: { ...DEFAULT_OPTIONS.layout, editMode: true } });
+    fireEvent.contextMenu(screen.getByTestId('flow-node-db'), { clientX: 10, clientY: 10 });
+    expect(screen.queryByText('Hide node')).not.toBeInTheDocument();
+    cleanup();
+    renderPanel();
+    fireEvent.contextMenu(screen.getByTestId('flow-node-solar'), { clientX: 10, clientY: 10 });
+    expect(screen.queryByText('Hide node')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('flow-hidden-chip')).not.toBeInTheDocument();
+  });
+});

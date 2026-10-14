@@ -5,9 +5,10 @@ import { locationService } from '@grafana/runtime';
 import { Button, usePanelContext, useStyles2, useTheme2 } from '@grafana/ui';
 import { DemoBadge, edgeTable, useDemoFrames, type DemoGenerator } from '../../shared/demo';
 import { useMotionAllowed } from '../../shared/motion';
+import { EMPTY_HIDDEN, pruneGraph, type HiddenItems, type PruneRules } from '../../shared/graph/prune';
 import { useQuickStart } from '../../shared/presets';
 import { ReducedMotionHint } from '../../shared/ReducedMotionHint';
-import { FlowCanvas } from './components/FlowCanvas';
+import { FlowCanvas, type PruneChange } from './components/FlowCanvas';
 import { Toolbar, type Tool } from './components/Toolbar';
 import { FLOW_PRESETS } from './presets';
 import { ZoomControls } from './components/ZoomControls';
@@ -17,6 +18,7 @@ import { createExampleDiagram } from './lib/example';
 import { extractGraph } from './lib/frames';
 import { fitViewport, zoomAt } from './lib/geometry';
 import { currentVariable, openLink, resolveNodeLink, resolveNodeVariable, variableName, variableQuery } from './lib/links';
+import { Chip, ChipRow } from './components/Chip';
 import { VariableChip } from './components/VariableChip';
 import type { GroupHints } from './lib/groups';
 import { layoutGraph, nodeSetKey, type LayoutOptions, type LayoutResult } from './lib/layout';
@@ -209,7 +211,12 @@ export const FlowPanel: React.FC<PanelProps<FlowOptions>> = ({
     () => (isDemo ? { ...dataOpts, sourceField: 'source', targetField: 'target', valueField: 'value', value2Field: '' } : dataOpts),
     [isDemo, dataOpts]
   );
-  const graph = useMemo(() => (isData ? extractGraph(frames, extractOpts) : undefined), [isData, frames, extractOpts]);
+  const rawGraph = useMemo(() => (isData ? extractGraph(frames, extractOpts) : undefined), [isData, frames, extractOpts]);
+  // Hidden list and prune rules (data modes only) sit between extraction and layout.
+  const pruneRules = useMemo<PruneRules>(() => dataOpts.prune ?? {}, [dataOpts.prune]);
+  const hidden = useMemo<HiddenItems>(() => dataOpts.hidden ?? EMPTY_HIDDEN, [dataOpts.hidden]);
+  const hiddenCount = hidden.nodes.length + hidden.groups.length;
+  const graph = useMemo(() => (rawGraph ? pruneGraph(rawGraph, pruneRules, hidden).graph : undefined), [rawGraph, pruneRules, hidden]);
   // Aspect is quantised so small resizes do not trigger a re-layout.
   const aspect = width > 0 && height > 0 ? Math.round((width / height) * 4) / 4 : undefined;
   const layoutOpts = useMemo<LayoutOptions>(
@@ -478,9 +485,32 @@ export const FlowPanel: React.FC<PanelProps<FlowOptions>> = ({
     },
     [links, fields, replaceVariables]
   );
+  // Context menu: the variable a node would set, whatever the trigger, and a direct setter.
+  const variableFor = useCallback(
+    (node: FlowNode) =>
+      links.action === 'variable'
+        ? resolveNodeVariable(node, { ...links, trigger: 'click' }, formatValue(node.valueField ? fields.get(node.valueField) : undefined, node.valueFormat), replaceVariables)
+        : undefined,
+    [links, fields, replaceVariables]
+  );
+  const onSetVariable = useCallback((v: { name: string; value: string }) => locationService.partial(variableQuery(v.name, v.value)), []);
   const varName = links.action === 'variable' ? variableName(links) : '';
   const varValue = varName ? currentVariable(varName, replaceVariables) : undefined;
   const clearVariable = useCallback(() => locationService.partial(variableQuery(varName, links.variableClear ?? '')), [varName, links.variableClear]);
+  // Right-click menu: hide a node or a group (deduplicated), or toggle the Collapse groups rule.
+  const onPrune = useCallback(
+    (change: PruneChange) => {
+      const add = (list: string[], id: string | undefined) => (id && !list.includes(id) ? [...list, id] : list);
+      const next: DataOptions = {
+        ...dataOpts,
+        hidden: { nodes: add(hidden.nodes, change.hideNode), groups: add(hidden.groups, change.hideGroup) },
+        prune: change.toggleCollapse ? { ...pruneRules, collapseGroups: !pruneRules.collapseGroups } : pruneRules,
+      };
+      onOptionsChange({ ...options, data: next });
+    },
+    [dataOpts, hidden, pruneRules, options, onOptionsChange]
+  );
+  const showHidden = useCallback(() => onOptionsChange({ ...options, data: { ...dataOpts, hidden: { nodes: [], groups: [] } } }), [options, dataOpts, onOptionsChange]);
   const toggleGrid = useCallback(() => {
     if (isData) {
       return;
@@ -528,6 +558,8 @@ export const FlowPanel: React.FC<PanelProps<FlowOptions>> = ({
   };
 
   const empty = diagram.nodes.length === 0;
+  /** The query had nodes but the rules / hidden list removed them all. */
+  const prunedAway = empty && !!rawGraph && rawGraph.nodes.length > 0;
   const notices = graph?.notices ?? [];
   const overrideCount = dataMode === 'overrides' ? Object.keys(dataOpts.overrides ?? {}).length : 0;
 
@@ -554,6 +586,10 @@ export const FlowPanel: React.FC<PanelProps<FlowOptions>> = ({
         linkTrigger={links.trigger}
         onOpenLink={onOpenLink}
         onNodeAction={onNodeAction}
+        variableFor={variableFor}
+        onSetVariable={onSetVariable}
+        onPrune={isData ? onPrune : undefined}
+        collapsed={isData && !!pruneRules.collapseGroups}
         onFit={fit}
         onViewport={setViewport}
         onSelect={setSelection}
@@ -598,7 +634,20 @@ export const FlowPanel: React.FC<PanelProps<FlowOptions>> = ({
       <div className={styles.badgeWrap} style={editing ? { top: 28 } : undefined}>
         <DemoBadge visible={isDemo} width={width} />
       </div>
-      {varName && varValue !== undefined && !editing && <VariableChip name={varName} value={varValue} onClear={clearVariable} width={width} />}
+      {!editing && ((varName && varValue !== undefined) || (isData && hiddenCount > 0)) && (
+        <ChipRow width={width}>
+          {varName && varValue !== undefined && <VariableChip name={varName} value={varValue} onClear={clearVariable} />}
+          {isData && hiddenCount > 0 && (
+            <Chip
+              testId="flow-hidden-chip"
+              tooltip="Nodes and groups hidden with the right-click menu (Data → Prune → Hidden items)"
+              action={{ label: 'Show hidden items', text: 'show', onClick: showHidden }}
+            >
+              hidden <b>{hiddenCount}</b>
+            </Chip>
+          )}
+        </ChipRow>
+      )}
       {demoFallback && !empty && (
         <div className={styles.demoHint} data-testid="flow-demo-hint">
           <span>{FLOW_DEMO_HINT}</span>
@@ -621,7 +670,17 @@ export const FlowPanel: React.FC<PanelProps<FlowOptions>> = ({
           </Button>
         </div>
       )}
-      {empty && isData && (
+      {empty && isData && prunedAway && (
+        <div className={styles.empty} data-testid="flow-pruned-empty">
+          <div>Everything is hidden by the prune rules or the hidden list (Data → Prune).</div>
+          {hiddenCount > 0 && (
+            <Button size="sm" variant="secondary" onClick={showHidden}>
+              Show hidden items
+            </Button>
+          )}
+        </div>
+      )}
+      {empty && isData && !prunedAway && (
         <div className={styles.empty} data-testid="flow-data-empty">
           <div>
             No edges found in the query results. Expected a frame with string fields{' '}
