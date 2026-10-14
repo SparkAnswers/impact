@@ -24,7 +24,7 @@ export interface NodeViewProps {
   opacity?: number;
   /** A link applies to this node: pointer cursor and a hover glow */
   linked?: boolean;
-  onClick?: (node: FlowNode) => void;
+  onClick?: (node: FlowNode, e: React.MouseEvent<SVGGElement>) => void;
   onPointerDown?: (e: React.PointerEvent<SVGGElement>, node: FlowNode) => void;
   onDoubleClick?: (node: FlowNode) => void;
   /** Right-click (view mode context menu) */
@@ -156,7 +156,7 @@ export const NodeView: React.FC<NodeViewProps> = ({
       className={linkClass}
       style={{ cursor: editing ? 'grab' : linked ? 'pointer' : 'default' }}
       onPointerDown={onPointerDown ? (e) => onPointerDown(e, n) : undefined}
-      onClick={onClick ? () => onClick(n) : undefined}
+      onClick={onClick ? (e) => onClick(n, e) : undefined}
       onDoubleClick={onDoubleClick ? () => onDoubleClick(n) : undefined}
       onContextMenu={onContextMenu ? (e) => onContextMenu(e, n) : undefined}
       data-testid={`flow-node-${n.id}`}

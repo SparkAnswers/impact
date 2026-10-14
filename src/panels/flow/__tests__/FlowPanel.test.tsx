@@ -494,6 +494,53 @@ describe('FlowPanel links and view-mode zoom', () => {
     open.mockRestore();
   });
 
+  it('Ctrl / Shift + click open the link whatever the click does; the click switch changes the click for the session', () => {
+    const open = jest.spyOn(window, 'open').mockImplementation(() => null);
+    const push = jest.spyOn(locationService, 'push').mockImplementation(() => undefined);
+    const node = (id: string) => screen.queryByTestId(`flow-node-${id}`);
+    // Click = Isolate, double-click = Zoom, a link template: the switch offers Isolate, Zoom and Open.
+    renderPanel({ links: { nodeUrl: '/d/t?n=${node.id}', target: 'same', trigger: 'click', action: 'focus', dblclick: 'zoom' } });
+    const sw = screen.getByTestId('flow-click-mode');
+    expect(sw.textContent).toBe('ClickIsolateZoomOpen');
+    expect(screen.getByRole('radio', { name: 'Isolate' })).toHaveAttribute('aria-checked', 'true');
+    fireEvent.click(node('solar')!, { ctrlKey: true });
+    expect(open).toHaveBeenLastCalledWith('/d/t?n=solar', '_blank', 'noopener,noreferrer');
+    expect(screen.queryByTestId('flow-focus-chip')).not.toBeInTheDocument(); // the modifier click did not isolate
+    fireEvent.click(node('solar')!, { shiftKey: true });
+    expect(push).toHaveBeenLastCalledWith('/d/t?n=solar');
+    // Switch the click to Open: a plain click now follows the link (same tab, the panel's target).
+    fireEvent.click(screen.getByRole('radio', { name: 'Open' }));
+    expect(screen.getByRole('radio', { name: 'Open' })).toHaveAttribute('aria-checked', 'true');
+    jest.useFakeTimers();
+    fireEvent.click(node('house')!);
+    act(() => {
+      jest.advanceTimersByTime(300);
+    });
+    expect(push).toHaveBeenLastCalledWith('/d/t?n=house');
+    // Switch to Zoom: a plain click zooms onto the card.
+    fireEvent.click(screen.getByRole('radio', { name: 'Zoom' }));
+    const chip = () => screen.getByTestId('flow-zoom-controls').textContent;
+    const before = chip();
+    fireEvent.click(node('house')!);
+    act(() => {
+      jest.advanceTimersByTime(300);
+    });
+    expect(chip()).not.toBe(before);
+    jest.useRealTimers();
+    cleanup();
+    // Without a link or a variable only Isolate and Zoom remain; with Zoom and pan off and no link, no switch at all.
+    renderPanel({ links: { nodeUrl: '', target: 'same', trigger: 'click', action: 'focus' }, diagram: { ...createExampleDiagram(), nodes: createExampleDiagram().nodes.map((n) => ({ ...n, link: undefined })) } });
+    expect(screen.getByTestId('flow-click-mode').textContent).toBe('ClickIsolateZoom');
+    cleanup();
+    renderPanel({ interaction: { zoom: false }, links: { nodeUrl: '', target: 'same', trigger: 'click', action: 'focus' }, diagram: { ...createExampleDiagram(), nodes: createExampleDiagram().nodes.map((n) => ({ ...n, link: undefined })) } });
+    expect(screen.queryByTestId('flow-click-mode')).not.toBeInTheDocument();
+    cleanup();
+    renderPanel({ interaction: { zoom: true, clickSwitch: false } });
+    expect(screen.queryByTestId('flow-click-mode')).not.toBeInTheDocument();
+    push.mockRestore();
+    open.mockRestore();
+  });
+
   it('hides the controls and ignores wheel/drag when Zoom and pan is off', () => {
     renderPanel({ interaction: { zoom: false } });
     expect(screen.queryByTestId('flow-zoom-controls')).not.toBeInTheDocument();

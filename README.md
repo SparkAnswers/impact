@@ -61,7 +61,7 @@ Impact is not yet signed by Grafana Labs, so Grafana has to be told to allow it.
 
 ```bash
 docker run -d -p 3000:3000 \
-  -e GF_INSTALL_PLUGINS="https://github.com/SparkAnswers/impact/releases/download/v1.0.1/sparkanswers-impact-app-1.0.1.zip;sparkanswers-impact-app" \
+  -e GF_INSTALL_PLUGINS="https://github.com/SparkAnswers/impact/releases/download/v1.0.2/sparkanswers-impact-app-1.0.2.zip;sparkanswers-impact-app" \
   -e GF_PLUGINS_ALLOW_LOADING_UNSIGNED_PLUGINS=sparkanswers-impact-app,sparkanswers-impact-flow-panel,sparkanswers-impact-gauge-panel,sparkanswers-impact-river-panel,sparkanswers-impact-bars-panel \
   grafana/grafana:13.0.10
 ```

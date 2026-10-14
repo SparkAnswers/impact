@@ -25,7 +25,8 @@ const CLICK_DELAY_MS = 250;
 
 const ZOOM_HINT_VIEW = 'Ctrl + scroll (⌘ on Mac) or pinch to zoom at the pointer · drag to pan · double-click a node to zoom onto it, empty canvas to fit';
 const ZOOM_HINT_EDIT = 'Scroll to zoom at the pointer · Space, middle mouse or Alt + drag to pan';
-import { currentVariable, gestureAction, openLink, resolveNodeLink, resolveNodeVariable, variableName, variableQuery, type NodeGesture } from './lib/links';
+import { clickModes, currentVariable, gestureAction, openLink, resolveNodeLink, resolveNodeVariable, variableName, variableQuery, type NodeGesture } from './lib/links';
+import { ClickModeSwitch } from './components/ClickModeSwitch';
 import { Chip, ChipRow } from '../../shared/Chip';
 import { VariableChip } from './components/VariableChip';
 import type { GroupHints } from './lib/groups';
@@ -44,8 +45,7 @@ import {
   type FlowOptions,
   type FlowSelection,
   type Point,
-  type Viewport,
-} from './types';
+  type Viewport, type DoubleClickAction } from './types';
 
 /** Demo data: one edge table (12-node service graph, `source`/`target`/`value`), built through the data pipeline. */
 const demoGenerator: DemoGenerator = () => [edgeTable()];
@@ -567,9 +567,17 @@ export const FlowPanel: React.FC<PanelProps<FlowOptions>> = ({
   );
   // Click and double-click each run their own action (Links options): open the link, set the variable, focus,
   // zoom onto the node, or nothing. Returns whether something happened.
+  // Click-mode switch (bottom-left pill): overrides what a plain click does, for the session only.
+  const [clickMode, setClickMode] = useState<DoubleClickAction | undefined>(undefined);
+  const hasLinks = !!(links.nodeUrl ?? '').trim() || diagram.nodes.some((n) => !!(n.link ?? '').trim());
+  const modes = useMemo(() => clickModes(links, { zoom: zoomEnabled, hasLinks }), [links, zoomEnabled, hasLinks]);
+  const actionFor = useCallback(
+    (gesture: NodeGesture): DoubleClickAction => (gesture === 'click' && clickMode && modes.includes(clickMode) ? clickMode : gestureAction(links, gesture)),
+    [clickMode, modes, links]
+  );
   const onNodeGesture = useCallback(
     (node: FlowNode, gesture: NodeGesture) => {
-      switch (gestureAction(links, gesture)) {
+      switch (actionFor(gesture)) {
         case 'focus':
           focusOn(node.id);
           return true;
@@ -586,20 +594,32 @@ export const FlowPanel: React.FC<PanelProps<FlowOptions>> = ({
           if (!href) {
             return false;
           }
-          onOpenLink(href);
+          if (gesture === 'ctrlclick') {
+            openLink(href, 'new');
+          } else if (gesture === 'shiftclick') {
+            openLink(href, 'same', (path) => locationService.push(path));
+          } else {
+            onOpenLink(href);
+          }
           return true;
         }
         case 'zoom':
+          if (gesture === 'click') {
+            zoomTo({ node: node.id });
+            return true;
+          }
           return false; // the canvas zooms onto the node when nothing else took the double-click
         default:
           return gesture === 'click' ? false : true; // 'off' on a double-click: not even the zoom
       }
     },
-    [links, focusOn, variableFor, linkFor, onOpenLink]
+    [actionFor, focusOn, variableFor, linkFor, onOpenLink, zoomTo]
   );
-  const clickActive = gestureAction(links, 'click') !== 'off';
+  const clickAction = actionFor('click');
+  const clickActive = clickAction !== 'off';
   // A click waits for a possible double-click only when both gestures do something.
-  const clickDelay = clickActive && gestureAction(links, 'dblclick') !== 'off' ? CLICK_DELAY_MS : 0;
+  const clickDelay = clickActive && actionFor('dblclick') !== 'off' ? CLICK_DELAY_MS : 0;
+  const showClickSwitch = !editing && diagram.nodes.length > 0 && (options.interaction?.clickSwitch ?? true) && modes.length >= 2;
   const onSetVariable = useCallback((v: { name: string; value: string }) => locationService.partial(variableQuery(v.name, v.value)), []);
   const varName = links.action === 'variable' ? variableName(links) : '';
   const varValue = varName ? currentVariable(varName, replaceVariables) : undefined;
@@ -749,6 +769,7 @@ export const FlowPanel: React.FC<PanelProps<FlowOptions>> = ({
           </span>
         </>
       )}
+      {showClickSwitch && <ClickModeSwitch modes={modes} current={clickAction} onChange={setClickMode} />}
       {(zoomEnabled || editing) && !empty && <ZoomControls zoom={effectiveViewport.zoom} onZoomIn={() => zoomBy(1.25)} onZoomOut={() => zoomBy(0.8)} onFit={fit} pinned={editing} hint={editing ? ZOOM_HINT_EDIT : ZOOM_HINT_VIEW} />}
       <ReducedMotionHint animationEnabled={animationEnabled} preference={options.animation?.reducedMotion} width={width} />
       {/* Below the design-mode toolbar and mode chip while editing. */}

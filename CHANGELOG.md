@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.0.2 (2026-10-14)
+
+Flow Designer
+
+- Ctrl / ⌘ + click opens a card's link in a new tab and Shift + click in the same tab, whatever the plain click does
+- Click switch: a pill in the bottom-left corner shows what a click does (Isolate, Zoom, Open, Filter) and changes it for the session; Interaction > Click switch turns it off
+
 ## 1.0.1 (2026-10-14)
 
 Flow Designer

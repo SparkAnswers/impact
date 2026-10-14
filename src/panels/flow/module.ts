@@ -492,6 +492,13 @@ export const plugin = new PanelPlugin<FlowOptions>(FlowPanel)
           ],
         },
       })
+      .addBooleanSwitch({
+        path: 'interaction.clickSwitch',
+        name: 'Click switch',
+        description: 'Small switch in the bottom-left corner (view mode) that changes what a click on a card does for the session: Isolate, Zoom, Open (when a link is configured), Filter (when a variable is named). Shown when there are at least two choices. Ctrl / ⌘ + click always opens the link in a new tab, Shift + click in the same tab',
+        category: INTERACTION,
+        defaultValue: DEFAULT_OPTIONS.interaction?.clickSwitch ?? true,
+      })
       .addRadio({
         path: 'interaction.focusDirection',
         name: 'Focus direction',

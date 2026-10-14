@@ -6,7 +6,7 @@ import { applyBinding, formatValue, type FieldValue } from '../lib/data';
 import { groupPalette } from '../lib/datadriven';
 import { edgeGeometry, hitNode, nearestSide, portOffsets, snap, uniqueId, wheelZoomFactor, zoomAt } from '../lib/geometry';
 import { groupSegments, type GroupHints } from '../lib/groups';
-import type { VariableAction } from '../lib/links';
+import type { NodeGesture, VariableAction } from '../lib/links';
 import {
   DEFAULT_EDGE,
   DEFAULT_NODE,
@@ -52,7 +52,7 @@ export interface FlowCanvasProps {
   linkFor?: (node: FlowNode) => string | undefined;
   onOpenLink?: (href: string) => void;
   /** View mode: runs the click / double-click action of the Links options; true when something happened. */
-  onNodeGesture?: (node: FlowNode, gesture: 'click' | 'dblclick') => boolean;
+  onNodeGesture?: (node: FlowNode, gesture: NodeGesture) => boolean;
   /** Whether a plain click does something (pointer cursor on nodes). */
   clickActive?: boolean;
   /**
@@ -567,8 +567,14 @@ export const FlowCanvas: React.FC<FlowCanvasProps> = (props) => {
     zoomTo({ group });
   };
 
-  const onNodeClick = (node: FlowNode) => {
+  const onNodeClick = (node: FlowNode, e: React.MouseEvent) => {
     if (editing || !onNodeGesture) {
+      return;
+    }
+    if (e.ctrlKey || e.metaKey || e.shiftKey) {
+      // Modifier click: the link, straight away, whatever the plain click does.
+      cancelPendingClick();
+      onNodeGesture(node, e.shiftKey && !(e.ctrlKey || e.metaKey) ? 'shiftclick' : 'ctrlclick');
       return;
     }
     if (clickDelay > 0) {

@@ -58,7 +58,8 @@ export function resolveNodeLink(
   return safeHref(href);
 }
 
-export type NodeGesture = 'click' | 'dblclick';
+/** `ctrlclick` (Ctrl / ⌘ + click) opens the node's link in a new tab, `shiftclick` in the same tab, whatever the click does. */
+export type NodeGesture = 'click' | 'dblclick' | 'ctrlclick' | 'shiftclick';
 
 /**
  * The action a gesture runs. Trigger = click: the click takes the main action and the double-click takes
@@ -68,10 +69,28 @@ export type NodeGesture = 'click' | 'dblclick';
 export function gestureAction(links: LinkOptions | undefined, gesture: NodeGesture): DoubleClickAction {
   const trigger = links?.trigger ?? 'dblclick';
   const main = links?.action ?? 'link';
+  if (gesture === 'ctrlclick' || gesture === 'shiftclick') {
+    return 'link';
+  }
   if (gesture === 'click') {
     return trigger === 'click' ? main : 'off';
   }
   return trigger === 'dblclick' ? main : (links?.dblclick ?? 'zoom');
+}
+
+/** The click actions a panel can switch between (the click-mode switch): focus always, zoom, link and variable when configured. */
+export function clickModes(links: LinkOptions | undefined, opts: { zoom: boolean; hasLinks: boolean }): DoubleClickAction[] {
+  const out: DoubleClickAction[] = ['focus'];
+  if (opts.zoom) {
+    out.push('zoom');
+  }
+  if (opts.hasLinks) {
+    out.push('link');
+  }
+  if (variableName(links)) {
+    out.push('variable');
+  }
+  return out;
 }
 
 export interface VariableAction {

@@ -265,6 +265,11 @@ is set; a manual node's own **Link** (Inspector → Data) beats the template. Li
 pointer cursor and a hover glow; links never fire while **Edit layout** is on. Only `http(s)` and
 relative URLs are opened.
 
+**Links without the menu.** **Ctrl / ⌘ + click** a card opens its link in a new tab and **Shift + click** in the
+same tab, whatever the plain click is set to. The **click switch** in the bottom-left corner (Interaction →
+Click switch) shows what a click does, `Isolate`, `Zoom`, `Open` or `Filter`, and changes it for the session;
+the Links options give the starting position.
+
 **Focus on a chain.** Set **Links → Node click** to *Focus* (or use **Focus on chain** in the right-click menu
 with any click action): the panel shows only that node and its chain, every ancestor and descendant, not
 siblings, laid out again at full size. **Interaction → Focus** limits it to 1, 2 or 3 hops and **Focus
@@ -366,6 +371,7 @@ result is the same wherever you start from; what survives is the drawn diagram, 
 | Links → Node link | URL template with dashboard variables and `${node.id|label|group|value|status}` tokens. Opened by the trigger when Node click is `Open link`; with `Focus` or `Set variable` it is still offered as **Open link** in the right-click menu. |
 | Links → Open in | `Same tab` or `New tab`. |
 | Links → Trigger | Which gesture runs the Node click action: `Double-click` (default), `Click` or `Off`. Nothing fires while Edit layout is on. |
+| Interaction → Click switch | On by default: a small pill in the bottom-left corner (view mode) shows what a click on a card does and lets the viewer change it for the session: `Isolate`, `Zoom`, `Open` (when a link is configured) and `Filter` (when a variable is named). Shown when there are at least two choices. |
 | Links → Node double-click | With Trigger = `Click`: what a double-click does. `Zoom to node` (default), `Open link`, `Set variable`, `Focus` or `Nothing`. This is how one panel dives on click, focuses on double-click and zooms with Ctrl + scroll; the right-click menu always offers all of them. |
 | Standard options / Overrides | Unit, decimals, min/max, thresholds, colour scheme and display name of the bound fields. |
 

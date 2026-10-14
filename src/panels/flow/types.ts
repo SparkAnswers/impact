@@ -203,6 +203,8 @@ export interface InteractionOptions {
   focusHops?: number;
   /** Focus: walk both ways, downstream only or upstream only */
   focusDirection?: FocusDirection;
+  /** Bottom-left switch that changes what a click does for the session (shown when there are at least two choices) */
+  clickSwitch?: boolean;
 }
 
 export interface FlowOptions {
@@ -329,7 +331,7 @@ export const MIN_IMAGE_SIZE = 12;
 export const MAX_IMAGE_SIZE = 64;
 
 export const DEFAULT_LINKS: LinkOptions = { nodeUrl: '', target: 'same', trigger: 'dblclick', action: 'link', dblclick: 'zoom', variable: '', variableValue: '${node.id}', variableClear: '' };
-export const DEFAULT_INTERACTION: InteractionOptions = { zoom: true, focusHops: 0, focusDirection: 'both' };
+export const DEFAULT_INTERACTION: InteractionOptions = { zoom: true, focusHops: 0, focusDirection: 'both', clickSwitch: true };
 
 export const DEFAULT_OPTIONS: FlowOptions = {
   interaction: DEFAULT_INTERACTION,
