@@ -737,13 +737,13 @@ export const FlowPanel: React.FC<PanelProps<FlowOptions>> = ({
             <Chip
               testId="flow-focus-chip"
               tooltip={`Only this node and its chain are shown (Interaction → Focus). Back leaves the focus${focusStackLive.length > 1 ? ' one step' : ''}; Esc leaves it entirely`}
-              action={{ label: 'Back from the focus', text: 'back', onClick: focusBack }}
+              action={{ label: 'Back from the focus', icon: 'arrow-left', text: 'Back', onClick: focusBack }}
             >
               focus <b>{diagram.nodes.find((n) => n.id === focusId)?.label || focusId}</b> · {diagram.nodes.length} of {focusCandidates?.length ?? diagram.nodes.length}
             </Chip>
           )}
           {zoomedIn && (
-            <Chip testId="flow-zoom-chip" tooltip="The view is zoomed or panned for this session. Back returns to the full, fitted diagram" action={{ label: 'Back to the full view', text: 'back', onClick: fit }}>
+            <Chip testId="flow-zoom-chip" tooltip="The view is zoomed or panned for this session. Back returns to the full, fitted diagram" action={{ label: 'Back to the full view', icon: 'arrow-left', text: 'Back', onClick: fit }}>
               zoomed <b>{Math.round(effectiveViewport.zoom * 100)}%</b>
             </Chip>
           )}
@@ -752,7 +752,7 @@ export const FlowPanel: React.FC<PanelProps<FlowOptions>> = ({
             <Chip
               testId="flow-hidden-chip"
               tooltip="Nodes and groups hidden with the right-click menu (Data → Prune → Hidden items)"
-              action={{ label: 'Show hidden items', text: 'show', onClick: showHidden }}
+              action={{ label: 'Show hidden items', icon: 'eye', text: 'Show', onClick: showHidden }}
             >
               hidden <b>{hiddenCount}</b>
             </Chip>

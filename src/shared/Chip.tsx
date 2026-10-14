@@ -1,7 +1,7 @@
 import React from 'react';
 import { css, cx } from '@emotion/css';
 import type { GrafanaTheme2 } from '@grafana/data';
-import { IconButton, Tooltip, useStyles2, type IconName } from '@grafana/ui';
+import { Icon, IconButton, Tooltip, useStyles2, type IconName } from '@grafana/ui';
 
 /** Panels narrower than this hide the chips (what they describe still applies). */
 export const CHIP_MIN_WIDTH = 220;
@@ -10,8 +10,9 @@ export interface ChipAction {
   /** Accessible name (and tooltip) of the action */
   label: string;
   onClick: () => void;
-  /** Icon button when set, otherwise a small text button showing `text` (or the label) */
+  /** With `text`: icon drawn before the text; alone: a small icon button */
   icon?: IconName;
+  /** Text of the button; a filled, easy-to-hit button (the "back" of a focus or zoom) */
   text?: string;
 }
 
@@ -31,7 +32,7 @@ export const Chip: React.FC<Props> = ({ children, tooltip, action, testId }) => 
     <div className={styles.chip} data-testid={testId}>
       {tooltip ? <Tooltip content={tooltip}>{text}</Tooltip> : text}
       {action &&
-        (action.icon ? (
+        (action.icon && !action.text ? (
           <IconButton
             name={action.icon}
             size="sm"
@@ -49,6 +50,7 @@ export const Chip: React.FC<Props> = ({ children, tooltip, action, testId }) => 
             title={action.label}
             onClick={action.onClick}
           >
+            {action.icon ? <Icon name={action.icon} size="sm" /> : null}
             {action.text ?? action.label}
           </button>
         ))}
@@ -85,11 +87,11 @@ const getStyles = (theme: GrafanaTheme2) => ({
   chip: css({
     display: 'inline-flex',
     alignItems: 'center',
-    gap: 2,
-    padding: '1px 2px 1px 8px',
+    gap: 6,
+    padding: '2px 3px 2px 10px',
     borderRadius: 999,
-    fontSize: 11,
-    lineHeight: '16px',
+    fontSize: 12,
+    lineHeight: '18px',
     fontFamily: theme.typography.fontFamily,
     color: theme.colors.text.primary,
     background: theme.colors.background.secondary,
@@ -101,16 +103,23 @@ const getStyles = (theme: GrafanaTheme2) => ({
   text: css({ overflow: 'hidden', textOverflow: 'ellipsis' }),
   help: css({ cursor: 'help' }),
   iconAction: css({ margin: 0 }),
+  // A real button, not a link: filled, 24 px tall, so "back" is easy to see and hit.
   textAction: css({
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: 4,
     border: 0,
-    background: 'none',
-    padding: '0 6px',
+    background: theme.colors.primary.main,
+    color: theme.colors.primary.contrastText,
+    padding: '0 10px',
+    height: 24,
     margin: 0,
     font: 'inherit',
-    color: theme.colors.text.link,
+    fontSize: 12,
+    fontWeight: theme.typography.fontWeightMedium,
     cursor: 'pointer',
     borderRadius: 999,
-    '&:hover': { background: theme.colors.action.hover },
-    '&:focus-visible': { outline: `2px solid ${theme.colors.primary.border}`, outlineOffset: -2 },
+    '&:hover': { background: theme.colors.primary.shade },
+    '&:focus-visible': { outline: `2px solid ${theme.colors.primary.border}`, outlineOffset: 1 },
   }),
 });

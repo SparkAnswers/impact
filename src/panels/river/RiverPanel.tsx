@@ -432,7 +432,7 @@ export const RiverPanel: React.FC<PanelProps<RiverOptions>> = (props) => {
           <Chip
             testId="river-focus-chip"
             tooltip={`Only this node and its chain are shown (Network map → Focus). Back leaves the focus${focusStack.length > 1 ? ' one step' : ''}; Esc leaves it entirely`}
-            action={{ label: 'Back from the focus', text: 'back', onClick: focusBack }}
+            action={{ label: 'Back from the focus', icon: 'arrow-left', text: 'Back', onClick: focusBack }}
           >
             focus <b>{network.nodes.find((n) => n.id === network.focusId)?.label ?? network.focusId}</b> · {network.nodes.length} of {network.allNodes}
           </Chip>

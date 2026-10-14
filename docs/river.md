@@ -91,7 +91,7 @@ sides so they never overlap; every other link bends gently (**Curve**; 0 = strai
 
 **Focus.** Clicking a node (with **Node click focuses** on, the default) shows only that node and its chain, every
 ancestor and descendant, laid out again at full size; **Focus** limits it to 1, 2 or 3 hops and **Focus
-direction** to downstream or upstream only. A `focus STORAGE · 4 of 10 · back` chip in the corner leads back
+direction** to downstream or upstream only. A `focus STORAGE · 9 of 10 · Back` chip in the corner leads back
 (focusing another node while focused stacks; back pops one level, Esc leaves entirely). The focus is kept for the
 session only and the clicks are off while **Edit on canvas** is on.
 

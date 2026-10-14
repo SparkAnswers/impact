@@ -126,7 +126,7 @@ applied to the extracted graph before layout (so the visible part is laid out at
 **Right-click menu (view mode).** Right-click a node or a group label to **Hide node**, **Hide group `name`**
 or toggle **Collapse groups** (a **View** section focuses on the node's chain, zooms to the node or group, or fits the panel); when **Links → Node click** is *Set variable* the menu also offers
 **Set `$variable` = value**, and **Open link** appears whenever the node has a URL. Hidden items go into
-**Data → Prune → Hidden items**, where each can be restored, and a `hidden 12 · show` chip in the panel's
+**Data → Prune → Hidden items**, where each can be restored, and a `hidden 12 · Show` chip in the panel's
 top-left corner restores everything at once. Nothing is hidden on manual diagrams or while **Edit layout** is on.
 
 **Data → Prune rules**, applied in this order after the hidden list:
@@ -250,7 +250,7 @@ when the panel is viewed on its own (view panel / fullscreen) and scrolls the da
 again, and a small **+ / − / fit** control appears bottom-right when hovering the panel (hover its
 percentage for the key hints). The right-click menu offers the same under **View** (Zoom to node, Zoom
 to group, Fit to panel), on every diagram, not only data-driven ones. While the view is zoomed or panned a
-`zoomed 134% · back` chip sits in the top-left corner; **back** returns to the full, fitted diagram. One
+`zoomed 134% · Back` chip sits in the top-left corner; **Back** returns to the full, fitted diagram. One
 wheel notch is one +/− step (×1.25); the view zooms out to 5 %, so a map of several hundred nodes
 still fits. The zoom is kept for the session only and dropped when the panel size changes a lot
 (for example coming back from **View panel** to the dashboard), so the small panel fits again; the
@@ -268,7 +268,7 @@ relative URLs are opened.
 **Focus on a chain.** Set **Links → Node click** to *Focus* (or use **Focus on chain** in the right-click menu
 with any click action): the panel shows only that node and its chain, every ancestor and descendant, not
 siblings, laid out again at full size. **Interaction → Focus** limits it to 1, 2 or 3 hops and **Focus
-direction** to downstream or upstream only. A `focus GOG · 7 of 60 · back` chip sits in the top-left corner;
+direction** to downstream or upstream only. A `focus GOG · 7 of 60 · Back` chip sits in the top-left corner;
 focusing another node while focused stacks, **back** pops one level, **Esc** leaves the focus entirely. The focus
 is kept for the session only, never saved with the panel, and design mode ignores it.
 
@@ -356,7 +356,7 @@ result is the same wherever you start from; what survives is the drawn diagram, 
 | Data → Prune → Min value | Drop edges below this value (value field's unit); nodes left without edges go unless they come from a node frame. Blank = off. |
 | Data → Prune → Max depth | Keep nodes within N hops of the roots (or the hub when there are none). 0 = all. |
 | Data → Prune → Collapse groups | One node per group with summed edges between groups; ungrouped nodes unchanged. Also toggled from the right-click menu. |
-| Data → Prune → Hidden items | Nodes and groups hidden with the right-click menu; restore one or all. The `hidden N · show` chip does the same from the panel. |
+| Data → Prune → Hidden items | Nodes and groups hidden with the right-click menu; restore one or all. The `hidden N · Show` chip does the same from the panel. |
 | Data → Edge and node fields | Source, Target, Value, Secondary value, Label, Source group, Target group field / label names for edge frames; Node id, label, group, status, value, image field names for node frames. Empty value fields mean "first numeric field"; a name that matches nothing means "no value". |
 | Data → Node overrides | Inspector for data nodes (overrides mode): label, shape, icon, image URL, status, colour, position; clear one node or reset all. |
 | Interaction → Focus / Focus direction | What a focus shows: the whole chain (default), or 1–3 hops; both ways, downstream only or upstream only. Reached from Node click = Focus or the right-click menu; a chip leads back, Esc clears. Session only. |
