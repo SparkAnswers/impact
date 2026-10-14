@@ -389,8 +389,15 @@ describe('FlowPanel links and view-mode zoom', () => {
     renderPanel();
     const chip = () => screen.getByTestId('flow-zoom-controls').textContent;
     const fitted = chip();
+    expect(screen.queryByTestId('flow-zoom-chip')).not.toBeInTheDocument();
     fireEvent.doubleClick(screen.getByTestId('flow-node-solar'));
     expect(chip()).toBe('200%'); // a single node: capped at 2×
+    // Top-left chip offers the way back while zoomed.
+    expect(screen.getByTestId('flow-zoom-chip').textContent).toContain('200%');
+    fireEvent.click(screen.getByLabelText('Back to the full view'));
+    expect(chip()).toBe(fitted);
+    expect(screen.queryByTestId('flow-zoom-chip')).not.toBeInTheDocument();
+    fireEvent.doubleClick(screen.getByTestId('flow-node-solar'));
     fireEvent.doubleClick(screen.getByTestId('flow-canvas'));
     expect(chip()).toBe(fitted);
     // Right-click menu on a manual diagram: only the View section.

@@ -211,6 +211,10 @@ describe('layout', () => {
     expect(overlaps(nodes, wide)).toBe(false);
     // Never narrower than the configured gap.
     expect(gap(layeredLayout(nodes, edges, { ...opts, aspect: 0.1 }).positions)).toBe(120);
+    // Spread scales the stretch: 0 keeps the configured gap, 0.5 lands halfway.
+    expect(gap(layeredLayout(nodes, edges, { ...opts, aspect: 2, spread: 0 }).positions)).toBe(120);
+    const half = gap(layeredLayout(nodes, edges, { ...opts, aspect: 2, spread: 0.5 }).positions);
+    expect(half).toBeCloseTo(120 + (gap(wide) - 120) / 2, 0);
   });
 
   it('nodeSetKey ignores order and edges but not layout options', () => {

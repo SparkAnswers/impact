@@ -37,6 +37,11 @@ export interface LayoutOptions {
    */
   aspect?: number;
   /**
+   * How much of that stretch to apply, 0..1 (default 1). 0 keeps `layerGap` as given, so a thin chain feeding
+   * a tall fan-out stays compact and fit-to-panel scales the whole diagram instead.
+   */
+  spread?: number;
+  /**
    * Layered layouts only: fold a layer with more than this many nodes into ceil(n / wrap) side-by-side bands
    * (sub-columns separated by nodeGap) so one huge fan-out does not become a single very long column.
    * 0 / undefined = never wrap.
@@ -252,7 +257,9 @@ export function layeredLayout(nodes: LayoutNode[], edges: LayoutEdge[], opts: La
   if (opts.aspect && opts.aspect > 0 && layers.length > 1) {
     const sumThickness = extents.reduce((s, e, bi) => s + e.thickness + (sameLayerNext(bi) ? opts.nodeGap : 0), 0);
     const wanted = horizontal ? tallest * opts.aspect : tallest / opts.aspect;
-    layerGap = Math.round(Math.min(opts.layerGap * 4, Math.max(opts.layerGap, (wanted - sumThickness) / (layers.length - 1))));
+    const stretched = Math.min(opts.layerGap * 4, Math.max(opts.layerGap, (wanted - sumThickness) / (layers.length - 1)));
+    const spread = Math.min(1, Math.max(0, opts.spread ?? 1));
+    layerGap = Math.round(opts.layerGap + (stretched - opts.layerGap) * spread);
   }
   const positions = new Map<string, Point>();
   let mainPos = 0;
@@ -528,7 +535,7 @@ export function layoutGraph(nodes: LayoutNode[], edges: LayoutEdge[], opts: Layo
 
 /** Signature of the node set (used to decide whether a re-layout is needed). */
 export const nodeSetKey = (nodes: Array<{ id: string }>, opts: LayoutOptions) =>
-  `${opts.direction}|${opts.layerGap}|${opts.nodeGap}|${opts.groupGap ?? ''}|${opts.aspect ?? ''}|${opts.wrap ?? ''}|${nodes
+  `${opts.direction}|${opts.layerGap}|${opts.nodeGap}|${opts.groupGap ?? ''}|${opts.aspect ?? ''}|${opts.spread ?? ''}|${opts.wrap ?? ''}|${nodes
     .map((n) => n.id)
     .sort()
     .join('\n')}`;

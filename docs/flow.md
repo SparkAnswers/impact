@@ -246,7 +246,8 @@ when the panel is viewed on its own (view panel / fullscreen) and scrolls the da
 **double-click a group label** zooms onto that group, **double-click** on empty canvas fits the diagram
 again, and a small **+ / − / fit** control appears bottom-right when hovering the panel (hover its
 percentage for the key hints). The right-click menu offers the same under **View** (Zoom to node, Zoom
-to group, Fit to panel), on every diagram, not only data-driven ones. One
+to group, Fit to panel), on every diagram, not only data-driven ones. While the view is zoomed or panned a
+`zoomed 134% · back` chip sits in the top-left corner; **back** returns to the full, fitted diagram. One
 wheel notch is one +/− step (×1.25); the view zooms out to 5 %, so a map of several hundred nodes
 still fits. The zoom is kept for the session only and dropped when the panel size changes a lot
 (for example coming back from **View panel** to the dashboard), so the small panel fits again; the
@@ -334,6 +335,7 @@ result is the same wherever you start from; what survives is the drawn diagram, 
 | Data → Demo data | Built-in generated service graph (12 nodes, edge rows `source` / `target` / `value`). *When no data* (default): used in the data modes when the query yields no edges, and in Manual mode while the diagram is empty (and not being designed). *Always*: ignores the query in the data modes. *Off*: never; the empty state says "Needs edge rows with source, target and value, or draw a diagram". A "Demo data" pill marks generated data. |
 | Data → Layout direction | `Left to right`, `Top to bottom` (layered) or `Radial`. |
 | Data → Layer gap / Node gap | Spacing between layers and between nodes in a layer, in canvas pixels. |
+| Data → Spread | Layered layouts: how far (0–100 %) the layer gap stretches towards the panel's shape. At 100 (default) the gap grows up to 4× so a tall fan-out uses the panel width, which spreads a thin chain feeding it across empty space; at 0 the Layer gap is kept as set, the chain stays compact and fit-to-panel scales the whole diagram. |
 | Data → Wrap layers after | Layered layouts only: a layer with more nodes than this is folded into side-by-side bands (ceil(n / wrap), near-equal size, node gap between them). 0 = never wrap. |
 | Data → Value drives | What the edge value controls: particle speed, colour (thresholds / colour scheme of the value field), width, or nothing. |
 | Data → Secondary value drives | Same for the secondary value field (shown when one is configured). |

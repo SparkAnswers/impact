@@ -243,6 +243,16 @@ export const plugin = new PanelPlugin<FlowOptions>(FlowPanel)
         showIf: isData,
       })
       .addSliderInput({
+        path: 'data.spread',
+        name: 'Spread',
+        description:
+          'Layered layouts: how far the layers spread out to match the panel’s shape. 100 stretches the layer gap (up to 4×) so a tall fan-out uses the width; 0 keeps the Layer gap as set, so a thin chain feeding a fan-out stays compact and the whole diagram is scaled to fit instead',
+        category: DATA,
+        defaultValue: D.spread,
+        settings: { min: 0, max: 100, step: 5 },
+        showIf: (o) => isData(o) && o.data?.layout !== 'radial',
+      })
+      .addSliderInput({
         path: 'data.nodeGap',
         name: 'Node gap',
         description: 'Distance between neighbouring nodes in a layer in canvas pixels',

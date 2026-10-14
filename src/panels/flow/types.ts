@@ -158,6 +158,8 @@ export interface DataOptions {
   layout: LayoutDirection;
   layerGap: number;
   nodeGap: number;
+  /** Layered layouts: how far (0..100 %) the layer gap stretches towards the panel's aspect; 0 = compact */
+  spread?: number;
   /** Layered layouts: fold a layer with more than this many nodes into side-by-side bands (0 = never) */
   wrap: number;
   groupBoxes: boolean;
@@ -300,6 +302,7 @@ export const DEFAULT_DATA_OPTIONS: DataOptions = {
   layout: 'lr',
   layerGap: 120,
   nodeGap: 24,
+  spread: 100,
   wrap: 0,
   groupBoxes: true,
   overrides: {},

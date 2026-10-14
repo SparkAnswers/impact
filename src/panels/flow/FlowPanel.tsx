@@ -231,9 +231,10 @@ export const FlowPanel: React.FC<PanelProps<FlowOptions>> = ({
       // Room between groups in a layer for the group boxes and their label.
       groupGap: dataOpts.groupBoxes ? fontSize + 10 : 0,
       aspect,
+      spread: Math.min(100, Math.max(0, dataOpts.spread ?? 100)) / 100,
       wrap: Math.max(0, dataOpts.wrap ?? 0),
     }),
-    [dataOpts.layout, dataOpts.layerGap, dataOpts.nodeGap, dataOpts.wrap, dataOpts.groupBoxes, fontSize, aspect]
+    [dataOpts.layout, dataOpts.layerGap, dataOpts.nodeGap, dataOpts.spread, dataOpts.wrap, dataOpts.groupBoxes, fontSize, aspect]
   );
   // Positions are only recomputed when the node set (or the layout options) change, so refreshes do not reshuffle.
   const layoutKey = graph ? nodeSetKey(graph.nodes, layoutOpts) : '';
@@ -594,6 +595,8 @@ export const FlowPanel: React.FC<PanelProps<FlowOptions>> = ({
   };
 
   const empty = diagram.nodes.length === 0;
+  /** View mode with a session zoom or pan: offer a way back to the fitted view (top-left chip). */
+  const zoomedIn = !editing && zoomEnabled && userViewport && !empty;
   /** The query had nodes but the rules / hidden list removed them all. */
   const prunedAway = empty && !!rawGraph && rawGraph.nodes.length > 0;
   const notices = graph?.notices ?? [];
@@ -673,8 +676,13 @@ export const FlowPanel: React.FC<PanelProps<FlowOptions>> = ({
       <div className={styles.badgeWrap} style={editing ? { top: 28 } : undefined}>
         <DemoBadge visible={isDemo} width={width} />
       </div>
-      {!editing && ((varName && varValue !== undefined) || (isData && hiddenCount > 0)) && (
+      {!editing && (zoomedIn || (varName && varValue !== undefined) || (isData && hiddenCount > 0)) && (
         <ChipRow width={width}>
+          {zoomedIn && (
+            <Chip testId="flow-zoom-chip" tooltip="The view is zoomed or panned for this session. Back returns to the full, fitted diagram" action={{ label: 'Back to the full view', text: 'back', onClick: fit }}>
+              zoomed <b>{Math.round(effectiveViewport.zoom * 100)}%</b>
+            </Chip>
+          )}
           {varName && varValue !== undefined && <VariableChip name={varName} value={varValue} onClear={clearVariable} />}
           {isData && hiddenCount > 0 && (
             <Chip
