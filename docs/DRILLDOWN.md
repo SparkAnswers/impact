@@ -1,8 +1,9 @@
 # Drill-down and pruning (design proposal)
 
-Status: section 1 (variable action + chip) and section 3 (prune rules, hidden list, right-click menu; `src/shared/graph/prune.ts`,
-**Data → Prune**) are built; section 2 (focus mode) is still a proposal, and so is the "Focus here" menu item. Mock-up:
-`mockups/drilldown/index.html`.
+Status: all three sections are built. Section 1 (variable action + chip), section 3 (prune rules, hidden list, right-click
+menu; `src/shared/graph/prune.ts`, **Data → Prune**) and section 2 (focus: `src/shared/graph/focus.ts`, **Links → Node click =
+Focus**, **Interaction → Focus / Focus direction**, "Focus on chain" in the menu, a `focus … · back` chip instead of a breadcrumb
+strip, default = the whole chain rather than 1 hop). Mock-up: `mockups/drilldown/index.html`.
 
 Big data-driven graphs (100+ nodes) are only useful if the reader can cut them down to the part that matters.
 This note proposes three mechanisms that stay data-shape agnostic (anything that produces source, target, value
@@ -77,4 +78,4 @@ and the variable action.
 1. Variable action + chip: done (Links > Node click = Set variable).
 2. Prune rules + hidden list + context menu: done (`pruneGraph` in `src/shared/graph/prune.ts`, Data > Prune, right-click menu
    in view mode, `hidden N  show` chip). Order of the rules: hidden list, min value, max depth, hide leaves, collapse groups.
-3. Focus mode with breadcrumbs (builds on the same filter function).
+3. Focus mode: done (`focusGraph` / `focusIds` in `src/shared/graph/focus.ts`; a stacked chip with back instead of breadcrumbs).

@@ -124,7 +124,7 @@ Big graphs are only useful once the reader can cut them down. Two mechanisms, bo
 applied to the extracted graph before layout (so the visible part is laid out at full size):
 
 **Right-click menu (view mode).** Right-click a node or a group label to **Hide node**, **Hide group `name`**
-or toggle **Collapse groups** (a **View** section zooms to the node or group, or fits the panel); when **Links → Node click** is *Set variable* the menu also offers
+or toggle **Collapse groups** (a **View** section focuses on the node's chain, zooms to the node or group, or fits the panel); when **Links → Node click** is *Set variable* the menu also offers
 **Set `$variable` = value**, and **Open link** appears whenever the node has a URL. Hidden items go into
 **Data → Prune → Hidden items**, where each can be restored, and a `hidden 12 · show` chip in the panel's
 top-left corner restores everything at once. Nothing is hidden on manual diagrams or while **Edit layout** is on.
@@ -265,6 +265,13 @@ is set; a manual node's own **Link** (Inspector → Data) beats the template. Li
 pointer cursor and a hover glow; links never fire while **Edit layout** is on. Only `http(s)` and
 relative URLs are opened.
 
+**Focus on a chain.** Set **Links → Node click** to *Focus* (or use **Focus on chain** in the right-click menu
+with any click action): the panel shows only that node and its chain, every ancestor and descendant, not
+siblings, laid out again at full size. **Interaction → Focus** limits it to 1, 2 or 3 hops and **Focus
+direction** to downstream or upstream only. A `focus GOG · 7 of 60 · back` chip sits in the top-left corner;
+focusing another node while focused stacks, **back** pops one level, **Esc** leaves the focus entirely. The focus
+is kept for the session only, never saved with the panel, and design mode ignores it.
+
 **Node click as a filter.** Set **Links → Node click** to *Set variable* and name a dashboard variable: the
 link trigger (double-click by default) writes the node id (or any `${node.*}` template) into `$name`, so every
 query on the dashboard that uses the variable re-runs for that node, including this panel's own. A chip in the
@@ -352,8 +359,9 @@ result is the same wherever you start from; what survives is the drawn diagram, 
 | Data → Prune → Hidden items | Nodes and groups hidden with the right-click menu; restore one or all. The `hidden N · show` chip does the same from the panel. |
 | Data → Edge and node fields | Source, Target, Value, Secondary value, Label, Source group, Target group field / label names for edge frames; Node id, label, group, status, value, image field names for node frames. Empty value fields mean "first numeric field"; a name that matches nothing means "no value". |
 | Data → Node overrides | Inspector for data nodes (overrides mode): label, shape, icon, image URL, status, colour, position; clear one node or reset all. |
+| Interaction → Focus / Focus direction | What a focus shows: the whole chain (default), or 1–3 hops; both ways, downstream only or upstream only. Reached from Node click = Focus or the right-click menu; a chip leads back, Esc clears. Session only. |
 | Interaction → Zoom and pan | View-mode zoom (Ctrl/⌘ + wheel, pinch, plain wheel in view-panel mode), drag to pan, double-click a node / group label to zoom onto it, double-click empty canvas to fit, floating +/−/fit control and a View section in the right-click menu. Session only; a large panel resize goes back to the fitted view. |
-| Links → Node click | `Open link` (the URL template) or `Set variable`: the click writes the node into a dashboard variable, so every query on the page that uses `$name` follows; a chip in the panel's corner shows the current value and clears it. |
+| Links → Node click | `Open link` (the URL template), `Set variable`: the click writes the node into a dashboard variable, so every query on the page that uses `$name` follows; a chip in the panel's corner shows the current value and clears it. `Focus`: only the node and its chain stay visible (see Interaction → Focus). |
 | Links → Variable / Value / Clear value | Variable name (without `$`), value template with the `${node.*}` tokens (default `${node.id}`, not URL-encoded), and what the clear button writes (empty for a Text box variable, `$__all` for Query/Custom variables with All). |
 | Links → Node link | URL template with dashboard variables and `${node.id|label|group|value|status}` tokens. |
 | Links → Open in | `Same tab` or `New tab`. |

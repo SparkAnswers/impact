@@ -476,16 +476,48 @@ export const plugin = new PanelPlugin<FlowOptions>(FlowPanel)
         category: INTERACTION,
         defaultValue: DEFAULT_OPTIONS.interaction?.zoom ?? true,
       })
+      .addSelect({
+        path: 'interaction.focusHops',
+        name: 'Focus',
+        description:
+          'What a focus shows (Links → Node click = Focus, or Focus on chain in the right-click menu): the whole chain through the node (every ancestor and descendant, not siblings) or only the nodes within 1, 2 or 3 hops. Esc or the chip’s back button leaves it',
+        category: INTERACTION,
+        defaultValue: DEFAULT_OPTIONS.interaction?.focusHops ?? 0,
+        settings: {
+          options: [
+            { value: 0, label: 'Whole chain' },
+            { value: 1, label: '1 hop' },
+            { value: 2, label: '2 hops' },
+            { value: 3, label: '3 hops' },
+          ],
+        },
+      })
+      .addRadio({
+        path: 'interaction.focusDirection',
+        name: 'Focus direction',
+        description: 'Both ways (default), downstream only (what the node feeds) or upstream only (what feeds it)',
+        category: INTERACTION,
+        defaultValue: DEFAULT_OPTIONS.interaction?.focusDirection ?? 'both',
+        settings: {
+          options: [
+            { value: 'both', label: 'Both' },
+            { value: 'down', label: 'Downstream' },
+            { value: 'up', label: 'Upstream' },
+          ],
+        },
+      })
       .addRadio({
         path: 'links.action',
         name: 'Node click',
-        description: 'Open link: the URL template below. Set variable: write the node into a dashboard variable so every query on the page that uses it follows the click; a chip in the panel shows and clears it',
+        description:
+          'Open link: the URL template below. Set variable: write the node into a dashboard variable so every query on the page that uses it follows the click; a chip in the panel shows and clears it. Focus: show only the node and its chain (see Interaction → Focus), a chip in the panel leads back',
         category: LINKS,
         defaultValue: DEFAULT_OPTIONS.links?.action ?? 'link',
         settings: {
           options: [
             { value: 'link', label: 'Open link' },
             { value: 'variable', label: 'Set variable' },
+            { value: 'focus', label: 'Focus' },
           ],
         },
       })
@@ -523,7 +555,7 @@ export const plugin = new PanelPlugin<FlowOptions>(FlowPanel)
         category: LINKS,
         defaultValue: DEFAULT_OPTIONS.links?.nodeUrl ?? '',
         settings: { placeholder: '/d/dashboard?var-node=${node.id}' },
-        showIf: (o) => o.links?.action !== 'variable',
+        showIf: (o) => (o.links?.action ?? 'link') === 'link',
       })
       .addRadio({
         path: 'links.target',

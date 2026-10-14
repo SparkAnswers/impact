@@ -6,6 +6,7 @@ import { Button, usePanelContext, useStyles2, useTheme2 } from '@grafana/ui';
 import { DemoBadge, edgeTable, useDemoFrames, type DemoGenerator } from '../../shared/demo';
 import { useMotionAllowed } from '../../shared/motion';
 import { EMPTY_HIDDEN, pruneGraph, type HiddenItems, type PruneRules } from '../../shared/graph/prune';
+import { DEFAULT_FOCUS, focusGraph, focusIds, type FocusOptions } from '../../shared/graph/focus';
 import { useQuickStart } from '../../shared/presets';
 import { ReducedMotionHint } from '../../shared/ReducedMotionHint';
 import { FlowCanvas, type PruneChange } from './components/FlowCanvas';
@@ -220,7 +221,24 @@ export const FlowPanel: React.FC<PanelProps<FlowOptions>> = ({
   const pruneRules = useMemo<PruneRules>(() => dataOpts.prune ?? {}, [dataOpts.prune]);
   const hidden = useMemo<HiddenItems>(() => dataOpts.hidden ?? EMPTY_HIDDEN, [dataOpts.hidden]);
   const hiddenCount = hidden.nodes.length + hidden.groups.length;
-  const graph = useMemo(() => (rawGraph ? pruneGraph(rawGraph, pruneRules, hidden).graph : undefined), [rawGraph, pruneRules, hidden]);
+  const prunedGraph = useMemo(() => (rawGraph ? pruneGraph(rawGraph, pruneRules, hidden).graph : undefined), [rawGraph, pruneRules, hidden]);
+  // Focus (session only): a stack of node ids; the last one is shown with its chain. Crumbs whose node left the
+  // graph are dropped. Design mode never focuses.
+  const focusOpts = useMemo<FocusOptions>(
+    () => ({ hops: Math.max(0, options.interaction?.focusHops ?? DEFAULT_FOCUS.hops), direction: options.interaction?.focusDirection ?? DEFAULT_FOCUS.direction }),
+    [options.interaction?.focusHops, options.interaction?.focusDirection]
+  );
+  const [focusStack, setFocusStack] = useState<string[]>([]);
+  const focusCandidates = isData ? prunedGraph?.nodes : manualDiagram.nodes;
+  const focusStackLive = useMemo(() => {
+    if (editing || !focusStack.length || !focusCandidates) {
+      return [];
+    }
+    const ids = new Set(focusCandidates.map((n) => n.id));
+    return focusStack.filter((id) => ids.has(id));
+  }, [editing, focusStack, focusCandidates]);
+  const focusId = focusStackLive.length ? focusStackLive[focusStackLive.length - 1] : undefined;
+  const graph = useMemo(() => (prunedGraph && focusId ? focusGraph(prunedGraph, focusId, focusOpts) : prunedGraph), [prunedGraph, focusId, focusOpts]);
   // Aspect is quantised so small resizes do not trigger a re-layout.
   const aspect = width > 0 && height > 0 ? Math.round((width / height) * 4) / 4 : undefined;
   const layoutOpts = useMemo<LayoutOptions>(
@@ -291,7 +309,19 @@ export const FlowPanel: React.FC<PanelProps<FlowOptions>> = ({
     return () => cancelAnimationFrame(raf);
   }, [fading]);
 
-  const diagram = isData ? (frame?.diagram ?? derived ?? manualDiagram) : manualDiagram;
+  // Manual diagrams keep their positions under focus; only the chain's nodes and edges are drawn.
+  const manualShown = useMemo<FlowDiagram>(() => {
+    if (isData || !focusId) {
+      return manualDiagram;
+    }
+    const keep = focusIds(
+      manualDiagram.edges.map((e) => ({ source: e.from, target: e.to })),
+      focusId,
+      focusOpts
+    );
+    return { ...manualDiagram, nodes: manualDiagram.nodes.filter((n) => keep.has(n.id)), edges: manualDiagram.edges.filter((e) => keep.has(e.from) && keep.has(e.to)) };
+  }, [isData, manualDiagram, focusId, focusOpts]);
+  const diagram = isData ? (frame?.diagram ?? derived ?? manualShown) : manualShown;
   const fadeOpacity = isData ? frame?.opacity : undefined;
 
   // Data modes never use the saved manual viewport: the view is fitted (and follows resizes and node-set
@@ -301,7 +331,18 @@ export const FlowPanel: React.FC<PanelProps<FlowOptions>> = ({
   if (prevIsData !== isData) {
     setPrevIsData(isData);
     setUserViewport(false);
+    setFocusStack([]);
   }
+  // Entering or leaving a focus goes back to the fitted view of what is now shown.
+  const [prevFocusId, setPrevFocusId] = useState(focusId);
+  if (prevFocusId !== focusId) {
+    setPrevFocusId(focusId);
+    setUserViewport(false);
+  }
+  const focusOn = useCallback((id: string) => setFocusStack((s) => (s[s.length - 1] === id ? s : [...s, id])), []);
+  const focusBack = useCallback(() => setFocusStack((s) => s.slice(0, -1)), []);
+  const focusClear = useCallback(() => setFocusStack([]), []);
+  const onFocusNode = useCallback((node: FlowNode) => focusOn(node.id), [focusOn]);
   // A big size change (leaving "view panel", a window resize, a re-arranged dashboard) drops a session zoom
   // and goes back to the fitted view: a viewport zoomed for a full-screen panel is useless in a small one.
   const lastSize = useRef({ width, height });
@@ -515,6 +556,10 @@ export const FlowPanel: React.FC<PanelProps<FlowOptions>> = ({
   // Node click sets a dashboard variable (action `variable`): every query on the page that uses it follows.
   const onNodeAction = useCallback(
     (node: FlowNode) => {
+      if (links.action === 'focus') {
+        focusOn(node.id);
+        return true;
+      }
       const v = resolveNodeVariable(node, links, formatValue(node.valueField ? fields.get(node.valueField) : undefined, node.valueFormat), replaceVariables);
       if (!v) {
         return false;
@@ -522,7 +567,7 @@ export const FlowPanel: React.FC<PanelProps<FlowOptions>> = ({
       locationService.partial(variableQuery(v.name, v.value));
       return true;
     },
-    [links, fields, replaceVariables]
+    [links, fields, replaceVariables, focusOn]
   );
   // Context menu: the variable a node would set, whatever the trigger, and a direct setter.
   const variableFor = useCallback(
@@ -561,7 +606,14 @@ export const FlowPanel: React.FC<PanelProps<FlowOptions>> = ({
   const loadExample = useCallback(() => commitManual(createExampleDiagram()), [commitManual]);
 
   const onKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
-    if (!editing || e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
+    if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
+      return;
+    }
+    if (!editing) {
+      if (e.key === 'Escape' && focusId) {
+        focusClear();
+        e.preventDefault();
+      }
       return;
     }
     const mod = e.ctrlKey || e.metaKey;
@@ -605,7 +657,7 @@ export const FlowPanel: React.FC<PanelProps<FlowOptions>> = ({
   const overrideCount = dataMode === 'overrides' ? Object.keys(dataOpts.overrides ?? {}).length : 0;
 
   return (
-    <div className={styles.wrap} style={{ width, height }} tabIndex={editing ? 0 : undefined} onKeyDown={onKeyDown} data-testid="flow-panel">
+    <div className={styles.wrap} style={{ width, height }} tabIndex={editing || focusId ? 0 : undefined} onKeyDown={onKeyDown} data-testid="flow-panel">
       <FlowCanvas
         diagram={displayDiagram}
         width={width}
@@ -634,6 +686,7 @@ export const FlowPanel: React.FC<PanelProps<FlowOptions>> = ({
         collapsed={isData && !!pruneRules.collapseGroups}
         onFit={fit}
         onZoomTo={zoomTo}
+        onFocus={onFocusNode}
         onViewport={setViewport}
         onSelect={setSelection}
         onDraft={setDraft}
@@ -678,8 +731,17 @@ export const FlowPanel: React.FC<PanelProps<FlowOptions>> = ({
       <div className={styles.badgeWrap} style={editing ? { top: 28 } : undefined}>
         <DemoBadge visible={isDemo} width={width} />
       </div>
-      {!editing && (zoomedIn || (varName && varValue !== undefined) || (isData && hiddenCount > 0)) && (
+      {!editing && (zoomedIn || focusId || (varName && varValue !== undefined) || (isData && hiddenCount > 0)) && (
         <ChipRow width={width}>
+          {focusId && (
+            <Chip
+              testId="flow-focus-chip"
+              tooltip={`Only this node and its chain are shown (Interaction → Focus). Back leaves the focus${focusStackLive.length > 1 ? ' one step' : ''}; Esc leaves it entirely`}
+              action={{ label: 'Back from the focus', text: 'back', onClick: focusBack }}
+            >
+              focus <b>{diagram.nodes.find((n) => n.id === focusId)?.label || focusId}</b> · {diagram.nodes.length} of {focusCandidates?.length ?? diagram.nodes.length}
+            </Chip>
+          )}
           {zoomedIn && (
             <Chip testId="flow-zoom-chip" tooltip="The view is zoomed or panned for this session. Back returns to the full, fitted diagram" action={{ label: 'Back to the full view', text: 'back', onClick: fit }}>
               zoomed <b>{Math.round(effectiveViewport.zoom * 100)}%</b>

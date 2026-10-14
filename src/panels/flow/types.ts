@@ -2,6 +2,7 @@ import type { DemoMode } from '../../shared/demo';
 import type { HiddenItems, PruneRules } from '../../shared/graph/prune';
 import type { MotionPreference } from '../../shared/motion';
 import { DEFAULT_PARTICLE_LIMIT, type ParticleMode } from './lib/particles';
+import type { FocusDirection } from '../../shared/graph/focus';
 import type { QuickStartState } from '../../shared/presets';
 
 /**
@@ -175,7 +176,7 @@ export type { HiddenItems, PruneRules };
 export type LinkTarget = 'same' | 'new';
 export type LinkTrigger = 'dblclick' | 'click' | 'off';
 /** What a node click does: open the URL template, or set a dashboard variable so every query on the page follows. */
-export type LinkAction = 'link' | 'variable';
+export type LinkAction = 'link' | 'variable' | 'focus';
 
 export interface LinkOptions {
   /** URL template; supports dashboard variables and ${node.id|label|group|value|status} tokens */
@@ -194,6 +195,10 @@ export interface LinkOptions {
 export interface InteractionOptions {
   /** View mode: Ctrl/⌘ + wheel (or plain wheel in view-panel mode) zooms, drag pans, double-click fits */
   zoom: boolean;
+  /** Focus (node click action `focus` or the menu): hops followed from the node, 0 = the whole chain */
+  focusHops?: number;
+  /** Focus: walk both ways, downstream only or upstream only */
+  focusDirection?: FocusDirection;
 }
 
 export interface FlowOptions {
@@ -320,7 +325,7 @@ export const MIN_IMAGE_SIZE = 12;
 export const MAX_IMAGE_SIZE = 64;
 
 export const DEFAULT_LINKS: LinkOptions = { nodeUrl: '', target: 'same', trigger: 'dblclick', action: 'link', variable: '', variableValue: '${node.id}', variableClear: '' };
-export const DEFAULT_INTERACTION: InteractionOptions = { zoom: true };
+export const DEFAULT_INTERACTION: InteractionOptions = { zoom: true, focusHops: 0, focusDirection: 'both' };
 
 export const DEFAULT_OPTIONS: FlowOptions = {
   interaction: DEFAULT_INTERACTION,

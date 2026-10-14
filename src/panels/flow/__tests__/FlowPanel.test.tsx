@@ -416,6 +416,40 @@ describe('FlowPanel links and view-mode zoom', () => {
     expect(screen.queryByText('Zoom to node')).not.toBeInTheDocument();
   });
 
+  it('focus: a click shows only the node and its chain, the chip leads back, Esc clears, the menu offers it', () => {
+    const node = (id: string) => screen.queryByTestId(`flow-node-${id}`);
+    renderPanel({ links: { ...DEFAULT_OPTIONS.links!, action: 'focus', trigger: 'click' } });
+    expect(node('generator')).toBeInTheDocument();
+    fireEvent.click(node('solar')!);
+    // Solar feeds the bus, the bus feeds the loads; the generator and grid import are neither upstream nor downstream of solar.
+    expect(screen.getByTestId('flow-focus-chip').textContent).toContain('Solar array');
+    expect(node('bus')).toBeInTheDocument();
+    expect(node('house')).toBeInTheDocument();
+    expect(node('generator')).not.toBeInTheDocument();
+    expect(node('grid')).not.toBeInTheDocument();
+    // A second focus stacks; back pops one level.
+    fireEvent.click(node('house')!);
+    expect(screen.getByTestId('flow-focus-chip').textContent).toContain('House loads');
+    expect(node('ev')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByLabelText('Back from the focus'));
+    expect(screen.getByTestId('flow-focus-chip').textContent).toContain('Solar array');
+    expect(node('ev')).toBeInTheDocument();
+    fireEvent.keyDown(screen.getByTestId('flow-panel'), { key: 'Escape' });
+    expect(screen.queryByTestId('flow-focus-chip')).not.toBeInTheDocument();
+    expect(node('generator')).toBeInTheDocument();
+    cleanup();
+    // Default action (Open link): the click does not focus, but the right-click menu does, here 1 hop upstream.
+    renderPanel({ interaction: { zoom: true, focusHops: 1, focusDirection: 'up' } });
+    fireEvent.click(node('house')!);
+    expect(screen.queryByTestId('flow-focus-chip')).not.toBeInTheDocument();
+    fireEvent.contextMenu(node('house')!, { clientX: 100, clientY: 100 });
+    fireEvent.click(screen.getByText('Focus on chain'));
+    expect(node('house')).toBeInTheDocument();
+    expect(node('bus')).toBeInTheDocument();
+    expect(node('solar')).not.toBeInTheDocument(); // two hops up
+    expect(node('ev')).not.toBeInTheDocument(); // sibling
+  });
+
   it('hides the controls and ignores wheel/drag when Zoom and pan is off', () => {
     renderPanel({ interaction: { zoom: false } });
     expect(screen.queryByTestId('flow-zoom-controls')).not.toBeInTheDocument();

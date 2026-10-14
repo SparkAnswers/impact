@@ -71,6 +71,8 @@ export interface FlowCanvasProps {
    * with the node id, or the group name.
    */
   onZoomTo?: (target: { node?: string; group?: string }) => void;
+  /** View mode: show only this node and its chain (right-click menu "Focus on chain"). */
+  onFocus?: (node: FlowNode) => void;
   onViewport: (vp: Viewport) => void;
   onSelect: (sel?: FlowSelection) => void;
   /** Transient update while dragging (no undo entry) */
@@ -137,6 +139,7 @@ export const FlowCanvas: React.FC<FlowCanvasProps> = (props) => {
     collapsed,
     onFit,
     onZoomTo,
+    onFocus,
     onViewport,
     onSelect,
     onDraft,
@@ -145,7 +148,8 @@ export const FlowCanvas: React.FC<FlowCanvasProps> = (props) => {
   } = props;
   const viewZoom = !editing && !!zoomEnabled;
   const zoomTo = !editing && !!zoomEnabled && !!onZoomTo ? onZoomTo : undefined;
-  const menuEnabled = !editing && (!!onPrune || !!zoomTo);
+  const focusTo = !editing ? onFocus : undefined;
+  const menuEnabled = !editing && (!!onPrune || !!zoomTo || !!focusTo);
   const [menu, setMenu] = useState<MenuTarget | undefined>();
   const closeMenu = useCallback(() => setMenu(undefined), []);
   const svgRef = useRef<SVGSVGElement>(null);
@@ -601,13 +605,15 @@ export const FlowCanvas: React.FC<FlowCanvasProps> = (props) => {
     if (!menu) {
       return null;
     }
-    const viewItems = zoomTo ? (
+    const viewItems =
+      zoomTo || (focusTo && menu.kind === 'node') ? (
       <MenuGroup key="view" label="View">
-        {menu.kind === 'node' && <MenuItem label="Zoom to node" icon="search-plus" onClick={() => zoomTo({ node: menu.node.id })} />}
-        {(menu.kind === 'group' || menu.node.group) && (
+        {menu.kind === 'node' && focusTo && <MenuItem label="Focus on chain" icon="crosshair" onClick={() => focusTo(menu.node)} />}
+        {menu.kind === 'node' && zoomTo && <MenuItem label="Zoom to node" icon="search-plus" onClick={() => zoomTo({ node: menu.node.id })} />}
+        {zoomTo && (menu.kind === 'group' || menu.node.group) && (
           <MenuItem label={`Zoom to group ${menu.kind === 'group' ? menu.group : menu.node.group}`} icon="search-plus" onClick={() => zoomTo({ group: menu.kind === 'group' ? menu.group : menu.node.group! })} />
         )}
-        {onFit && <MenuItem label="Fit to panel" icon="expand-arrows-alt" onClick={onFit} />}
+        {zoomTo && onFit && <MenuItem label="Fit to panel" icon="expand-arrows-alt" onClick={onFit} />}
       </MenuGroup>
     ) : null;
     const collapseItem =
